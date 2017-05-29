@@ -3,7 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/abstraction.iml" filepath="$PROJECT_DIR$/.idea/modules/abstraction.iml" />
-      <module fileurl="file://$PROJECT_DIR$/algos/algos.iml" filepath="$PROJECT_DIR$/algos/algos.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/abstraction-build.iml" filepath="$PROJECT_DIR$/.idea/modules/abstraction-build.iml" />
     </modules>
   </component>
 </project>
