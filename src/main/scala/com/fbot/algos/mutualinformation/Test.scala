@@ -5,5 +5,9 @@ package com.fbot.algos.mutualinformation
   *
   */
 object Test extends App {
-  println("Hello, world!")
+
+  val tuples: TupleArray = TupleArray(Tuple(1,0,0), Tuple(2,1,0), Tuple(0,0,1), Tuple(5, 5, 5))
+
+  println(tuples)
+  tuples.nearest(2)
 }
