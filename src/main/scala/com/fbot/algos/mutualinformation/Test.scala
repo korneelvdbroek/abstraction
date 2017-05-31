@@ -6,8 +6,18 @@ package com.fbot.algos.mutualinformation
   */
 object Test extends App {
 
-  val tuples: TupleArray = TupleArray(Tuple(1,0,0), Tuple(2,1,0), Tuple(0,0,1), Tuple(5, 5, 5))
+  val tuples: TupleArray = TupleArray(
+    Tuple(0,0), Tuple(1,0), Tuple(1,1), Tuple(-1, 2), Tuple(-2,-3),
+    Tuple(5,1), Tuple(1,5), Tuple(-5,1), Tuple(1,-5),
+    Tuple(5,5), Tuple(-5,5), Tuple(-5,-5), Tuple(5,-5),
+    Tuple(6,5), Tuple(7,6))
 
-  println(tuples)
-  tuples.nearest(2)
+  val k = 2
+  val centerTupleIndex = 0
+
+  println(s"All tuples:\n$tuples")
+  println(s"Center tuple:\n${ tuples(centerTupleIndex) }")
+  val kNearestIndices = tuples.nearest(k, centerTupleIndex)
+  val kNearest = TupleArray(kNearestIndices.map(tuples(_)))
+  println(s"$k-Nearest:\n$kNearest")
 }
