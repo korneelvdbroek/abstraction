@@ -1,6 +1,8 @@
 package com.fbot.algos.mutualinformation
 
 import TupleOps._
+import TupleIndex.index._
+import Ordering.Implicits._
 
 import scala.annotation.tailrec
 
@@ -8,45 +10,54 @@ import scala.annotation.tailrec
   * Copyright (C) 5/30/2017 - REstore NV
   *
   */
-case class TupleArray(tuples: Array[Tuple]) {
-
-  val sortedData: Array[(Array[Int], Array[Int])] = {
-    def indexSortAndRank(axis: Int): (Array[Int], Array[Int]) = {
-      val index = Array.range(0, length)
-      val sortedIndex = index.sortWith(tuples(_)(axis) < tuples(_)(axis))
-      val rank = index.sortWith(sortedIndex(_) < sortedIndex(_))
-      (sortedIndex, rank)
-    }
-
-    Array.range(0, dim).map(indexSortAndRank)
-  }
+class TupleArray(tuples: Array[Tuple]) {
 
   def length: Int = tuples.length
+
+  def apply(tupleIndex: TupleIndex): Tuple = tuples(tupleIndex.i)
 
   def dim: Int = {
     if (tuples.length > 0) tuples(0).dim else 0
   }
 
-  def apply(i: Int): Tuple = tuples(i)
-
-
   override def toString: String = {
     tuples.mkString("[", ",\n", "]")
   }
 
-  def candidateNearest(centerTupleIndex: Int, axes: Array[(Int, Boolean)], step: Int): Array[(Int, (Int, Boolean))] = {
-    axes.flatMap(axisDirection => {
-      val (axis, direction) = axisDirection
+  def indexRange: Array[TupleIndex] = Array.range(0, tuples.length).map(TupleIndex(_))
 
-      val (sortedIndex, rank) = sortedData(axis)
+}
+
+
+object TupleArray {
+
+  def apply(data: Tuple*): TupleArray = new TupleArray(data.toArray)
+
+}
+
+
+class Dots(tuples: TupleArray) {
+  val sortedData: Array[(Array[TupleIndex], Array[Int])] = {
+    def indexSortAndRank(axis: Int): (Array[TupleIndex], Array[Int]) = {
+      val sortedIndex = tuples.indexRange.sortWith(tuples(_)(axis) < tuples(_)(axis))
+      val rank = Array.range(0, tuples.length).sortWith((i,j) => sortedIndex(i) < sortedIndex(j))
+      (sortedIndex, rank)
+    }
+
+    Array.range(0, tuples.dim).map(indexSortAndRank)
+  }
+
+  def candidateNearest(centerTupleIndex: Int, cubeSides: Array[HyperCubeSide], step: Int): Array[(TupleIndex, HyperCubeSide)] = {
+    cubeSides.flatMap(cubeSide => {
+      val (sortedIndex, rank) = sortedData(cubeSide.axis)
       val rankPosition = rank(centerTupleIndex)
 
-      if (direction) {
+      if (cubeSide.direction) {
         val newRank = rankPosition + step
-        if (newRank < length) Some((sortedIndex(newRank), axisDirection)) else None
+        if (newRank < tuples.length) Some((sortedIndex(newRank), cubeSide)) else None
       } else {
         val newRank = rankPosition - step
-        if (0 <= newRank) Some((sortedIndex(newRank), axisDirection)) else None
+        if (0 <= newRank) Some((sortedIndex(newRank), cubeSide)) else None
       }
     })
   }
@@ -115,17 +126,14 @@ case class TupleArray(tuples: Array[Tuple]) {
 
 
     // initialization
-    val axes = Array.range(0, dim).flatMap(d => Array((d, false), (d, true)))
+    val axes = Array.range(0, tuples.dim).flatMap(d => Array((d, false), (d, true)))
     kNearestIndices(axes, 1, Array.empty, Array.empty)
 
   }
 
 }
 
-object TupleArray {
-
-  def apply(data: Tuple*): TupleArray = new TupleArray(data.toArray)
-
+object Dots {
 
   def print[T](x: Array[T]): String = x.deep.mkString("Array(", ",", ")")
 
