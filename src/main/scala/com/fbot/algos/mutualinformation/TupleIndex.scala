@@ -1,11 +1,18 @@
 package com.fbot.algos.mutualinformation
 
+import scala.math.Ordering
 
 /**
   * Copyright (C) 5/31/2017 - REstore NV
   *
   */
-final case class TupleIndex(i: Int) extends AnyVal
+final case class TupleIndex(i: Int) extends AnyVal {
+
+  override def toString: String = {
+    s"index_$i"
+  }
+
+}
 
 object TupleIndex {
 
@@ -18,5 +25,9 @@ object TupleIndex {
 
     def compare(i: TupleIndex, j: TupleIndex): Int = i.i.compare(j.i)
   }
+
+  implicit def mkIndexOps(lhs: TupleIndex)(implicit ind: Index[TupleIndex]): Index[TupleIndex]#Ops = new ind.Ops(lhs)
+
+  implicit def mkOrderingOps(lhs: TupleIndex)(implicit ord: Ordering[TupleIndex]): Ordering[TupleIndex]#Ops = new ord.Ops(lhs)
 
 }

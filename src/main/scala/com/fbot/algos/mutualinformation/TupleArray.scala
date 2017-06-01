@@ -1,8 +1,7 @@
 package com.fbot.algos.mutualinformation
 
 import TupleOps._
-import TupleIndex.index._
-import Ordering.Implicits._
+
 
 import scala.annotation.tailrec
 
@@ -10,7 +9,7 @@ import scala.annotation.tailrec
   * Copyright (C) 5/30/2017 - REstore NV
   *
   */
-class TupleArray(tuples: Array[Tuple]) {
+case class TupleArray(tuples: Array[Tuple]) {
 
   def length: Int = tuples.length
 
@@ -36,25 +35,27 @@ object TupleArray {
 }
 
 
-class Dots(tuples: TupleArray) {
+
+case class TupleCloud(tupleCloud: TupleArray) {
+
   val sortedData: Array[(Array[TupleIndex], Array[Int])] = {
     def indexSortAndRank(axis: Int): (Array[TupleIndex], Array[Int]) = {
-      val sortedIndex = tuples.indexRange.sortWith(tuples(_)(axis) < tuples(_)(axis))
-      val rank = Array.range(0, tuples.length).sortWith((i,j) => sortedIndex(i) < sortedIndex(j))
+      val sortedIndex = tupleCloud.indexRange.sortWith(tupleCloud(_)(axis) < tupleCloud(_)(axis))
+      val rank = Array.range(0, tupleCloud.length).sortWith((i, j) => sortedIndex(i) < sortedIndex(j))
       (sortedIndex, rank)
     }
 
-    Array.range(0, tuples.dim).map(indexSortAndRank)
+    Array.range(0, tupleCloud.dim).map(indexSortAndRank)
   }
 
-  def candidateNearest(centerTupleIndex: Int, cubeSides: Array[HyperCubeSide], step: Int): Array[(TupleIndex, HyperCubeSide)] = {
+  def candidateNearest(centerTupleIndex: TupleIndex, cubeSides: Array[HyperCubeSide], step: Int): Array[(TupleIndex, HyperCubeSide)] = {
     cubeSides.flatMap(cubeSide => {
       val (sortedIndex, rank) = sortedData(cubeSide.axis)
-      val rankPosition = rank(centerTupleIndex)
+      val rankPosition = rank(centerTupleIndex.i)
 
       if (cubeSide.direction) {
         val newRank = rankPosition + step
-        if (newRank < tuples.length) Some((sortedIndex(newRank), cubeSide)) else None
+        if (newRank < tupleCloud.length) Some((sortedIndex(newRank), cubeSide)) else None
       } else {
         val newRank = rankPosition - step
         if (0 <= newRank) Some((sortedIndex(newRank), cubeSide)) else None
@@ -62,28 +63,35 @@ class Dots(tuples: TupleArray) {
     })
   }
 
-  def nearest(k: Int, currentTupleIndex: Int): Array[Int] = {
+  def nearest(k: Int, currentTupleIndex: TupleIndex): Array[TupleIndex] = {
 
+    def cubeSidesToGrow(epsilon: Double,
+                        tuplesOnCubeSide: Array[(TupleIndex, HyperCubeSide)]): Array[HyperCubeSide] = {
+      val cubeSidesToGrow = tuplesOnCubeSide.flatMap(tupleOnCubeSide => {
+        val (tupleOnCubeSideIndex, cubeSide) = tupleOnCubeSide
+        val distanceToCubeSide = math.abs(tupleCloud(tupleOnCubeSideIndex)(cubeSide.axis) - tupleCloud(currentTupleIndex)(cubeSide.axis))
 
-    def axesWhereToTakeNewSteps(epsilon: Double,
-                                candidateIndicesAndAxes: Array[(Int, (Int, Boolean))]): Array[(Int, Boolean)] = {
-      candidateIndicesAndAxes.flatMap(candidateIndexAndAxis => {
-        val (candidateAlongAxisIndex, axis) = candidateIndexAndAxis
-        val distanceAlongAxisLowerBound = math.abs(tuples(candidateAlongAxisIndex)(axis._1) - tuples(currentTupleIndex)(axis._1))
-
-        if (epsilon < distanceAlongAxisLowerBound) None else Some(axis)
+        if (epsilon < distanceToCubeSide) None else Some(cubeSide)
       })
+
+      // check if another axis already swept out the entire hypercube, since then we are done
+      if (cubeSidesToGrow.map(_.axis).distinct.length < tupleCloud.dim) {
+        Array.empty
+      } else {
+        cubeSidesToGrow
+      }
+
     }
 
     @tailrec
-    def kNearestIndices(axes: Array[(Int, Boolean)], step: Int,
-                        kNearestCandidateIndices: Array[Int], kNearestCandidateDistances: Array[Double]): Array[Int] = {
+    def kNearestIndices(axes: Array[HyperCubeSide], step: Int,
+                        kNearestCandidateIndices: Array[TupleIndex], kNearestCandidateDistances: Array[Double]): Array[TupleIndex] = {
 
-      println(s"Entering kNearestIndices with")
-      println(s"  axes                       = ${TupleArray.print(axes)}")
+//      println(s"Entering kNearestIndices with")
+      println(s"  axes                       = ${TupleCloud.print(axes) }")
       println(s"  step                       = $step")
-      println(s"  kNearestCandidateIndices   = ${TupleArray.print(kNearestCandidateIndices)}")
-      println(s"  kNearestCandidateDistances = ${TupleArray.print(kNearestCandidateDistances)}")
+//      println(s"  kNearestCandidateIndices   = ${TupleCloud.print(kNearestCandidateIndices) }")
+//      println(s"  kNearestCandidateDistances = ${TupleCloud.print(kNearestCandidateDistances) }")
 
       if (axes.isEmpty) {
 
@@ -95,12 +103,12 @@ class Dots(tuples: TupleArray) {
         if (newCandidateIndices.isEmpty) {
           kNearestCandidateIndices
         } else {
-          println(s"  ==> new harvest of indices = ${TupleArray.print(newCandidateIndices) }")
+//          println(s"  ==> new harvest of indices = ${TupleCloud.print(newCandidateIndices) }")
           val uniqueNewCandidateIndices = (newCandidateIndices.map(_._1).toSet -- kNearestCandidateIndices).toArray
 
           val candidateIndices = kNearestCandidateIndices ++ uniqueNewCandidateIndices
           val candidateDistances = kNearestCandidateDistances ++
-                                   uniqueNewCandidateIndices.map(candidateIndex => distance(tuples(candidateIndex), tuples(currentTupleIndex)))
+                                   uniqueNewCandidateIndices.map(candidateIndex => distance(tupleCloud(candidateIndex), tupleCloud(currentTupleIndex)))
 
           val numberOfCandidates = candidateIndices.length
           if (k < numberOfCandidates) {
@@ -109,7 +117,7 @@ class Dots(tuples: TupleArray) {
             val epsilon = candidateDistances(candidateDistancesSortedIndex(k - 1))
 
             // weed out axes we don't need to look at anymore
-            val newAxes = axesWhereToTakeNewSteps(epsilon, newCandidateIndices)
+            val newAxes = cubeSidesToGrow(epsilon, newCandidateIndices)
 
             val kNearestCandidateSortedIndices = candidateDistancesSortedIndex.take(k)
             kNearestIndices(newAxes, step + 1,
@@ -126,16 +134,36 @@ class Dots(tuples: TupleArray) {
 
 
     // initialization
-    val axes = Array.range(0, tuples.dim).flatMap(d => Array((d, false), (d, true)))
+    val axes = Array.range(0, tupleCloud.dim).flatMap(d => Array(HyperCubeSide(d, direction = false), HyperCubeSide(d, direction = true)))
     kNearestIndices(axes, 1, Array.empty, Array.empty)
 
   }
 
+
+  def nearestBruteForce(k: Int, currentTupleIndex: TupleIndex): (Int, Array[TupleIndex]) = {
+    val currentTuple = tupleCloud(currentTupleIndex)
+    val otherTuplesSortedByDistance = tupleCloud.indexRange
+      .filterNot(_ == currentTupleIndex)
+      .map(index => (index, distance(tupleCloud(index), currentTuple)))
+      .sortBy(_._2)
+
+
+    var i = k
+    while (i < otherTuplesSortedByDistance.length && otherTuplesSortedByDistance(k - 1)._2 ==  otherTuplesSortedByDistance(i)._2) {
+      i += 1
+    }
+
+    (i, otherTuplesSortedByDistance.take(k).map(_._1))
+  }
+
 }
 
-object Dots {
+object TupleCloud {
+
+  def apply(data: Tuple*): TupleCloud = TupleCloud(TupleArray(data.toArray))
+
+  def apply(data: Array[Tuple]): TupleCloud = TupleCloud(TupleArray(data))
 
   def print[T](x: Array[T]): String = x.deep.mkString("Array(", ",", ")")
 
-  //sortedData foreach (tuple => {tuple._1 foreach print; print(" "); tuple._2 foreach print; println})
 }

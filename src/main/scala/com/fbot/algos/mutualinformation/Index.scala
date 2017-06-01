@@ -1,5 +1,6 @@
 package com.fbot.algos.mutualinformation
 
+import scala.math.Ordering
 
 /**
   * Copyright (C) 5/31/2017 - REstore NV
@@ -18,7 +19,6 @@ object Index {
     implicit def infixIndexOps[T](x: T)(implicit ind: Index[T]): Index[T]#Ops = new ind.Ops(x)
   }
   object Implicits extends ExtraImplicits { }
-
 
 }
 
