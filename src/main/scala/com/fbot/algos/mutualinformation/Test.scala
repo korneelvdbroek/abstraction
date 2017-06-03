@@ -9,7 +9,7 @@ import scala.util.Random
 object Test extends App {
 
 
-  val cloud = TupleCloud(Array.fill[Tuple](1000000){
+  val cloud = PointCloud(Array.fill[Tuple](1000000){
     def randomInt = {
       val sign = if (Random.nextBoolean()) 1 else -1
       sign * Random.nextInt(1000)
@@ -17,7 +17,7 @@ object Test extends App {
     Tuple(randomInt, randomInt, randomInt, randomInt, randomInt, randomInt, randomInt, randomInt)
   })
   val kTrial = 4
-  val centerTupleIndex = TupleIndex(Random.nextInt(cloud.tupleCloud.length))
+  val centerTupleIndex = ArrayIndex(Random.nextInt(cloud.points.length))
 
   //  val cloud: TupleCloud = TupleCloud(
 //    Tuple(0,0), Tuple(1,0), Tuple(1,1), Tuple(-1, 2), Tuple(-2,-3),
@@ -44,8 +44,8 @@ object Test extends App {
 
   if (kNearestIndices.toSet != kNearestBFIndices.toSet) println("ERROR")
 
-  val kNearest   = TupleArray(kNearestIndices.map(cloud.tupleCloud(_)))
-  val kNearestBF = TupleArray(kNearestBFIndices.map(cloud.tupleCloud(_)))
+  val kNearest   = TupleArray(kNearestIndices.map(cloud.points(_)))
+  val kNearestBF = TupleArray(kNearestBFIndices.map(cloud.points(_)))
 
 //  println(s"All tuples:\n${cloud.tupleCloud}")
 //  println(s"Center tuple:\n${ cloud.tupleCloud(centerTupleIndex) }")

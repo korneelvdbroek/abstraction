@@ -33,7 +33,7 @@ class TupleArraySpec extends FlatSpec with Matchers {
 object TupleArraySpec {
 
   val UnsortedTuples = TupleArray(Tuple(1, 5), Tuple(2, 3), Tuple(3, 4), Tuple(5, 1), Tuple(4, 2), Tuple(0, 0))
-  val UnsortedTupleCloud = TupleCloud(UnsortedTuples)
+  val UnsortedTupleCloud = PointCloud(UnsortedTuples)
 
   val emptyTuples = TupleArray()
 
