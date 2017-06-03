@@ -6,8 +6,10 @@ import com.fbot.common.immutable.{ArrayIndex, ImmutableArray}
 /**
   * Copyright (C) 5/30/2017 - REstore NV
   *
+  *
+  * note: use classes to render data type safe, do everything else functional
   */
-case class PointCloud(points: ImmutableArray[Tuple]) {
+case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
 
   def nearestBruteForce(k: Int, currentTupleIndex: ArrayIndex): (Int, ImmutableArray[ArrayIndex]) = {
     val currentTuple = points(currentTupleIndex)
@@ -34,11 +36,12 @@ case class PointCloud(points: ImmutableArray[Tuple]) {
    5. include next shell of hyperCubeBins & go to 3 (only adding to the already found k-nearest the new points from the hyperCubeShell
    */
 
-  val binning = UnitHyperCube(Array.range(0, points.dim).map(_ => 1.0), points)
+  lazy val binnedPoints: ImmutableArray[UnitHyperCube] = points.map(space.findEnclosingUnitHyperCube)
+  def enclosingBin(tupleIndex: ArrayIndex): UnitHyperCube = binnedPoints(tupleIndex)
 
-  val pointsByBin: Map[HyperCubeBin, ImmutableArray[ArrayIndex]] = points.indexRange.groupBy(binning.enclosingBin)
+  val pointsByBin: Map[UnitHyperCube, ImmutableArray[ArrayIndex]] = points.indexRange.groupBy(enclosingBin)
 
-  def kNearestBinned(k: Int, currentTupleIndex: ArrayIndex): (Int, Array[ArrayIndex]) = {
+  def kNearestBinned(k: Int, currentTupleIndex: ArrayIndex): Array[ArrayIndex] = {
 
     ???
   }
@@ -46,10 +49,6 @@ case class PointCloud(points: ImmutableArray[Tuple]) {
 }
 
 object PointCloud {
-
-  def apply(data: Tuple*): PointCloud = PointCloud(ImmutableArray(data.toArray))
-
-  def apply(data: Array[Tuple]): PointCloud = PointCloud(ImmutableArray(data))
 
   def print[T](x: Array[T]): String = x.deep.mkString("Array(", ",", ")")
 

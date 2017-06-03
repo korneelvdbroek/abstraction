@@ -7,7 +7,7 @@ import scala.math.Ordering
   *
   */
 
-trait Index[T] extends Ordering[T] {
+trait Indexing[T] extends Ordering[T] {
   def plus(i: T, j: T): T
   def minus(i: T, j: T): T
   def times(i: T, j: T): T
@@ -22,7 +22,7 @@ trait Index[T] extends Ordering[T] {
 }
 
 
-object Index {
+object Indexing {
 
   trait ExtraImplicits {
     /** These implicits create conversions from a value for which an implicit Numeric
@@ -32,7 +32,7 @@ object Index {
       *  def plus[T: Index](x: T, y: T) = x + y
       *  }}}
       */
-    implicit def infixIndexOps[T](x: T)(implicit ind: Index[T]): Index[T]#Ops = new ind.Ops(x)
+    implicit def infixIndexOps[T](x: T)(implicit ind: Indexing[T]): Indexing[T]#Ops = new ind.Ops(x)
   }
   object Implicits extends ExtraImplicits { }
 
