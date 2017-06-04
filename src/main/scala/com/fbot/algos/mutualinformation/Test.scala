@@ -29,6 +29,10 @@ object Test extends App {
 //  val centerTupleIndex = TupleIndex(0)
 
 
+  val space = Space(3, Array(1.0, 1.0, 1.0))
+
+  val smallCube = HyperCube(UnitHyperCube(1.0, 1.0, 1.0), UnitHyperCube(3.0, 3.0, 3.0))
+  val bigCube   = HyperCube(UnitHyperCube(0.0, 1.0, 1.0), UnitHyperCube(4.0, 3.0, 3.0))
 
 }
 

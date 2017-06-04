@@ -1,5 +1,7 @@
 package com.fbot.common.immutable
 
+import scala.reflect.ClassTag
+
 /**
   * Copyright (C) 6/3/2017 - REstore NV
   *
@@ -10,7 +12,7 @@ class ImmutableArray[T](val repr: Array[T]) extends AnyVal {
 
   def apply(index: ArrayIndex): T = repr(index.i)
 
-  def map[B](f: (T) ⇒ B): ImmutableArray[B] = new ImmutableArray(repr.map(f))
+  def map[B: ClassTag](f: (T) ⇒ B): ImmutableArray[B] = new ImmutableArray(repr.map(f))
 
   def sortWith(lt: (T, T) ⇒ Boolean): ImmutableArray[T] = new ImmutableArray(repr.sortWith(lt))
 
@@ -34,6 +36,6 @@ object ImmutableArray {
 
   def apply[T](data: Array[T]): ImmutableArray[T] = new ImmutableArray[T](data)
 
-  def apply[T](data: T*): ImmutableArray[T] = new ImmutableArray[T](data.toArray)
+  def apply[T: ClassTag](data: T*): ImmutableArray[T] = new ImmutableArray[T](data.toArray)
 
 }

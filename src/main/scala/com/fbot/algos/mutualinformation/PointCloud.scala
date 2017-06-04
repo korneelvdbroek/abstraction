@@ -31,7 +31,10 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
    New algo:
    1. OK def tuple => hyperCubeBin & store in map
    2. OK groupBy(tuple => hyperCubeBin)
-   3. for center-point, find hyperCubeBin (use stored map) & find brute force the k-nearest (if number of points in hyperCube > k)
+   3. for center-point,
+      expand smallHyperCube -> bigHyperCube
+      find all points isIn(BigCube) and isNotIn(SmallCube)
+      find brute force k-nearest on all points             (!!!if number of points in hyperCube > k)
    4. if distance from farthest of k-nearest to center-point < edges of hyperCube (or number of points in hyperCube < k)
    5. include next shell of hyperCubeBins & go to 3 (only adding to the already found k-nearest the new points from the hyperCubeShell
    */
