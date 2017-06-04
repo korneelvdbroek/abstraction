@@ -5,6 +5,7 @@ import com.fbot.common.immutable.DoubleArrayMath._
 /**
   * Copyright (C) 6/2/2017 - REstore NV
   *
+  * note: we allow Doubles since Int/Long might not be enough for the UnitHyperCube grid...
   */
 case class UnitHyperCube(position: Array[Double]) extends AnyVal {
 
@@ -25,7 +26,7 @@ case class UnitHyperCube(position: Array[Double]) extends AnyVal {
 
 object UnitHyperCube {
 
-  def apply(position: Double*): UnitHyperCube = new UnitHyperCube(position.toArray)
+  def apply(position: Double*): UnitHyperCube = UnitHyperCube(position.toArray)
 
 }
 

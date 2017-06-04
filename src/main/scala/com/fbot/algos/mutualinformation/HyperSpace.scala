@@ -15,5 +15,5 @@ trait HyperSpace {
   }
 }
 
-case class Space(dim: Int, unitCubeSize: Array[Double]) extends HyperSpace with HyperCubeOps
+case class Space(dim: Int, unitCubeSize: Array[Double]) extends HyperSpace
 
