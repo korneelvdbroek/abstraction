@@ -1,6 +1,7 @@
 package com.fbot.algos.mutualinformation
 
 import com.fbot.common.immutable.DoubleArrayMath._
+import com.fbot.algos.mutualinformation.Tuple._
 
 /**
   * Copyright (C) 6/2/2017 - REstore NV
@@ -31,10 +32,28 @@ object UnitHyperCube {
 }
 
 
+
+
+
 case class HyperCube(left: UnitHyperCube, right: UnitHyperCube) {
 
   def grow(leftDirection: Array[Double], rightDirection: Array[Double]): HyperCube = {
     HyperCube(UnitHyperCube(left.position + leftDirection), UnitHyperCube(right.position + rightDirection))
   }
+
+}
+
+object HyperCube {
+
+  //implicit def apply(left: Array[Double], right: Array[Double]): HyperCube = HyperCube(UnitHyperCube(left), UnitHyperCube(right))
+
+  def empty(tuple: Tuple): HyperCube = {
+    HyperCube(UnitHyperCube(tuple), UnitHyperCube(tuple))
+  }
+
+  def unit(tuple: Tuple): HyperCube = {
+    HyperCube(UnitHyperCube(tuple), UnitHyperCube(tuple + Tuple.one(tuple.dim)))
+  }
+
 
 }

@@ -21,7 +21,7 @@ object DoubleArrayMath {
     def *(rhs: Array[Double]): Array[Double] = times(lhs, rhs)
     def unary_-(): Array[Double] = negate(lhs)
   }
-  implicit def mkArrayMathOps(lhs: Array[Double]): Ops = new Ops(lhs)
+  implicit def mkDoubleArrayMathOps(lhs: Array[Double]): Ops = new Ops(lhs)
 
 
   private def elementWise(f: (Double, Double) => Double)(a: Array[Double], b: Array[Double]): Array[Double] = {
