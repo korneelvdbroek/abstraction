@@ -2,13 +2,21 @@ package com.fbot.algos.mutualinformation
 
 import com.fbot.common.immutable.DoubleArrayMath._
 import com.fbot.algos.mutualinformation.Tuple._
+import com.fbot.common.immutable.ImmutableArray
 
 /**
   * Copyright (C) 6/2/2017 - REstore NV
   *
   * note: we allow Doubles since Int/Long might not be enough for the UnitHyperCube grid...
   */
-case class UnitHyperCube(position: Array[Double]) extends AnyVal {
+case class UnitHyperCube(position: Array[Double]) {
+
+  override def hashCode(): Int = scala.util.hashing.MurmurHash3.arrayHashing.hash(position)
+
+  override def equals(that: Any): Boolean = that match {
+    case that: UnitHyperCube => (that canEqual this) && (this.position sameElements that.position)
+    case _                       => false
+  }
 
   def isIn(hyperCube: HyperCube): Boolean = {
     val axes = Array.range(0, position.length)
@@ -37,8 +45,12 @@ object UnitHyperCube {
 
 case class HyperCube(left: UnitHyperCube, right: UnitHyperCube) {
 
+  def grow(leftDirection: ImmutableArray[Double], rightDirection: ImmutableArray[Double]): HyperCube = {
+    HyperCube(UnitHyperCube(left.position + leftDirection.repr.toArray), UnitHyperCube(right.position + rightDirection.repr.toArray))
+  }
+
   def grow(leftDirection: Array[Double], rightDirection: Array[Double]): HyperCube = {
-    HyperCube(UnitHyperCube(left.position + leftDirection), UnitHyperCube(right.position + rightDirection))
+    HyperCube(UnitHyperCube(left.position + leftDirection.repr), UnitHyperCube(right.position + rightDirection.repr))
   }
 
 }

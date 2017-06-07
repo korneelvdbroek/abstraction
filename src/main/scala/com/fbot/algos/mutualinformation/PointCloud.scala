@@ -3,6 +3,9 @@ package com.fbot.algos.mutualinformation
 import TupleOps._
 import com.fbot.common.immutable.{ArrayIndex, ImmutableArray, UnzippedMap}
 import com.fbot.common.immutable.BooleanArrayMath._
+import com.fbot.common.immutable.DoubleArrayMath._
+
+import scala.annotation.tailrec
 
 /**
   * Copyright (C) 5/30/2017 - REstore NV
@@ -37,41 +40,53 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
 
   val pointsByBin: UnzippedMap[UnitHyperCube, ImmutableArray[ArrayIndex]] = points.indexRange.unzippedGroupBy(enclosingBin)
 
-  def kNearest(k: Int, currentTupleIndex: ArrayIndex): Array[ArrayIndex] = {
+  def kNearest(k: Int, currentTupleIndex: ArrayIndex): ImmutableArray[ArrayIndex] = {
 
+    val currentTuple = points(currentTupleIndex)
+
+    @tailrec
     def kNearestInCube(kNearestCandidates: ImmutableArray[ArrayIndex],
                        remainingPointsByBin: UnzippedMap[UnitHyperCube, ImmutableArray[ArrayIndex]],
                        cube: HyperCube): ImmutableArray[(ArrayIndex, Double)] = {
-      val newCandidateBins     = remainingPointsByBin.filterKeys(_ isIn cube)
-      val newCandidatePoints   = kNearestCandidates ++ newCandidateBins.values.flatten
+
+      val newCandidateBins   = remainingPointsByBin.filterKeys(_ isIn cube)
+      val newCandidatePoints = if (kNearestCandidates.isEmpty) {
+        newCandidateBins.values.flatten.filterNot(_ == currentTupleIndex)
+      } else {
+        kNearestCandidates ++ newCandidateBins.values.flatten
+      }
+
+      println(s"cube = $cube; (${ newCandidatePoints.length})")
+      if (newCandidatePoints.length > 100) {
+        (0 to 100).foreach(i => print(s"${ points(newCandidatePoints(ArrayIndex(i))) }, "))
+        println()
+      }
 
       if (newCandidatePoints.length >= k) {
         val kNearestWithDistance = kNearestBruteForce(newCandidatePoints)(k, currentTupleIndex)
-        val newCube = ???
-
         val epsilon = kNearestWithDistance.map(_._2).last
-        if (epsilon > .) {
-          kNearestInCube(kNearestWithDistance.map(_._1), remainingPointsByBin.filterOut(newCandidateBins.filter), newCube)
-        } else {
+
+        val growLeft = space.axes.map(axis => if ((currentTuple(axis) - cube.left.position(axis)) < epsilon) -space.unitCubeSize(axis) else 0d)
+        val growRight = space.axes.map(axis => if ((cube.right.position(axis) - currentTuple(axis)) < epsilon) space.unitCubeSize(axis) else 0d)
+
+        if (growLeft.forall(_ == 0d) && growRight.forall(_ == 0d)) {
           kNearestWithDistance
+        } else {
+          val newCube = cube.grow(growLeft, growRight)
+          kNearestInCube(kNearestWithDistance.map(_._1), remainingPointsByBin.filterOut(newCandidateBins.filter), newCube)
         }
+
       } else {
-        val newCube = cube.grow(???, ???)
+        val newCube = cube.grow(-space.unitCubeSize, space.unitCubeSize)
 
         kNearestInCube(newCandidatePoints, remainingPointsByBin.filterOut(newCandidateBins.filter), newCube)
       }
-
-
-      //compute new cube here
     }
 
     // initialize
     val cube               = HyperCube.unit(points(currentTupleIndex))
     val kNearestCandidates = ImmutableArray.empty[ArrayIndex]
-    val (newkNearestCandidates, remainingPointsByBin) = kNearestInCube(kNearestCandidates, pointsByBin, cube)
-
-
-    ???
+    kNearestInCube(kNearestCandidates, pointsByBin, cube).map(_._1)
   }
 
 
@@ -88,5 +103,4 @@ object PointCloud {
 /**
   *  1.  watch kids
   *  2.  schools to call (Montesorri school Ghent, sisters of Heverlee, steinerschool leuven, nos enfants, ludgardis, montesorri school antwerp)
-  *  3.  Sergio: wednesday or friday
   */

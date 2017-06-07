@@ -6,7 +6,7 @@ import com.fbot.common.immutable.DoubleArrayMath._
   * Copyright (C) 5/30/2017 - REstore NV
   *
   */
-case class Tuple(data: Array[Double]) extends AnyVal {
+case class Tuple(data: Array[Double]) {
 
   def dim: Int = data.length
 

@@ -1,18 +1,20 @@
 package com.fbot.common.immutable
 
+import scala.reflect.ClassTag
+
 /**
   * Copyright (C) 6/6/2017 - REstore NV
   *
   */
 class ZippedImmutableArray2[El1, El2](array1: ImmutableArray[El1], array2: ImmutableArray[El2]) {
 
-  def map[B](f: (El1, El2) => B): ImmutableArray[B] = {
+  def map[B: ClassTag](f: (El1, El2) => B): ImmutableArray[B] = {
     val len = array1.length
     val zipped = new Array[B](len)
 
     var i = 0
     while (i < len) {
-      zipped(i) = f(array1(i), array2(i))
+      zipped(i) = f(array1(ArrayIndex(i)), array2(ArrayIndex(i)))
       i += 1
     }
 
