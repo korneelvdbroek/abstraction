@@ -13,7 +13,7 @@ trait HyperSpace {
   lazy val axes = ImmutableArray(Array.range(0, dim))
 
   def findEnclosingUnitHyperCube(point: Tuple): UnitHyperCube = {
-    val position = axes.map(axis => (point(axis) / unitCubeSize(axis)).floor)
+    val position = axes.map(axis => (point(axis) / unitCubeSize(axis)).floor * unitCubeSize(axis))
     UnitHyperCube(position.repr.toArray)
   }
 }

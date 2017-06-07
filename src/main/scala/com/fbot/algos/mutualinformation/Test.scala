@@ -25,7 +25,7 @@ object Test extends App {
   // volume total space = 2000^8 = 2^8 10^(3*8)   = 256   10^24  --> 10^6  points
   // volume unit cube   =  500^8 = 1/2^8 10^(3*8) = 1/256 10^24  --> 15.25 points
   val k = 4
-  val unitSize = 10d
+  val unitSize = 2000d
   val space = Space(8, Array(unitSize, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize))
 
 
@@ -57,7 +57,7 @@ object Test extends App {
 
   val cloud = PointCloud(data, space)
 
-  for (loop <- 0 to 20){
+  for (loop <- 0 to 1){
     val centerTupleIndex = ArrayIndex(Random.nextInt(data.length))
 
     val tBruteForce = timeIt { cloud.kNearestBruteForce(data.indexRange)(k, centerTupleIndex) }

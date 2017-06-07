@@ -56,12 +56,6 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
         kNearestCandidates ++ newCandidateBins.values.flatten
       }
 
-      println(s"cube = $cube; (${ newCandidatePoints.length})")
-      if (newCandidatePoints.length > 100) {
-        (0 to 100).foreach(i => print(s"${ points(newCandidatePoints(ArrayIndex(i))) }, "))
-        println()
-      }
-
       if (newCandidatePoints.length >= k) {
         val kNearestWithDistance = kNearestBruteForce(newCandidatePoints)(k, currentTupleIndex)
         val epsilon = kNearestWithDistance.map(_._2).last
