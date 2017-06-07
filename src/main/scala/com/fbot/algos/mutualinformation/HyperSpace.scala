@@ -1,5 +1,6 @@
 package com.fbot.algos.mutualinformation
 
+import com.fbot.common.immutable.DoubleArrayMath._
 import com.fbot.common.immutable.ImmutableArray
 
 /**
@@ -7,8 +8,10 @@ import com.fbot.common.immutable.ImmutableArray
   *
   */
 trait HyperSpace {
-  val dim: Int
+
   val unitCubeSize: Array[Double]
+
+  lazy val dim: Int = unitCubeSize.length
 
   lazy val axes = ImmutableArray(Array.range(0, dim))
 
@@ -16,7 +19,17 @@ trait HyperSpace {
     val position = axes.map(axis => (point(axis) / unitCubeSize(axis)).floor * unitCubeSize(axis))
     UnitHyperCube(position.repr.toArray)
   }
+
+  def emptyCube(tuple: Tuple): HyperCube = {
+    val unitHyperCube = findEnclosingUnitHyperCube(tuple)
+    HyperCube(unitHyperCube, unitHyperCube)
+  }
+
+  def unitCube(tuple: Tuple): HyperCube = {
+    val unitHyperCube = findEnclosingUnitHyperCube(tuple)
+    HyperCube(unitHyperCube, UnitHyperCube(unitHyperCube.position.toArray + unitCubeSize))
+  }
 }
 
-case class Space(dim: Int, unitCubeSize: Array[Double]) extends HyperSpace
+case class Space(unitCubeSize: Array[Double]) extends HyperSpace
 

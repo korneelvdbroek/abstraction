@@ -1,9 +1,8 @@
 package com.fbot.algos.mutualinformation
 
-import TupleOps._
-import com.fbot.common.immutable.{ArrayIndex, ImmutableArray, UnzippedMap}
-import com.fbot.common.immutable.BooleanArrayMath._
+import com.fbot.algos.mutualinformation.TupleOps._
 import com.fbot.common.immutable.DoubleArrayMath._
+import com.fbot.common.immutable.{ArrayIndex, ImmutableArray, UnzippedMap}
 
 import scala.annotation.tailrec
 
@@ -36,6 +35,7 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
    */
 
   lazy val binnedPoints: ImmutableArray[UnitHyperCube] = points.map(space.findEnclosingUnitHyperCube)
+
   def enclosingBin(tupleIndex: ArrayIndex): UnitHyperCube = binnedPoints(tupleIndex)
 
   val pointsByBin: UnzippedMap[UnitHyperCube, ImmutableArray[ArrayIndex]] = points.indexRange.unzippedGroupBy(enclosingBin)
@@ -49,12 +49,14 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
                        remainingPointsByBin: UnzippedMap[UnitHyperCube, ImmutableArray[ArrayIndex]],
                        cube: HyperCube): ImmutableArray[(ArrayIndex, Double)] = {
 
-      val newCandidateBins   = remainingPointsByBin.filterKeys(_ isIn cube)
+      val newCandidateBins = remainingPointsByBin.filterKeys(_ isIn cube)
       val newCandidatePoints = if (kNearestCandidates.isEmpty) {
         newCandidateBins.values.flatten.filterNot(_ == currentTupleIndex)
       } else {
         kNearestCandidates ++ newCandidateBins.values.flatten
       }
+
+      //println(f"$cube%60s: #candidates = ${kNearestCandidates.length }%3d + ${newCandidateBins.values.flatten.length }%3d")
 
       if (newCandidatePoints.length >= k) {
         val kNearestWithDistance = kNearestBruteForce(newCandidatePoints)(k, currentTupleIndex)
@@ -78,11 +80,10 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
     }
 
     // initialize
-    val cube               = HyperCube.unit(points(currentTupleIndex))
+    val cube = space.unitCube(points(currentTupleIndex))
     val kNearestCandidates = ImmutableArray.empty[ArrayIndex]
     kNearestInCube(kNearestCandidates, pointsByBin, cube).map(_._1)
   }
-
 
 
 }
@@ -92,7 +93,6 @@ object PointCloud {
   def print[T](x: Array[T]): String = x.deep.mkString("Array(", ",", ")")
 
 }
-
 
 /**
   *  1.  watch kids
