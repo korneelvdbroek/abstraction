@@ -1,8 +1,8 @@
 package com.fbot.algos.mutualinformation
 
 import com.fbot.algos.mutualinformation.TupleOps._
-import com.fbot.common.immutable.DoubleArrayMath._
-import com.fbot.common.immutable.{ArrayIndex, ImmutableArray, UnzippedMap}
+import com.fbot.common.immutable.LongArrayMath._
+import com.fbot.common.immutable.{ArrayIndex, ImmutableArray, LongArrayMath, UnzippedMap}
 
 import scala.annotation.tailrec
 
@@ -14,10 +14,10 @@ import scala.annotation.tailrec
   */
 case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
 
-  def kNearestBruteForce(pointIndices: ImmutableArray[ArrayIndex])(k: Int, currentTupleIndex: ArrayIndex): ImmutableArray[(ArrayIndex, Double)] = {
+  def kNearestBruteForce(pointIndices: ImmutableArray[ArrayIndex])(k: Int, currentTuple: Tuple): ImmutableArray[(ArrayIndex, Double)] = {
+    println(pointIndices.length)
     val otherTuplesSortedByDistance = pointIndices
-      .filterNot(_ == currentTupleIndex)
-      .map(index => (index, distance(points(index), points(currentTupleIndex))))
+      .map(index => (index, distance(points(index), currentTuple)))
       .sortBy(_._2)
 
     otherTuplesSortedByDistance.take(k)
@@ -36,9 +36,7 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
 
   lazy val binnedPoints: ImmutableArray[UnitHyperCube] = points.map(space.findEnclosingUnitHyperCube)
 
-  def enclosingBin(tupleIndex: ArrayIndex): UnitHyperCube = binnedPoints(tupleIndex)
-
-  val pointsByBin: UnzippedMap[UnitHyperCube, ImmutableArray[ArrayIndex]] = points.indexRange.unzippedGroupBy(enclosingBin)
+  lazy val pointsByBin: UnzippedMap[UnitHyperCube, ImmutableArray[ArrayIndex]] = points.indexRange.unzippedGroupBy(binnedPoints(_))
 
   def kNearest(k: Int, currentTupleIndex: ArrayIndex): ImmutableArray[ArrayIndex] = {
 
@@ -49,7 +47,11 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
                        remainingPointsByBin: UnzippedMap[UnitHyperCube, ImmutableArray[ArrayIndex]],
                        cube: HyperCube): ImmutableArray[(ArrayIndex, Double)] = {
 
-      val newCandidateBins = remainingPointsByBin.filterKeys(_ isIn cube)
+      println(s"#remainingPointsByBin = ${remainingPointsByBin.filter.length}")
+
+      val (newCandidateBins, time) = Utils.timeIt { remainingPointsByBin.filterKeys(_ isIn cube) }
+      println(s"filter cubes: ${ Utils.prettyPrintTime(time )}")
+
       val newCandidatePoints = if (kNearestCandidates.isEmpty) {
         newCandidateBins.values.flatten.filterNot(_ == currentTupleIndex)
       } else {
@@ -59,21 +61,23 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
       //println(f"$cube%60s: #candidates = ${kNearestCandidates.length }%3d + ${newCandidateBins.values.flatten.length }%3d")
 
       if (newCandidatePoints.length >= k) {
-        val kNearestWithDistance = kNearestBruteForce(newCandidatePoints)(k, currentTupleIndex)
+        val kNearestWithDistance = kNearestBruteForce(newCandidatePoints)(k, currentTuple)
         val epsilon = kNearestWithDistance.map(_._2).last
 
-        val growLeft = space.axes.map(axis => if ((currentTuple(axis) - cube.left.position(axis)) < epsilon) -space.unitCubeSize(axis) else 0d)
-        val growRight = space.axes.map(axis => if ((cube.right.position(axis) - currentTuple(axis)) < epsilon) space.unitCubeSize(axis) else 0d)
+        val growLeft = space.axes.map(axis => if ((currentTuple(axis) - cube.left.repr(axis) * space.unitCubeSize(axis)) < epsilon) -1L else 0L)
+        val growRight = space.axes.map(axis => if ((cube.right.repr(axis) * space.unitCubeSize(axis) - currentTuple(axis)) < epsilon) 1L else 0L)
 
-        if (growLeft.forall(_ == 0d) && growRight.forall(_ == 0d)) {
+        if (growLeft.forall(_ == 0L) && growRight.forall(_ == 0L)) {
+          println("done")
           kNearestWithDistance
         } else {
+          println(s"grow cube $growLeft $growRight")
           val newCube = cube.grow(growLeft, growRight)
           kNearestInCube(kNearestWithDistance.map(_._1), remainingPointsByBin.filterOut(newCandidateBins.filter), newCube)
         }
 
       } else {
-        val newCube = cube.grow(-space.unitCubeSize, space.unitCubeSize)
+        val newCube = cube.grow(-LongArrayMath.one(space.dim), LongArrayMath.one(space.dim))
 
         kNearestInCube(newCandidatePoints, remainingPointsByBin.filterOut(newCandidateBins.filter), newCube)
       }

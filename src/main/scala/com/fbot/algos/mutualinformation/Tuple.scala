@@ -1,6 +1,7 @@
 package com.fbot.algos.mutualinformation
 
 import com.fbot.common.immutable.DoubleArrayMath._
+import com.fbot.common.immutable.ImmutableArrayOps
 
 import scala.collection.mutable
 
@@ -8,14 +9,16 @@ import scala.collection.mutable
   * Copyright (C) 5/30/2017 - REstore NV
   *
   */
-case class Tuple(data: mutable.WrappedArray[Double]) extends AnyVal {
+case class Tuple(repr: mutable.WrappedArray[Double]) extends AnyVal with ImmutableArrayOps[Double, Tuple] {
 
-  def dim: Int = data.length
+  def make(x: mutable.WrappedArray[Double]): Tuple = Tuple(x)
 
-  def apply(i: Int): Double = data(i)
+  def dim: Int = repr.length
+
+  def apply(i: Int): Double = repr(i)
 
   override def toString: String = {
-    data.mkString("(", ", ", ")")
+    repr.mkString("(", ", ", ")")
   }
 
 }
@@ -24,19 +27,17 @@ object Tuple {
 
   def apply(data: Double*): Tuple = new Tuple(data.toArray)
 
-  implicit def tupleToArray(tuple: Tuple): Array[Double] = tuple.data.toArray
-
   def zero(dim: Int): Tuple = Tuple(Array.fill(dim)(0d))
 
   def one(dim: Int): Tuple = Tuple(Array.fill(dim)(1d))
 
-  def plus(a: Tuple, b: Tuple): Tuple = Tuple(a.data.toArray + b.data.toArray)
+  def plus(a: Tuple, b: Tuple): Tuple = Tuple(a.repr.toArray + b.repr.toArray)
 
-  def minus(a: Tuple, b: Tuple): Tuple = Tuple(a.data.toArray - b.data.toArray)
+  def minus(a: Tuple, b: Tuple): Tuple = Tuple(a.repr.toArray - b.repr.toArray)
 
-  def times(a: Tuple, b: Tuple): Tuple = Tuple(a.data.toArray * b.data.toArray)
+  def times(a: Tuple, b: Tuple): Tuple = Tuple(a.repr.toArray * b.repr.toArray)
 
-  def negate(a: Tuple): Tuple = Tuple(-a.data.toArray)
+  def negate(a: Tuple): Tuple = Tuple(-a.repr.toArray)
 
   class Ops(lhs: Tuple) {
     def +(rhs: Tuple): Tuple = plus(lhs, rhs)

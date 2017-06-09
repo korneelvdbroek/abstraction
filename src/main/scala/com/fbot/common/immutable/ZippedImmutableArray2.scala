@@ -9,6 +9,7 @@ import scala.reflect.ClassTag
 class ZippedImmutableArray2[El1, El2](array1: ImmutableArray[El1], array2: ImmutableArray[El2]) {
 
   def map[B: ClassTag](f: (El1, El2) => B): ImmutableArray[B] = {
+
     val len = array1.length
     val zipped = new Array[B](len)
 

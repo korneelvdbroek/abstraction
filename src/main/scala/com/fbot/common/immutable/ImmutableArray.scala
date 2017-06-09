@@ -1,26 +1,24 @@
 package com.fbot.common.immutable
 
-import scala.reflect.ClassTag
-import BooleanArrayMath._
-import ZippedImmutableArray2._
-import ArrayIndex._
-
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 /**
   * Copyright (C) 6/3/2017 - REstore NV
   *
+  * Notes:
+  * 1. is a value class (to avoid wrapping) [also gives us the hashcode() and equals() of the data type)
+  * 1. since 1 already forces us to make repr public, might as well make it a case class (and get additional methods for free)
   */
-case class ImmutableArray[T: ClassTag](repr: mutable.WrappedArray[T]) {
+trait ImmutableArrayOps[T, Self <: ImmutableArrayOps[T, Self]] extends Any {
 
-  def ++[T: ClassTag](that: ImmutableArray[T]): ImmutableArray[T] = {
-    val thisLen = this.repr.toArray.length
-    val thatLen = that.repr.toArray.length
-    val x = new Array[T](thisLen + thatLen)
-    System.arraycopy(this.repr.toArray, 0, x, 0, thisLen)
-    System.arraycopy(that.repr.toArray, 0, x, thisLen, thatLen)
-    new ImmutableArray(x)
-  }
+  def repr: mutable.WrappedArray[T]
+
+  def make(x: mutable.WrappedArray[T]): Self
+
+
+
+  def make(x: Array[T]): Self = make(mutable.WrappedArray.make[T](x))
 
   def length: Int = repr.length
 
@@ -32,32 +30,71 @@ case class ImmutableArray[T: ClassTag](repr: mutable.WrappedArray[T]) {
 
   def forall(p: (T) => Boolean): Boolean = repr.forall(p)
 
-  def map[B: ClassTag](f: (T) ⇒ B): ImmutableArray[B] = new ImmutableArray(repr.map(f))
+  def forallWithIndex(p: (T, ArrayIndex) => Boolean): Boolean = {
+    val len = length
 
-  def mapWithIndex[B: ClassTag](f: (T, ArrayIndex) ⇒ B): ImmutableArray[B] = {
+    var i = 0
+    while (i < len && p(repr(i), ArrayIndex(i))) i += 1
+    i == len
+  }
+
+  def toList: List[T] = repr.toList
+
+  def toSet: Set[T] = repr.toSet
+
+  override def toString: String = repr.mkString("[", ",\n", "]")
+
+}
+
+/**
+  * All methods which either change either
+  * - the dimension of the result, or
+  * - the type
+  *
+  * @tparam T
+  */
+trait ImmutableArrayOpsTransform[T, Self[T] <: ImmutableArrayOpsTransform[T, Self]] extends Any with ImmutableArrayOps[T, Self[T]] {
+
+  def makeTransformed[B](x: mutable.WrappedArray[B]): Self[B]
+
+  def make(x: mutable.WrappedArray[T]): Self[T] = makeTransformed(x)
+
+  def ++(that: Self[T])(implicit evidence: scala.reflect.ClassTag[T]): Self[T] = {
+    val thisLen = repr.toArray.length
+    val thatLen = that.repr.toArray.length
+
+    val x = new Array[T](thisLen + thatLen)
+    System.arraycopy(repr.toArray, 0, x, 0, thisLen)
+    System.arraycopy(that.repr.toArray, 0, x, thisLen, thatLen)
+    make(x)
+  }
+
+  def map[B: ClassTag](f: (T) ⇒ B): Self[B] = makeTransformed(repr.map(f))
+
+  def mapWithIndex[B: ClassTag](f: (T, ArrayIndex) ⇒ B): Self[B] = {
     val len = length
     val mapped = new Array[B](len)
 
     var i = 0
     while (i < len) {
-      mapped(i) = f(this(ArrayIndex(i)), ArrayIndex(i))
+      mapped(i) = f(repr(i), ArrayIndex(i))
       i += 1
     }
 
-    new ImmutableArray(mapped)
+    makeTransformed(mapped)
   }
 
-  def sortWith(lt: (T, T) ⇒ Boolean): ImmutableArray[T] = new ImmutableArray(repr.sortWith(lt))
+  def sortWith(lt: (T, T) ⇒ Boolean): Self[T] = make(repr.sortWith(lt))
 
-  def sortBy[B](f: (T) ⇒ B)(implicit ord: math.Ordering[B]): ImmutableArray[T] = new ImmutableArray(repr.sortBy(f))
+  def sortBy[B](f: (T) ⇒ B)(implicit ord: math.Ordering[B]): Self[T] = make(repr.sortBy(f))
 
-  def take(n: Int): ImmutableArray[T] = {
-    val x = new Array[T](n)
-    System.arraycopy(this.repr.toArray[T], 0, x, 0, n)
-    new ImmutableArray(x)
+  def take(k: Int)(implicit evidence: scala.reflect.ClassTag[T]): Self[T] = {
+    val x = new Array[T](k)
+    System.arraycopy(this.repr.toArray[T], 0, x, 0, k)
+    make(x)
   }
 
-  def flatten[U: ClassTag](implicit asArray: (T) ⇒ ImmutableArray[U]): ImmutableArray[U] = {
+  def flatten[U: ClassTag](implicit asArray: (T) ⇒ Self[U]): Self[U] = {
     val n = repr.map(elem => asArray(elem).length).sum
     val x = new Array[U](n)
 
@@ -68,26 +105,33 @@ case class ImmutableArray[T: ClassTag](repr: mutable.WrappedArray[T]) {
       i += array.length
     }
 
-    new ImmutableArray(x)
+    makeTransformed(x)
   }
 
-  def filter(p: (T) ⇒ Boolean): ImmutableArray[T] = new ImmutableArray(repr.filter(p))
+  def filter(p: (T) ⇒ Boolean): Self[T] = make(repr.filter(p))
 
-  def filterNot(p: (T) ⇒ Boolean): ImmutableArray[T] = new ImmutableArray(repr.filterNot(p))
+  def filterNot(p: (T) ⇒ Boolean): Self[T] = make(repr.filterNot(p))
 
-  def unzippedGroupBy[K: ClassTag](f: (T) ⇒ K): UnzippedMap[K, ImmutableArray[T]] = {
-    val unzipped = repr.groupBy(f).mapValues(new ImmutableArray(_)).unzip
-    UnzippedMap(unzipped._1, unzipped._2)
+  def groupBy[K: ClassTag](f: (T) ⇒ K): Map[K, Self[T]] = {
+    repr.groupBy(f).mapValues(make)
   }
 
-  def toList: List[T] = repr.toList
+  def unzippedGroupBy[K: ClassTag](f: (T) ⇒ K)(implicit evidence: scala.reflect.ClassTag[Self[T]]): UnzippedMap[K, Self[T]] = {
+    UnzippedMap(repr.groupBy(f).mapValues(make))
+  }
 
-  override def toString: String = repr.mkString("[", ",\n", "]")
-
-  def indexRange: ImmutableArray[ArrayIndex] = ImmutableArray(Array.range(0, repr.length).map(ArrayIndex(_)))
+  def indexRange: Self[ArrayIndex] = makeTransformed(Array.range(0, repr.length).map(ArrayIndex(_)))
 
 }
 
+
+
+
+case class ImmutableArray[T](repr: mutable.WrappedArray[T]) extends AnyVal with ImmutableArrayOpsTransform[T, ImmutableArray] {
+
+  def makeTransformed[B](x: mutable.WrappedArray[B]): ImmutableArray[B] = ImmutableArray(x)
+
+}
 
 object ImmutableArray {
 
@@ -98,50 +142,5 @@ object ImmutableArray {
   def fill[T: ClassTag](n: Int)(elem: ⇒ T): ImmutableArray[T] = ImmutableArray(Array.fill[T](n)(elem))
 
   def empty[T: ClassTag]: ImmutableArray[T] = ImmutableArray(Array.empty[T])
-}
-
-
-
-
-
-
-case class UnzippedMap[A, B: ClassTag](keyArray: ImmutableArray[A], valueArray: ImmutableArray[B], filter: ImmutableArray[Boolean]) {
-
-  def filterKeys(p: (A) ⇒ Boolean): UnzippedMap[A, B] = {
-    val updatedFilter = (keyArray, filter).map((key, flag) => if (flag) p(key) else false)
-    UnzippedMap(keyArray, valueArray, updatedFilter)
-  }
-
-  def filterOut(reject: ImmutableArray[Boolean]): UnzippedMap[A, B] = {
-    val updatedFilter = (filter, reject).map((flag, reject) => if (flag) !reject else false)
-    UnzippedMap(keyArray, valueArray, updatedFilter)
-  }
-
-  def filterOut(reject: (ArrayIndex) => Boolean): UnzippedMap[A, B] = {
-    val updatedFilter = filter.mapWithIndex((flag, index) => if (flag) !reject(index) else false)
-    UnzippedMap(keyArray, valueArray, updatedFilter)
-  }
-
-
-  def values: ImmutableArray[B] = {
-    val b = Array.newBuilder[B]
-    val len = keyArray.length
-
-    var i = 0
-    while (i < len) {
-      if (filter(ArrayIndex(i))) b += valueArray(ArrayIndex(i))
-      i += 1
-    }
-
-    new ImmutableArray(b.result)
-  }
-
-}
-
-object UnzippedMap {
-
-  def apply[A: ClassTag, B: ClassTag](keys: Iterable[A], values: Iterable[B]): UnzippedMap[A, B] = {
-    UnzippedMap(ImmutableArray(keys.toArray[A]), ImmutableArray(values.toArray[B]), ImmutableArray.fill(keys.size)(true))
-  }
 
 }

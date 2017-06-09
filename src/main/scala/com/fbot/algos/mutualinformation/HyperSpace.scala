@@ -1,7 +1,7 @@
 package com.fbot.algos.mutualinformation
 
-import com.fbot.common.immutable.DoubleArrayMath._
-import com.fbot.common.immutable.ImmutableArray
+import com.fbot.common.immutable.LongArrayMath._
+import com.fbot.common.immutable.{ImmutableArray, LongArrayMath}
 
 /**
   * Copyright (C) 6/3/2017 - REstore NV
@@ -16,8 +16,8 @@ trait HyperSpace {
   lazy val axes = ImmutableArray(Array.range(0, dim))
 
   def findEnclosingUnitHyperCube(point: Tuple): UnitHyperCube = {
-    val position = axes.map(axis => (point(axis) / unitCubeSize(axis)).floor * unitCubeSize(axis))
-    UnitHyperCube(position.repr.toArray)
+    val position = axes.map(axis => (point(axis) / unitCubeSize(axis)).floor.toLong)
+    UnitHyperCube(position.repr)
   }
 
   def emptyCube(tuple: Tuple): HyperCube = {
@@ -27,7 +27,7 @@ trait HyperSpace {
 
   def unitCube(tuple: Tuple): HyperCube = {
     val unitHyperCube = findEnclosingUnitHyperCube(tuple)
-    HyperCube(unitHyperCube, UnitHyperCube(unitHyperCube.position.toArray + unitCubeSize))
+    HyperCube(unitHyperCube, UnitHyperCube(unitHyperCube.repr.toArray + LongArrayMath.one(dim)))
   }
 }
 

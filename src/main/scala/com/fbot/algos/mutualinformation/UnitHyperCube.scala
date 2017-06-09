@@ -1,35 +1,44 @@
 package com.fbot.algos.mutualinformation
 
-import com.fbot.common.immutable.DoubleArrayMath._
-import com.fbot.common.immutable.ImmutableArray
+import com.fbot.common.immutable.LongArrayMath._
+import com.fbot.common.immutable.{ArrayIndex, ImmutableArray, ImmutableArrayOps}
 
 import scala.collection.mutable
+
 
 /**
   * Copyright (C) 6/2/2017 - REstore NV
   *
   * note: we allow Doubles since Int/Long might not be enough for the UnitHyperCube grid...
   */
-case class UnitHyperCube(position: mutable.WrappedArray[Double]) extends AnyVal {
+case class UnitHyperCube(repr: mutable.WrappedArray[Long]) extends AnyVal with ImmutableArrayOps[Long, UnitHyperCube] {
+
+  def make(x: mutable.WrappedArray[Long]): UnitHyperCube = UnitHyperCube(x)
 
   def isIn(hyperCube: HyperCube): Boolean = {
-    val axes = Array.range(0, position.length)
-    axes.forall(axis => {
-      hyperCube.left.position(axis) <= position(axis) && position(axis) < hyperCube.right.position(axis)
+//    val (result, time) = Utils.timeIt {
+//      forallWithIndex((position, axisIndex) => {
+//        hyperCube.left(axisIndex) <= position && position < hyperCube.right(axisIndex)
+//      })
+//    }
+//    println(s"isIn: ${ Utils.prettyPrintTime(time )}  $result  ")
+//    result
+    forallWithIndex((position, axisIndex) => {
+      hyperCube.left(axisIndex) <= position && position < hyperCube.right(axisIndex)
     })
   }
 
   def isNotIn(hyperCube: HyperCube): Boolean = !isIn(hyperCube)
 
   override def toString: String = {
-    position.mkString("Cube(", ",", ")")
+    repr.repr.mkString("Cube(", ",", ")")
   }
 
 }
 
 object UnitHyperCube {
 
-  def apply(position: Double*): UnitHyperCube = UnitHyperCube(position.toArray)
+  def apply(position: Long*): UnitHyperCube = UnitHyperCube(position.toArray)
 
 }
 
@@ -39,12 +48,12 @@ object UnitHyperCube {
 
 case class HyperCube(left: UnitHyperCube, right: UnitHyperCube) {
 
-  def grow(leftDirection: ImmutableArray[Double], rightDirection: ImmutableArray[Double]): HyperCube = {
-    HyperCube(UnitHyperCube(left.position.toArray + leftDirection.repr.toArray), UnitHyperCube(right.position.toArray + rightDirection.repr.toArray))
+  def grow(leftDirection: ImmutableArray[Long], rightDirection: ImmutableArray[Long]): HyperCube = {
+    HyperCube(UnitHyperCube(left.repr.toArray + leftDirection.repr.toArray), UnitHyperCube(right.repr.toArray + rightDirection.repr.toArray))
   }
 
-  def grow(leftDirection: Array[Double], rightDirection: Array[Double]): HyperCube = {
-    HyperCube(UnitHyperCube(left.position.toArray + leftDirection), UnitHyperCube(right.position.toArray + rightDirection))
+  def grow(leftDirection: Array[Long], rightDirection: Array[Long]): HyperCube = {
+    HyperCube(UnitHyperCube(left.repr.toArray + leftDirection), UnitHyperCube(right.repr.toArray + rightDirection))
   }
 
 }

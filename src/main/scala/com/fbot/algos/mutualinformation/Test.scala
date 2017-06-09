@@ -23,8 +23,8 @@ object Test extends App {
   // 0 - 1,000   of 1,000,000 = 10^6
   // volume total space = 2000^8 = 2^8 10^(3*8)   = 256   10^24  --> 10^6  points
   // volume unit cube   =  500^8 = 1/2^8 10^(3*8) = 1/256 10^24  --> 15.25 points
-  val k = 4
-  val unitSize = 1000d
+  val k = 1
+  val unitSize = 500d
   val space = Space(Array(unitSize, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize))
 
   val cloud = PointCloud(data, space)
@@ -32,22 +32,33 @@ object Test extends App {
   def checkIfEqual(centerTuple: Tuple, resultBF: ImmutableArray[(ArrayIndex, Double)], result: ImmutableArray[ArrayIndex]): Boolean = {
     val resultWithDistance = result.map(index => (index, TupleOps.distance(data(index), centerTuple)))
 
-    resultBF.repr.toArray.groupBy(_._2)
+    def cleanup(data: ImmutableArray[(ArrayIndex, Double)]): Map[Double, Set[ArrayIndex]] = {
+      val maxDistance = data.map(_._2).repr.max   // filter out biggest distance since we might have multiplicities...
+      data.groupBy(_._2).map(x => (x._1, x._2.map(_._1).toSet)).filterKeys(_ != maxDistance)
+    }
+
+    cleanup(resultBF) == cleanup(resultWithDistance)
   }
 
   for (loop <- 0 to 20){
     val centerTupleIndex = ArrayIndex(Random.nextInt(data.length))
+    val centerTuple = data(centerTupleIndex)
 
-    val (resultBruteForce, tBruteForce) = timeIt { cloud.kNearestBruteForce(data.indexRange)(k, centerTupleIndex) }
+    val (resultBruteForce, tBruteForce) = timeIt { cloud.kNearestBruteForce(data.indexRange)(k, centerTuple) }
     val (result, t) = timeIt { cloud.kNearest(k, centerTupleIndex) }
 
-    if (!checkIfEqual(data(centerTupleIndex), resultBruteForce, result)) println("ERROR")
+    if (!checkIfEqual(data(centerTupleIndex), resultBruteForce, result)) {
+      println(resultBruteForce)
+      println(result)
+      throw new RuntimeException("data from algo does not match brute force")
+    }
 
     println(f"$loop%3d: Brute Force t = ${prettyPrintTime(tBruteForce)}; t = ${prettyPrintTime(t)}")
 
   }
 
   val centerTupleIndex = ArrayIndex(Random.nextInt(data.length))
+  val centerTuple = data(centerTupleIndex)
 
 
 //  5432101234567
@@ -78,7 +89,7 @@ object Test extends App {
 //
 //  val cloud = PointCloud(data, space)
 
-  val x = cloud.kNearestBruteForce(data.indexRange)(k+1, centerTupleIndex)
+  val x = cloud.kNearestBruteForce(data.indexRange)(k+1, centerTuple)
   val y = cloud.kNearest(k, centerTupleIndex)
   println(x.map(index => (data(index._1), index._2)))
   println()
