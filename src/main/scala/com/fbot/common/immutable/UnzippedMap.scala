@@ -12,13 +12,7 @@ import scala.reflect.ClassTag
 case class UnzippedMap[A, B: ClassTag](keyArray: ImmutableArray[A], valueArray: ImmutableArray[B], filter: ImmutableArray[Boolean]) {
 
   def filterKeys(p: (A) ⇒ Boolean): UnzippedMap[A, B] = {
-    var time = 0L
-    val updatedFilter = (keyArray, filter).map((key, flag) => if (flag) {
-      val (result, t) = Utils.timeIt { p(key) }
-      time += t
-      result
-    } else false)
-    println(s"predicate: ${ Utils.prettyPrintTime(time )}")
+    val updatedFilter = (keyArray, filter).map((key, flag) => if (flag) p(key) else false)
     UnzippedMap(keyArray, valueArray, updatedFilter)
   }
 

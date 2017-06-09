@@ -23,8 +23,8 @@ object Test extends App {
   // 0 - 1,000   of 1,000,000 = 10^6
   // volume total space = 2000^8 = 2^8 10^(3*8)   = 256   10^24  --> 10^6  points
   // volume unit cube   =  500^8 = 1/2^8 10^(3*8) = 1/256 10^24  --> 15.25 points
-  val k = 1
-  val unitSize = 500d
+  val k = 20
+  val unitSize = 1000d
   val space = Space(Array(unitSize, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize))
 
   val cloud = PointCloud(data, space)
@@ -34,7 +34,7 @@ object Test extends App {
 
     def cleanup(data: ImmutableArray[(ArrayIndex, Double)]): Map[Double, Set[ArrayIndex]] = {
       val maxDistance = data.map(_._2).repr.max   // filter out biggest distance since we might have multiplicities...
-      data.groupBy(_._2).map(x => (x._1, x._2.map(_._1).toSet)).filterKeys(_ != maxDistance)
+      data.groupBy(_._2).map(x => (x._1, x._2.map(_._1).toSet)).filterKeys(distance => distance != maxDistance)
     }
 
     cleanup(resultBF) == cleanup(resultWithDistance)
@@ -44,7 +44,7 @@ object Test extends App {
     val centerTupleIndex = ArrayIndex(Random.nextInt(data.length))
     val centerTuple = data(centerTupleIndex)
 
-    val (resultBruteForce, tBruteForce) = timeIt { cloud.kNearestBruteForce(data.indexRange)(k, centerTuple) }
+    val (resultBruteForce, tBruteForce) = timeIt { cloud.kNearestBruteForce(data.indexRange.filterNot(_ == centerTupleIndex))(k, centerTuple) }
     val (result, t) = timeIt { cloud.kNearest(k, centerTupleIndex) }
 
     if (!checkIfEqual(data(centerTupleIndex), resultBruteForce, result)) {

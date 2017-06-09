@@ -1,6 +1,7 @@
 package com.fbot.common.immutable
 
 import scala.collection.mutable
+import scala.math.Ordering
 import scala.reflect.ClassTag
 
 /**
@@ -87,6 +88,32 @@ trait ImmutableArrayOpsTransform[T, Self[T] <: ImmutableArrayOpsTransform[T, Sel
   def sortWith(lt: (T, T) ⇒ Boolean): Self[T] = make(repr.sortWith(lt))
 
   def sortBy[B](f: (T) ⇒ B)(implicit ord: math.Ordering[B]): Self[T] = make(repr.sortBy(f))
+
+  def partialSort(k: Int, lt: (T, T) => Boolean): Self[T] = {
+
+    val array = repr.toArray
+    val ordering: Ordering[T] = Ordering fromLessThan lt
+    val pq: mutable.PriorityQueue[T] = new mutable.PriorityQueue[T]()(ordering)
+
+    // load up the PQ
+    var i: Int = 0
+    while (i < k && i < array.length) {
+      pq.enqueue(array(i))
+      i += 1
+    }
+
+    //
+    var j = k
+    while (j < array.length) {
+      if (ordering.compare(array(j), pq.head) > 0) {
+        pq.dequeue()
+        pq.enqueue(array(j))
+      }
+      j += 1
+    }
+
+    make(pq.dequeueAll.toArray)
+  }
 
   def take(k: Int)(implicit evidence: scala.reflect.ClassTag[T]): Self[T] = {
     val x = new Array[T](k)

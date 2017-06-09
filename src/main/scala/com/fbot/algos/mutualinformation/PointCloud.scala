@@ -49,8 +49,7 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
 
       println(s"#remainingPointsByBin = ${remainingPointsByBin.filter.length}")
 
-      val (newCandidateBins, time) = Utils.timeIt { remainingPointsByBin.filterKeys(_ isIn cube) }
-      println(s"filter cubes: ${ Utils.prettyPrintTime(time )}")
+      val newCandidateBins = remainingPointsByBin.filterKeys(_ isIn cube)  // time-expensive line
 
       val newCandidatePoints = if (kNearestCandidates.isEmpty) {
         newCandidateBins.values.flatten.filterNot(_ == currentTupleIndex)
@@ -68,10 +67,8 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
         val growRight = space.axes.map(axis => if ((cube.right.repr(axis) * space.unitCubeSize(axis) - currentTuple(axis)) < epsilon) 1L else 0L)
 
         if (growLeft.forall(_ == 0L) && growRight.forall(_ == 0L)) {
-          println("done")
           kNearestWithDistance
         } else {
-          println(s"grow cube $growLeft $growRight")
           val newCube = cube.grow(growLeft, growRight)
           kNearestInCube(kNearestWithDistance.map(_._1), remainingPointsByBin.filterOut(newCandidateBins.filter), newCube)
         }
