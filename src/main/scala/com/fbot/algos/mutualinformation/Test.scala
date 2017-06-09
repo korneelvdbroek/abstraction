@@ -11,6 +11,16 @@ import scala.util.Random
 object Test extends App {
   import Utils._
 
+  val datax = ImmutableArray(
+    Tuple(0,0),
+    Tuple(1,0), Tuple(1,1), Tuple(-1, 2), Tuple(-2,-3),
+    Tuple(5,1), Tuple(1,5), Tuple(-5,1), Tuple(1,-5),
+    Tuple(5,5), Tuple(-5,5), Tuple(-5,-5), Tuple(5,-5),
+    Tuple(6,5), Tuple(7,6))
+  println(datax.partialSort(10, _(1) < _(1)))
+
+  System.exit(0)
+
 
   val data = ImmutableArray(Array.fill[Tuple](1000000){
     def randomInt = {

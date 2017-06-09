@@ -1,38 +1,68 @@
 package com.fbot.common.immutable
 
+import scala.collection.mutable
+
 /**
   * Copyright (C) 6/3/2017 - REstore NV
   *
   */
-object DoubleArrayMath {
-  def plus(a: Array[Double], b: Array[Double]): Array[Double] = elementWise(_ + _)(a, b)
+trait DoubleImmutableArrayMath[Self <: ImmutableArrayOps[Double, Self]] extends Any with ElementWiseArrayOps[Double] {
 
-  def minus(a: Array[Double], b: Array[Double]): Array[Double] = elementWise(_ - _)(a, b)
+  def make(x: mutable.WrappedArray[Double]): Self
 
-  def times(a: Array[Double], b: Array[Double]): Array[Double] = elementWise(_ * _)(a, b)
-
-  def negate(a: Array[Double]): Array[Double] = {
-    a.map(- _)
+  def make(x: Array[Double]): Self = {
+    // avoid the match case, and go straight to Double
+    make(new mutable.WrappedArray.ofDouble(x).asInstanceOf[mutable.WrappedArray[Double]])
   }
 
-  class Ops(lhs: Array[Double]) {
-    def +(rhs: Array[Double]): Array[Double] = plus(lhs, rhs)
-    def -(rhs: Array[Double]): Array[Double] = minus(lhs, rhs)
-    def *(rhs: Array[Double]): Array[Double] = times(lhs, rhs)
-    def unary_-(): Array[Double] = negate(lhs)
+  def plus(a: ImmutableArrayOps[Double, Self], b: ImmutableArrayOps[Double, Self]): Self = {
+    val res: Array[Double] = new Array[Double](a.length)
+    make(elementWise(_ + _)(a.repr.toArray, b.repr.toArray)(res))
   }
-  implicit def mkDoubleArrayMathOps(lhs: Array[Double]): Ops = new Ops(lhs)
 
-
-  private def elementWise(f: (Double, Double) => Double)(a: Array[Double], b: Array[Double]): Array[Double] = {
-    val c: Array[Double] = new Array[Double](a.length)
-    var i: Int = 0
-    while (i < a.length) {
-      c(i) = f(a(i), b(i))
-      i += 1
-    }
-    c
+  def minus(a: ImmutableArrayOps[Double, Self], b: ImmutableArrayOps[Double, Self]): Self = {
+    val res: Array[Double] = new Array[Double](a.length)
+    make(elementWise(_ - _)(a.repr.toArray, b.repr.toArray)(res))
   }
+
+  def times(a: ImmutableArrayOps[Double, Self], b: ImmutableArrayOps[Double, Self]): Self = {
+    val res: Array[Double] = new Array[Double](a.length)
+    make(elementWise(_ * _)(a.repr.toArray, b.repr.toArray)(res))
+  }
+
+  def negate(a: ImmutableArrayOps[Double, Self]): Self = {
+    make(a.repr.toArray.map(- _))
+  }
+
+  class Ops(lhs: ImmutableArrayOps[Double, Self]) {
+    def +(rhs: ImmutableArrayOps[Double, Self]): Self = plus(lhs, rhs)
+    def -(rhs: ImmutableArrayOps[Double, Self]): Self = minus(lhs, rhs)
+    def *(rhs: ImmutableArrayOps[Double, Self]): Self = times(lhs, rhs)
+    def unary_-(): Self = negate(lhs)
+  }
+  implicit def mkDoubleArrayMathOps(lhs: ImmutableArrayOps[Double, Self]): Ops = new Ops(lhs)
 
 }
 
+
+trait ElementWiseArrayOps[@specialized T] extends Any {
+
+  /**
+    *
+    * @param f    element wise operation
+    * @param a    array with first elements
+    * @param b    array with second elements
+    * @param res  array with results
+    *             note: needs to be created outside this function, since Array[T] creating requires ClassTag which defeats specialization
+    * @return     array with results
+    */
+  protected def elementWise(f: (T, T) => T)(a: Array[T], b: Array[T])(res: Array[T]): Array[T] = {
+    var i: Int = 0
+    while (i < a.length) {
+      res(i) = f(a(i), b(i))
+      i += 1
+    }
+    res
+  }
+
+}
