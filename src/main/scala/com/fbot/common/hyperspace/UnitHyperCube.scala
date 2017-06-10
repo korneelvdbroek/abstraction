@@ -1,7 +1,7 @@
-package com.fbot.algos.mutualinformation
+package com.fbot.common.hyperspace
 
-import com.fbot.common.immutable.LongArrayMath._
-import com.fbot.common.immutable.{ArrayIndex, ImmutableArray, ImmutableArrayOps}
+import com.fbot.common.fastcollections.math.FastArrayLongMath
+import com.fbot.common.fastcollections.{FastTuple, ImmutableArray}
 
 import scala.collection.mutable
 
@@ -11,7 +11,7 @@ import scala.collection.mutable
   *
   * note: we allow Doubles since Int/Long might not be enough for the UnitHyperCube grid...
   */
-case class UnitHyperCube(repr: mutable.WrappedArray[Long]) extends AnyVal with ImmutableArrayOps[Long, UnitHyperCube] {
+case class UnitHyperCube(repr: mutable.WrappedArray[Long]) extends AnyVal with FastTuple[Long, UnitHyperCube] with FastArrayLongMath[UnitHyperCube] {
 
   def make(x: mutable.WrappedArray[Long]): UnitHyperCube = UnitHyperCube(x)
 
@@ -39,21 +39,5 @@ case class UnitHyperCube(repr: mutable.WrappedArray[Long]) extends AnyVal with I
 object UnitHyperCube {
 
   def apply(position: Long*): UnitHyperCube = UnitHyperCube(position.toArray)
-
-}
-
-
-
-
-
-case class HyperCube(left: UnitHyperCube, right: UnitHyperCube) {
-
-  def grow(leftDirection: ImmutableArray[Long], rightDirection: ImmutableArray[Long]): HyperCube = {
-    HyperCube(UnitHyperCube(left.repr.toArray + leftDirection.repr.toArray), UnitHyperCube(right.repr.toArray + rightDirection.repr.toArray))
-  }
-
-  def grow(leftDirection: Array[Long], rightDirection: Array[Long]): HyperCube = {
-    HyperCube(UnitHyperCube(left.repr.toArray + leftDirection), UnitHyperCube(right.repr.toArray + rightDirection))
-  }
 
 }

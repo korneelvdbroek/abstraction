@@ -1,10 +1,13 @@
 package com.fbot.algos.mutualinformation
 
-import com.fbot.algos.mutualinformation.TupleOps._
-import com.fbot.common.immutable.LongArrayMath._
-import com.fbot.common.immutable.{ArrayIndex, ImmutableArray, LongArrayMath, UnzippedMap}
+import com.fbot.common.hyperspace.TupleOps._
+import com.fbot.common.fastcollections.{FastMap, ImmutableArray}
+import com.fbot.common.fastcollections.index.ArrayIndex
+import com.fbot.common.fastcollections.math.FastArrayLongMath
+import com.fbot.common.hyperspace.{HyperCube, HyperSpace, Tuple, UnitHyperCube}
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 
 /**
   * Copyright (C) 5/30/2017 - REstore NV
@@ -15,12 +18,11 @@ import scala.annotation.tailrec
 case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
 
   def kNearestBruteForce(pointIndices: ImmutableArray[ArrayIndex])(k: Int, currentTuple: Tuple): ImmutableArray[(ArrayIndex, Double)] = {
-    println(pointIndices.length)
     val otherTuplesSortedByDistance = pointIndices
       .map(index => (index, distance(points(index), currentTuple)))
-      .sortBy(_._2)
+      .partialSort(k, (el1, el2) => el1._2 < el2._2)
 
-    otherTuplesSortedByDistance.take(k)
+    otherTuplesSortedByDistance
   }
 
   /*
@@ -36,7 +38,7 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
 
   lazy val binnedPoints: ImmutableArray[UnitHyperCube] = points.map(space.findEnclosingUnitHyperCube)
 
-  lazy val pointsByBin: UnzippedMap[UnitHyperCube, ImmutableArray[ArrayIndex]] = points.indexRange.unzippedGroupBy(binnedPoints(_))
+  lazy val pointsByBin: FastMap[UnitHyperCube, ImmutableArray[ArrayIndex]] = points.indexRange.unzippedGroupBy(binnedPoints(_))
 
   def kNearest(k: Int, currentTupleIndex: ArrayIndex): ImmutableArray[ArrayIndex] = {
 
@@ -44,10 +46,8 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
 
     @tailrec
     def kNearestInCube(kNearestCandidates: ImmutableArray[ArrayIndex],
-                       remainingPointsByBin: UnzippedMap[UnitHyperCube, ImmutableArray[ArrayIndex]],
+                       remainingPointsByBin: FastMap[UnitHyperCube, ImmutableArray[ArrayIndex]],
                        cube: HyperCube): ImmutableArray[(ArrayIndex, Double)] = {
-
-      println(s"#remainingPointsByBin = ${remainingPointsByBin.filter.length}")
 
       val newCandidateBins = remainingPointsByBin.filterKeys(_ isIn cube)  // time-expensive line
 
@@ -74,7 +74,7 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
         }
 
       } else {
-        val newCube = cube.grow(-LongArrayMath.one(space.dim), LongArrayMath.one(space.dim))
+        val newCube = cube.grow(Array.fill[Long](space.dim)(-1L), Array.fill[Long](space.dim)(1L))
 
         kNearestInCube(newCandidatePoints, remainingPointsByBin.filterOut(newCandidateBins.filter), newCube)
       }

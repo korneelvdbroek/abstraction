@@ -1,4 +1,4 @@
-package com.fbot.algos.mutualinformation
+package com.fbot.common.hyperspace
 
 /**
   * Copyright (C) 5/30/2017 - REstore NV

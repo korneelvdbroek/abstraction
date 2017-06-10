@@ -1,4 +1,6 @@
-package com.fbot.common.immutable
+package com.fbot.common.fastcollections
+
+import com.fbot.common.fastcollections.index.ArrayIndex
 
 import scala.collection.mutable
 import scala.math.Ordering
@@ -15,11 +17,13 @@ import scala.reflect.ClassTag
   *
   * @tparam T
   */
-trait ImmutableArrayOpsTransform[T, Self[T] <: ImmutableArrayOpsTransform[T, Self]] extends Any with ImmutableArrayOps[T, Self[T]] {
+trait FastArray[T, Self[T] <: FastArray[T, Self]] extends Any with FastTuple[T, Self[T]] {
 
   def makeTransformed[B](x: mutable.WrappedArray[B]): Self[B]
 
   def make(x: mutable.WrappedArray[T]): Self[T] = makeTransformed(x)
+
+  private def make(x: Array[T]): Self[T] = make(mutable.WrappedArray.make[T](x))
 
   def ++(that: Self[T])(implicit evidence: scala.reflect.ClassTag[T]): Self[T] = {
     val thisLen = repr.toArray.length
@@ -48,10 +52,9 @@ trait ImmutableArrayOpsTransform[T, Self[T] <: ImmutableArrayOpsTransform[T, Sel
 
   def sortWith(lt: (T, T) ⇒ Boolean): Self[T] = make(repr.sortWith(lt))
 
-  def sortBy[B](f: (T) ⇒ B)(implicit ord: math.Ordering[B]): Self[T] = make(repr.sortBy(f))
+  def sortBy[B](f: (T) ⇒ B)(implicit ord: Ordering[B]): Self[T] = make(repr.sortBy(f))
 
   def partialSort(k: Int, lt: (T, T) => Boolean)(implicit evidence: scala.reflect.ClassTag[T]): Self[T] = {
-
     val array = repr.toArray
     val ordering: Ordering[T] = Ordering fromLessThan lt
     val pq: mutable.PriorityQueue[T] = new mutable.PriorityQueue[T]()(ordering)
@@ -62,20 +65,18 @@ trait ImmutableArrayOpsTransform[T, Self[T] <: ImmutableArrayOpsTransform[T, Sel
       pq.enqueue(array(i))
       i += 1
     }
-    println(pq)
 
-    //
-    var j = k
-    while (j < array.length) {
-      println(s"${ array(j) } ${ ordering.compare(array(j), pq.head) }")
-      if (ordering.compare(array(j), pq.head) <= 0) {
+    // evaluate rest of array
+    while (i < array.length) {
+      //println(s"${ array(i) } ${ ordering.compare(array(i), pq.head) }")
+      if (ordering.compare(array(i), pq.head) <= 0) {
         pq.dequeue()
-        pq.enqueue(array(j))
+        pq.enqueue(array(i))
       }
-      j += 1
+      i += 1
     }
 
-    make(pq.dequeueAll.toArray)
+    make(pq.dequeueAll.reverse.toArray)
   }
 
   def take(k: Int)(implicit evidence: scala.reflect.ClassTag[T]): Self[T] = {
@@ -106,8 +107,8 @@ trait ImmutableArrayOpsTransform[T, Self[T] <: ImmutableArrayOpsTransform[T, Sel
     repr.groupBy(f).mapValues(make)
   }
 
-  def unzippedGroupBy[K: ClassTag](f: (T) ⇒ K)(implicit evidence: scala.reflect.ClassTag[Self[T]]): UnzippedMap[K, Self[T]] = {
-    UnzippedMap(repr.groupBy(f).mapValues(make))
+  def unzippedGroupBy[K: ClassTag](f: (T) ⇒ K)(implicit evidence: scala.reflect.ClassTag[Self[T]]): FastMap[K, Self[T]] = {
+    FastMap(repr.groupBy(f).mapValues(make))
   }
 
   def indexRange: Self[ArrayIndex] = makeTransformed(Array.range(0, repr.length).map(ArrayIndex(_)))
@@ -117,20 +118,3 @@ trait ImmutableArrayOpsTransform[T, Self[T] <: ImmutableArrayOpsTransform[T, Sel
 
 
 
-case class ImmutableArray[T](repr: mutable.WrappedArray[T]) extends AnyVal with ImmutableArrayOpsTransform[T, ImmutableArray] {
-
-  def makeTransformed[B](x: mutable.WrappedArray[B]): ImmutableArray[B] = ImmutableArray(x)
-
-}
-
-object ImmutableArray {
-
-  def apply[T: ClassTag](data: T*): ImmutableArray[T] = ImmutableArray[T](data.toArray)
-
-  def apply[T: ClassTag](data: Array[T]): ImmutableArray[T] = ImmutableArray[T](mutable.WrappedArray.make[T](data))
-
-  def fill[T: ClassTag](n: Int)(elem: ⇒ T): ImmutableArray[T] = ImmutableArray(Array.fill[T](n)(elem))
-
-  def empty[T: ClassTag]: ImmutableArray[T] = ImmutableArray(Array.empty[T])
-
-}

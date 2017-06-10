@@ -1,7 +1,7 @@
-package com.fbot.algos.mutualinformation
+package com.fbot.common.hyperspace
 
-import com.fbot.common.immutable.LongArrayMath._
-import com.fbot.common.immutable.{ImmutableArray, LongArrayMath}
+import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.math.FastArrayLongMath
 
 /**
   * Copyright (C) 6/3/2017 - REstore NV
@@ -27,7 +27,7 @@ trait HyperSpace {
 
   def unitCube(tuple: Tuple): HyperCube = {
     val unitHyperCube = findEnclosingUnitHyperCube(tuple)
-    HyperCube(unitHyperCube, UnitHyperCube(unitHyperCube.repr.toArray + LongArrayMath.one(dim)))
+    HyperCube(unitHyperCube, unitHyperCube + UnitHyperCube(Array.fill[Long](dim)(1L)))
   }
 }
 

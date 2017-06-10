@@ -1,6 +1,8 @@
 package com.fbot.algos.mutualinformation
 
-import com.fbot.common.immutable.{ArrayIndex, ImmutableArray}
+import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.index.ArrayIndex
+import com.fbot.common.hyperspace.{Space, Tuple, TupleOps}
 
 import scala.util.Random
 
@@ -10,16 +12,6 @@ import scala.util.Random
   */
 object Test extends App {
   import Utils._
-
-  val datax = ImmutableArray(
-    Tuple(0,0),
-    Tuple(1,0), Tuple(1,1), Tuple(-1, 2), Tuple(-2,-3),
-    Tuple(5,1), Tuple(1,5), Tuple(-5,1), Tuple(1,-5),
-    Tuple(5,5), Tuple(-5,5), Tuple(-5,-5), Tuple(5,-5),
-    Tuple(6,5), Tuple(7,6))
-  println(datax.partialSort(10, _(1) < _(1)))
-
-  System.exit(0)
 
 
   val data = ImmutableArray(Array.fill[Tuple](1000000){
@@ -33,7 +25,7 @@ object Test extends App {
   // 0 - 1,000   of 1,000,000 = 10^6
   // volume total space = 2000^8 = 2^8 10^(3*8)   = 256   10^24  --> 10^6  points
   // volume unit cube   =  500^8 = 1/2^8 10^(3*8) = 1/256 10^24  --> 15.25 points
-  val k = 20
+  val k = 4
   val unitSize = 1000d
   val space = Space(Array(unitSize, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize))
 

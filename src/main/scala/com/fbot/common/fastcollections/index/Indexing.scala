@@ -1,4 +1,4 @@
-package com.fbot.common.immutable
+package com.fbot.common.fastcollections.index
 
 import scala.math.Ordering
 
