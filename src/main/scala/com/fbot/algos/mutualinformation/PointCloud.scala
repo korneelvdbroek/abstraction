@@ -95,7 +95,3 @@ object PointCloud {
 
 }
 
-/**
-  *  1.  watch kids
-  *  2.  schools to call (Montesorri school Ghent, sisters of Heverlee, steinerschool leuven, nos enfants, ludgardis, montesorri school antwerp)
-  */

@@ -14,20 +14,20 @@ object Test extends App {
   import Utils._
 
 
-  val data = ImmutableArray(Array.fill[Tuple](1000000){
+  val data = ImmutableArray(Array.fill[Tuple](10000000){
     def randomInt = {
       val sign = if (Random.nextBoolean()) 1 else -1
-      sign * Random.nextInt(1000)
+      sign * Random.nextInt(100000)
     }
-    Tuple(randomInt, randomInt, randomInt, randomInt, randomInt, randomInt, randomInt, randomInt)
+    Tuple(randomInt, randomInt) //, randomInt, randomInt, randomInt, randomInt, randomInt, randomInt)
   })
 
   // 0 - 1,000   of 1,000,000 = 10^6
   // volume total space = 2000^8 = 2^8 10^(3*8)   = 256   10^24  --> 10^6  points
   // volume unit cube   =  500^8 = 1/2^8 10^(3*8) = 1/256 10^24  --> 15.25 points
-  val k = 4
-  val unitSize = 1000d
-  val space = Space(Array(unitSize, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize))
+  val k = 40
+  val unitSize = 2000d
+  val space = Space(Array(unitSize, unitSize)) //, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize))
 
   val cloud = PointCloud(data, space)
 
