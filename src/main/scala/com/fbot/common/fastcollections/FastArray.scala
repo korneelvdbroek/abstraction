@@ -7,10 +7,6 @@ import scala.math.Ordering
 import scala.reflect.ClassTag
 
 /**
-  * Copyright (C) 6/3/2017 - REstore NV
-  *
-  */
-/**
   * All methods which either change either
   * - the dimension of the result, or
   * - the type

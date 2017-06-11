@@ -1,7 +1,6 @@
 package com.fbot.common.fastcollections.math
 
 /**
-  * Copyright (C) 6/10/2017 - REstore NV
   *
   */
 trait ElementWiseFastArrayOps[@specialized T] extends Any {

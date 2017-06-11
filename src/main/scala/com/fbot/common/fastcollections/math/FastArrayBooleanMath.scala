@@ -5,7 +5,6 @@ import com.fbot.common.fastcollections.FastTuple
 import scala.collection.mutable
 
 /**
-  * Copyright (C) 6/6/2017 - REstore NV
   *
   */
 trait FastArrayBooleanMath[Self <: FastTuple[Boolean, Self]] extends Any with ElementWiseFastArrayOps[Boolean] with FastTuple[Boolean, Self] {

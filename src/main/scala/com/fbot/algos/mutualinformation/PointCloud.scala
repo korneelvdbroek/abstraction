@@ -8,10 +8,7 @@ import com.fbot.common.hyperspace.{HyperCube, HyperSpace, Tuple, UnitHyperCube}
 import scala.annotation.tailrec
 
 /**
-  * Copyright (C) 5/30/2017 - REstore NV
   *
-  *
-  * note: use classes to render data type safe, do everything else functional
   */
 case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
 
@@ -23,16 +20,6 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
     otherTuplesSortedByDistance
   }
 
-  /*
-   New algo:
-   1. OK def tuple => hyperCubeBin & store in map
-   2. OK groupBy(tuple => hyperCubeBin)
-   3. around center-point initialize with cube = UnitHyperCube
-   4. find all points .isIn(bigCube) and not already visited
-      if (number of points in hyperCube > k) find brute force k-nearest on all points
-   4. if distance from farthest of k-nearest to center-point < some edges of hyperCube (or number of points in hyperCube < k)
-      extend smallHyperCube -> bigHyperCube in direction of edges which are too close and go back to 4.
-   */
 
   lazy val binnedPoints: ImmutableArray[UnitHyperCube] = points.map(space.findEnclosingUnitHyperCube)
 
@@ -58,7 +45,7 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
 
       if (newCandidatePoints.length >= k) {
         val kNearestWithDistance = kNearestBruteForce(newCandidatePoints)(k, currentTuple)
-        val epsilon = kNearestWithDistance.map(_._2).last
+        val epsilon = kNearestWithDistance.last._2
 
         val growLeft = space.axes.map(axis => if ((currentTuple(axis) - cube.left.repr(axis) * space.unitCubeSize(axis)) < epsilon) -1L else 0L)
         val growRight = space.axes.map(axis => if ((cube.right.repr(axis) * space.unitCubeSize(axis) - currentTuple(axis)) < epsilon) 1L else 0L)
@@ -78,7 +65,7 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
     }
 
     // initialize
-    val unitCube = space.unitCube(points(currentTupleIndex))
+    val unitCube = space.unitCube(currentTuple)
     val kNearestCandidates = ImmutableArray.empty[ArrayIndex]
     kNearestInCube(kNearestCandidates, unitCube, ImmutableArray(unitCube)).map(_._1)
   }

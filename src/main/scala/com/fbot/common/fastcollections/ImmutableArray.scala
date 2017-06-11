@@ -4,7 +4,6 @@ import scala.collection.mutable
 import scala.reflect.ClassTag
 
 /**
-  * Copyright (C) 6/10/2017 - REstore NV
   *
   */
 case class ImmutableArray[T](repr: mutable.WrappedArray[T]) extends AnyVal with FastArray[T, ImmutableArray] {

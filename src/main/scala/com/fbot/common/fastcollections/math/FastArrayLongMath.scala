@@ -5,7 +5,6 @@ import com.fbot.common.fastcollections.{FastTuple, ImmutableArray}
 import scala.collection.mutable
 
 /**
-  * Copyright (C) 6/8/2017 - REstore NV
   *
   */
 trait FastArrayLongMath[Self <: FastTuple[Long, Self]] extends Any with ElementWiseFastArrayOps[Long] with FastTuple[Long, Self] {

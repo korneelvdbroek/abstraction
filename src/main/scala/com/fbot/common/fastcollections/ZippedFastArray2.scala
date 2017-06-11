@@ -5,7 +5,6 @@ import com.fbot.common.fastcollections.index.ArrayIndex
 import scala.reflect.ClassTag
 
 /**
-  * Copyright (C) 6/6/2017 - REstore NV
   *
   */
 class ZippedFastArray2[El1, El2](array1: ImmutableArray[El1], array2: ImmutableArray[El2]) {

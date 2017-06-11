@@ -5,8 +5,6 @@ import com.fbot.common.fastcollections.index.ArrayIndex
 import scala.collection.mutable
 
 /**
-  * Copyright (C) 6/9/2017 - REstore NV
-  *
   * Notes:
   * 0. this trait is written to extend a value class (hence it extends from Any)
   * 1. value class avoids time consuming boxing of the Array and also gives us a good equals() and hashcode() from WrappedArray

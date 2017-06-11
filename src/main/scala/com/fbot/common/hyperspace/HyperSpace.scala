@@ -3,7 +3,6 @@ package com.fbot.common.hyperspace
 import com.fbot.common.fastcollections.ImmutableArray
 
 /**
-  * Copyright (C) 6/3/2017 - REstore NV
   *
   */
 trait HyperSpace {

@@ -3,7 +3,6 @@ package com.fbot.common.fastcollections.index
 import scala.math.Ordering
 
 /**
-  * Copyright (C) 5/31/2017 - REstore NV
   *
   * ArrayIndex is a value class to make ImmutableArray indexing type safe
   */

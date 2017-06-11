@@ -7,7 +7,6 @@ import scala.collection.mutable
 
 
 /**
-  * Copyright (C) 6/2/2017 - REstore NV
   *
   * note: we allow Doubles since Int/Long might not be enough for the UnitHyperCube grid...
   */

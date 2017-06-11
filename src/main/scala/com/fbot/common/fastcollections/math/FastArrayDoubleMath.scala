@@ -5,7 +5,6 @@ import com.fbot.common.fastcollections.FastTuple
 import scala.collection.mutable
 
 /**
-  * Copyright (C) 6/3/2017 - REstore NV
   *
   */
 trait FastArrayDoubleMath[Self <: FastTuple[Double, Self]] extends Any with ElementWiseFastArrayOps[Double] with FastTuple[Double, Self] {

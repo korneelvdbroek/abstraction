@@ -7,7 +7,6 @@ import com.fbot.common.hyperspace._
 import scala.util.Random
 
 /**
-  * Copyright (C) 5/29/2017 - REstore NV
   *
   */
 object Test extends App {

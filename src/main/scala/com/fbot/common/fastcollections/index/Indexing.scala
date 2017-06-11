@@ -3,7 +3,6 @@ package com.fbot.common.fastcollections.index
 import scala.math.Ordering
 
 /**
-  * Copyright (C) 6/3/2017 - REstore NV
   *
   */
 

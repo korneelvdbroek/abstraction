@@ -6,7 +6,6 @@ import com.fbot.common.fastcollections.math.FastArrayDoubleMath
 import scala.collection.mutable
 
 /**
-  * Copyright (C) 5/30/2017 - REstore NV
   *
   */
 case class Tuple(repr: mutable.WrappedArray[Double]) extends AnyVal with FastTuple[Double, Tuple] with FastArrayDoubleMath[Tuple] {

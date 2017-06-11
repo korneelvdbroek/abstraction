@@ -1,12 +1,9 @@
 package com.fbot.common.hyperspace
 
 import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.ZippedFastArray2._
 import com.fbot.common.fastcollections.index.ArrayIndex
-import com.fbot.common.fastcollections.math.ArrayLongMath._
 
 /**
-  * Copyright (C) 6/10/2017 - REstore NV
   *
   */
 case class HyperCube(left: UnitHyperCube, right: UnitHyperCube) {
@@ -15,7 +12,9 @@ case class HyperCube(left: UnitHyperCube, right: UnitHyperCube) {
     def cartesianProduct(xs: Traversable[Traversable[Long]]): Seq[UnitHyperCube] = {
       xs.foldLeft(Seq(Seq.empty[Long]))((x, y) => {
         for (a <- x.view; b <- y)
-          yield a :+ b
+          yield {
+            a :+ b
+          }
       }).map(unitHyperCubeLocation => UnitHyperCube(unitHyperCubeLocation.toArray))
     }
 
