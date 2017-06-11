@@ -15,13 +15,6 @@ case class UnitHyperCube(repr: mutable.WrappedArray[Long]) extends AnyVal with F
   def make(x: mutable.WrappedArray[Long]): UnitHyperCube = UnitHyperCube(x)
 
   def isIn(hyperCube: HyperCube): Boolean = {
-//    val (result, time) = Utils.timeIt {
-//      forallWithIndex((position, axisIndex) => {
-//        hyperCube.left(axisIndex) <= position && position < hyperCube.right(axisIndex)
-//      })
-//    }
-//    println(s"isIn: ${ Utils.prettyPrintTime(time )}  $result  ")
-//    result
     forallWithIndex((position, axisIndex) => {
       hyperCube.left(axisIndex) <= position && position < hyperCube.right(axisIndex)
     })

@@ -12,11 +12,6 @@ import scala.util.Random
 object Test extends App {
   import Utils._
 
-//  val theCube = HyperCube(UnitHyperCube(0,0,0), UnitHyperCube(5,5,5))
-//  println(theCube.grow(Array(0L,-1L,-1L), Array(1L,0L,1L)))
-//
-//  System.exit(0)
-
   val data = ImmutableArray(Array.fill[Tuple](1000000){
     def randomInt = {
       val sign = if (Random.nextBoolean()) 1 else -1
@@ -29,7 +24,7 @@ object Test extends App {
   // volume total space = 2000^8 = 2^8 10^(3*8)   = 256   10^24  --> 10^6  points
   // volume unit cube   =  500^8 = 1/2^8 10^(3*8) = 1/256 10^24  --> 15.25 points
   val k = 4
-  val unitSize = 1000d
+  val unitSize = 500d
   val space = Space(Array(unitSize, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize, unitSize))
 
   val cloud = PointCloud(data, space)
@@ -49,17 +44,16 @@ object Test extends App {
     val centerTupleIndex = ArrayIndex(Random.nextInt(data.length))
     val centerTuple = data(centerTupleIndex)
 
-    //val (resultBruteForce, tBruteForce) = timeIt { cloud.kNearestBruteForce(data.indexRange.filterNot(_ == centerTupleIndex))(k, centerTuple) }
+    val (resultBruteForce, tBruteForce) = timeIt { cloud.kNearestBruteForce(data.indexRange.filterNot(_ == centerTupleIndex))(k, centerTuple) }
     val (result, t) = timeIt { cloud.kNearest(k, centerTupleIndex) }
 
-//    if (!checkIfEqual(data(centerTupleIndex), resultBruteForce, result)) {
-//      println(resultBruteForce)
-//      println(result)
-//      throw new RuntimeException("data from algo does not match brute force")
-//    }
-//
-//    println(f"$loop%3d: Brute Force t = ${prettyPrintTime(tBruteForce)}; t = ${prettyPrintTime(t)}")
-    println(f"$loop%3d: t = ${prettyPrintTime(t)}")
+    if (!checkIfEqual(data(centerTupleIndex), resultBruteForce, result)) {
+      println(resultBruteForce)
+      println(result)
+      throw new RuntimeException("data from algo does not match brute force")
+    }
+
+    println(f"$loop%3d: Brute Force t = ${prettyPrintTime(tBruteForce)}; t = ${prettyPrintTime(t)}")
 
   }
 

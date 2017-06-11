@@ -31,14 +31,14 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
 
     @tailrec
     def kNearestInCube(kNearestCandidates: ImmutableArray[ArrayIndex],
-                       cube: HyperCube, newUnitCubes: ImmutableArray[UnitHyperCube]): ImmutableArray[(ArrayIndex, Double)] = {
+                       cube: HyperCube, cubeSideUnitCubes: ImmutableArray[UnitHyperCube]): ImmutableArray[(ArrayIndex, Double)] = {
 
-      val newPointsInNewBins = newUnitCubes.map(pointsByBin.getOrElse(_, ImmutableArray.empty[ArrayIndex])).flatten
+      val pointsInNewUnitCubes = cubeSideUnitCubes.map(pointsByBin.getOrElse(_, ImmutableArray.empty[ArrayIndex])).flatten
 
       val newCandidatePoints = if (kNearestCandidates.isEmpty) {
-        newPointsInNewBins.filterNot(_ == currentTupleIndex)
+        pointsInNewUnitCubes.filterNot(_ == currentTupleIndex)
       } else {
-        kNearestCandidates ++ newPointsInNewBins
+        kNearestCandidates ++ pointsInNewUnitCubes
       }
 
       //println(f"$cube%60s: #candidates = ${kNearestCandidates.length }%3d + ${newCandidateBins.values.flatten.length }%3d")
@@ -47,6 +47,8 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
         val kNearestWithDistance = kNearestBruteForce(newCandidatePoints)(k, currentTuple)
         val epsilon = kNearestWithDistance.last._2
 
+        // make a .distanceToSide(tuple, axis) = (left, right)
+        // and .growCubeSidesToIncludeDistance(epsilon) = (leftDirection, rightDirection) in HyperCube
         val growLeft = space.axes.map(axis => if ((currentTuple(axis) - cube.left.repr(axis) * space.unitCubeSize(axis)) < epsilon) -1L else 0L)
         val growRight = space.axes.map(axis => if ((cube.right.repr(axis) * space.unitCubeSize(axis) - currentTuple(axis)) < epsilon) 1L else 0L)
 
@@ -70,6 +72,15 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
     kNearestInCube(kNearestCandidates, unitCube, ImmutableArray(unitCube)).map(_._1)
   }
 
+  def numberOfPointsWithin(distance: Double, currentTupleIndex: ArrayIndex): Long = {
+    /**
+      * 0. get cube of currentTupleIndex
+      * 1. check distance to each side [make this part of HyperCube class]
+      * 2. grow the cube accordingly, repeat 1 & 2 until cube grows no more   [no need for unitHyperCubes, so split it off]
+      * 3. get all points of the found unit cubes (via pointsByBin), and .count(predicate)
+      */
+    ???
+  }
 
 }
 
