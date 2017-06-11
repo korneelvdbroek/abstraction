@@ -1,7 +1,6 @@
 package com.fbot.common.hyperspace
 
 import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.math.FastArrayLongMath
 
 /**
   * Copyright (C) 6/3/2017 - REstore NV
@@ -25,10 +24,10 @@ trait HyperSpace {
     HyperCube(unitHyperCube, unitHyperCube)
   }
 
-  def unitCube(tuple: Tuple): HyperCube = {
-    val unitHyperCube = findEnclosingUnitHyperCube(tuple)
-    HyperCube(unitHyperCube, unitHyperCube + UnitHyperCube(Array.fill[Long](dim)(1L)))
+  def unitCube(tuple: Tuple): UnitHyperCube = {
+    findEnclosingUnitHyperCube(tuple)
   }
+
 }
 
 case class Space(unitCubeSize: Array[Double]) extends HyperSpace

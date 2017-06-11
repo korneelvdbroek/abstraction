@@ -38,3 +38,26 @@ trait FastArrayLongMath[Self <: FastTuple[Long, Self]] extends Any with ElementW
   }
 
 }
+
+object ArrayLongMath extends ElementWiseFastArrayOps[Long] {
+
+  def plus(lhs: ImmutableArray[Long], rhs: ImmutableArray[Long]): ImmutableArray[Long] = {
+    val res: Array[Long] = new Array[Long](lhs.length)
+    ImmutableArray(elementWise(_ + _)(lhs.toArray, rhs.toArray)(res))
+  }
+
+  def minus(lhs: ImmutableArray[Long], rhs: ImmutableArray[Long]): ImmutableArray[Long] = {
+    val res: Array[Long] = new Array[Long](lhs.length)
+    ImmutableArray(elementWise(_ - _)(lhs.toArray, rhs.toArray)(res))
+  }
+
+  def times(lhs: ImmutableArray[Long], rhs: ImmutableArray[Long]): ImmutableArray[Long] = {
+    val res: Array[Long] = new Array[Long](lhs.length)
+    ImmutableArray(elementWise(_ * _)(lhs.toArray, rhs.toArray)(res))
+  }
+
+  def negate(lhs: ImmutableArray[Long]): ImmutableArray[Long] = {
+    lhs.map(-_)
+  }
+
+}

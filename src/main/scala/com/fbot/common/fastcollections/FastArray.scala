@@ -107,10 +107,6 @@ trait FastArray[T, Self[T] <: FastArray[T, Self]] extends Any with FastTuple[T, 
     repr.groupBy(f).mapValues(make)
   }
 
-  def unzippedGroupBy[K: ClassTag](f: (T) ⇒ K)(implicit evidence: scala.reflect.ClassTag[Self[T]]): FastMap[K, Self[T]] = {
-    FastMap(repr.groupBy(f).mapValues(make))
-  }
-
   def indexRange: Self[ArrayIndex] = makeTransformed(Array.range(0, repr.length).map(ArrayIndex(_)))
 
 }

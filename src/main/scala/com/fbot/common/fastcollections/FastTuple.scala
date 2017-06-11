@@ -30,6 +30,8 @@ trait FastTuple[T, Self <: FastTuple[T, Self]] extends Any {
 
   def last: T = repr(length - 1)
 
+  def foldLeft[B](z: B)(op: (B, T) => B): B = repr.foldLeft(z)(op)
+
   def forall(p: (T) => Boolean): Boolean = repr.forall(p)
 
   def forallWithIndex(p: (T, ArrayIndex) => Boolean): Boolean = {
