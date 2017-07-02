@@ -30,7 +30,7 @@ object Test extends App {
   val cloud = PointCloud(data, space)
 
   def checkIfEqual(centerTuple: Tuple, resultBF: ImmutableArray[(ArrayIndex, Double)], result: ImmutableArray[ArrayIndex]): Boolean = {
-    val resultWithDistance = result.map(index => (index, TupleOps.distance(data(index), centerTuple)))
+    val resultWithDistance = result.map(index => (index, space.distance(data(index), centerTuple)))
 
     def cleanup(data: ImmutableArray[(ArrayIndex, Double)]): Map[Double, Set[ArrayIndex]] = {
       val maxDistance = data.map(_._2).repr.max   // filter out biggest distance since we might have multiplicities...

@@ -18,7 +18,7 @@ trait FastTuple[T, Self <: FastTuple[T, Self]] extends Any {
 
 
 
-  private def make(x: Array[T]): Self = make(mutable.WrappedArray.make[T](x))
+  def makeFromArray(x: Array[T]): Self = make(mutable.WrappedArray.make[T](x))
 
   def length: Int = repr.length
 

@@ -19,7 +19,7 @@ trait FastArray[T, Self[T] <: FastArray[T, Self]] extends Any with FastTuple[T, 
 
   def make(x: mutable.WrappedArray[T]): Self[T] = makeTransformed(x)
 
-  private def make(x: Array[T]): Self[T] = make(mutable.WrappedArray.make[T](x))
+//  private def make(x: Array[T]): Self[T] = make(mutable.WrappedArray.make[T](x))
 
   def ++(that: Self[T])(implicit evidence: scala.reflect.ClassTag[T]): Self[T] = {
     val thisLen = repr.toArray.length
@@ -72,7 +72,7 @@ trait FastArray[T, Self[T] <: FastArray[T, Self]] extends Any with FastTuple[T, 
       i += 1
     }
 
-    make(pq.dequeueAll.reverse.toArray)
+    makeFromArray(pq.dequeueAll.reverse.toArray)
   }
 
   def take(k: Int)(implicit evidence: scala.reflect.ClassTag[T]): Self[T] = {

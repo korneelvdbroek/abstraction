@@ -6,23 +6,25 @@ import com.fbot.common.fastcollections.index.ArrayIndex
 /**
   *
   */
-case class HyperCube(left: UnitHyperCube, right: UnitHyperCube) {
+case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
 
-  def grow(leftDirection: ImmutableArray[Long], rightDirection: ImmutableArray[Long]): (HyperCube, ImmutableArray[UnitHyperCube]) = {
-    def cartesianProduct(xs: Traversable[Traversable[Long]]): Seq[UnitHyperCube] = {
+  def dim: Int = left.dim
+
+  def grow(leftDirection: ImmutableArray[Long], rightDirection: ImmutableArray[Long]): (HyperCube, ImmutableArray[HyperSpaceUnit]) = {
+    def cartesianProduct(xs: Traversable[Traversable[Long]]): Seq[HyperSpaceUnit] = {
       xs.foldLeft(Seq(Seq.empty[Long]))((x, y) => {
         for (a <- x.view; b <- y)
           yield {
             a :+ b
           }
-      }).map(unitHyperCubeLocation => UnitHyperCube(unitHyperCubeLocation.toArray))
+      }).map(unitHyperCubeLocation => HyperSpaceUnit(unitHyperCubeLocation.toArray))
     }
 
-    def newUnitHyperCubes: ImmutableArray[UnitHyperCube] = {
-      val newUnitHyperCubes = Array.range(0, left.length).flatMap(axisPosition => {
+    val newHyperSpaceCubes: ImmutableArray[HyperSpaceUnit] = {
+      val newUnitHyperCubes = Array.range(0, dim).flatMap(axisPosition => {
         val i = ArrayIndex(axisPosition)
 
-        val positionRange = Array.range(0, left.length).map(axis => {
+        val positionRange: Array[IndexedSeq[Long]] = Array.range(0, dim).map(axis => {
           val j = ArrayIndex(axis)
 
           if (j < i) {
@@ -40,21 +42,44 @@ case class HyperCube(left: UnitHyperCube, right: UnitHyperCube) {
       ImmutableArray(newUnitHyperCubes)
     }
 
-    val newHyperCube = HyperCube(left + UnitHyperCube(leftDirection.repr), right + UnitHyperCube(rightDirection.repr))
+    val newHyperCube = HyperCube(left + HyperSpaceUnit(leftDirection.repr), right + HyperSpaceUnit(rightDirection.repr))
 
-    (newHyperCube, newUnitHyperCubes)
+    (newHyperCube, newHyperSpaceCubes)
   }
 
-  def grow(leftDirection: Array[Long], rightDirection: Array[Long]): (HyperCube, ImmutableArray[UnitHyperCube]) = {
+  def contains(unitHyperSpace: HyperSpaceUnit): Boolean = {
+    unitHyperSpace.forallWithIndex((position, axis) => {
+      left(axis) <= position && position < right(axis)
+    })
+  }
+
+  def grow(leftDirection: Array[Long], rightDirection: Array[Long]): (HyperCube, ImmutableArray[HyperSpaceUnit]) = {
     grow(ImmutableArray(leftDirection), ImmutableArray(rightDirection))
+  }
+
+  def growCubeSidesToIncludeDistanceAround(epsilon: Double, point: Tuple, distance: HyperCube => Int => (Double, Double)): (HyperCube, ImmutableArray[HyperSpaceUnit]) = {
+    Array.range(0, dim).map(axis => {
+      val (l, r) = distance(this)(axis)
+      if
+    })
+
+    val growLeft = space.axes.map(axis => if  ((point(axis) - cube.left.repr(axis) * space.unitCubeSize(axis)) < epsilon) -1L else 0L)
+    val growRight = space.axes.map(axis => if ((cube.right.repr(axis) * space.unitCubeSize(axis) - point(axis)) < epsilon) 1L else 0L)
+
+    if (growLeft.forall(_ == 0L) && growRight.forall(_ == 0L)) {
+      kNearestWithDistance
+    } else {
+      val (newCube, newUnitCubes) = cube.grow(growLeft, growRight)
+    }
+    ???
   }
 
 }
 
 object HyperCube {
 
-  implicit def fromUnitHyperCube(unitHyperCube: UnitHyperCube): HyperCube = {
-    HyperCube(unitHyperCube, unitHyperCube + UnitHyperCube(Array.fill[Long](unitHyperCube.length)(1L)))
+  def from(hyperSpaceUnit: HyperSpaceUnit): HyperCube = {
+    HyperCube(hyperSpaceUnit, hyperSpaceUnit + HyperSpaceUnit.unit(hyperSpaceUnit.length))
   }
 
 }
