@@ -11,34 +11,15 @@ import scala.reflect.ClassTag
   * 1. value class avoids time consuming boxing of the Array and also gives us a good equals() and hashcode() from WrappedArray
   * 2. since 1 already forces us to make repr public, might as well make it a case class (and get additional methods for free)
   */
-trait FastTuple[T, Self[T] <: FastTuple[T, Self]] extends Any {
+trait FastTuple[T, Self <: FastTuple[T, Self]] extends Any {
 
   def repr: mutable.WrappedArray[T]
 
-  def makeTransformed[B](x: mutable.WrappedArray[B]): Self[B]
-
-  def make(x: mutable.WrappedArray[T]): Self[T] = makeTransformed(x)
+  def make(x: mutable.WrappedArray[T]): Self
 
 
 
-  def makeFromArray(x: Array[T]): Self[T] = make(mutable.WrappedArray.make[T](x))
-
-  def map[B: ClassTag](f: (T) ⇒ B): Self[B] = makeTransformed(repr.map(f))
-
-  def mapWithIndex[B: ClassTag](f: (T, ArrayIndex) ⇒ B): Self[B] = {
-    val len = length
-    val mapped = new Array[B](len)
-
-    var i = 0
-    while (i < len) {
-      mapped(i) = f(repr(i), ArrayIndex(i))
-      i += 1
-    }
-
-    makeTransformed(mapped)
-  }
-
-  def flatMap[B: ClassTag](f: T => GenTraversableOnce[B]): Self[B] = makeTransformed(repr.flatMap(f))
+  def makeFromArray(x: Array[T]): Self = make(mutable.WrappedArray.make[T](x))
 
   def length: Int = repr.length
 

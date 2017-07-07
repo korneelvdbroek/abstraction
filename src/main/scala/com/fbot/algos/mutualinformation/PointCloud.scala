@@ -24,9 +24,9 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
 
   lazy val pointsByBin: Map[HyperSpaceUnit, ImmutableArray[ArrayIndex]] = points.indexRange.groupBy(binnedPoints(_))
 
-  def kNearest(k: Int, currentTupleIndex: ArrayIndex): ImmutableArray[ArrayIndex] = {
+  def kNearest(k: Int, centerTupleIndex: ArrayIndex): ImmutableArray[ArrayIndex] = {
 
-    val currentTuple = points(currentTupleIndex)
+    val centerTuple = points(centerTupleIndex)
 
     @tailrec
     def kNearestInCube(kNearestCandidates: ImmutableArray[ArrayIndex],
@@ -35,7 +35,7 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
       val pointsInNewUnitCubes = cubeSideUnitCubes.map(pointsByBin.getOrElse(_, ImmutableArray.empty[ArrayIndex])).flatten
 
       val newCandidatePoints = if (kNearestCandidates.isEmpty) {
-        pointsInNewUnitCubes.filterNot(_ == currentTupleIndex)
+        pointsInNewUnitCubes.filterNot(_ == centerTupleIndex)
       } else {
         kNearestCandidates ++ pointsInNewUnitCubes
       }
@@ -43,33 +43,29 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
       //println(f"$cube%60s: #candidates = ${kNearestCandidates.length }%3d + ${newCandidateBins.values.flatten.length }%3d")
 
       if (newCandidatePoints.length >= k) {
-        val kNearestWithDistance = kNearestBruteForce(newCandidatePoints)(k, currentTuple)
+        val kNearestWithDistance = kNearestBruteForce(newCandidatePoints)(k, centerTuple)
         val epsilon = kNearestWithDistance.last._2
 
 
-        val (a, b) = cube.growCubeSidesToIncludeDistanceAround(epsilon, currentTuple, space.distanceToHyperPlanes)
+        val newCube = cube.growCubeSidesToIncludeDistanceAround(epsilon, centerTuple, space.unitCubeSize, space.distanceToHyperPlanes)
+        val newHyperSpaceUnits = newCube.minus(cube)
 
-        // make a .distanceToSide(tuple, axis) = (left, right)
-        // and .growCubeSidesToIncludeDistance(epsilon) = (leftDirection, rightDirection) in HyperCube
-        val growLeft = space.axes.map(axis => if ((currentTuple(axis) - cube.left.repr(axis) * space.unitCubeSize(axis)) < epsilon) -1L else 0L)
-        val growRight = space.axes.map(axis => if ((cube.right.repr(axis) * space.unitCubeSize(axis) - currentTuple(axis)) < epsilon) 1L else 0L)
-
-        if (growLeft.forall(_ == 0L) && growRight.forall(_ == 0L)) {
+        if (newHyperSpaceUnits.isEmpty) {
           kNearestWithDistance
         } else {
-          val (newCube, newUnitCubes) = cube.grow(growLeft, growRight)
-          kNearestInCube(kNearestWithDistance.map(_._1), newCube, newUnitCubes)
+          kNearestInCube(kNearestWithDistance.map(_._1), newCube, newHyperSpaceUnits)
         }
 
       } else {
-        val (newCube, newUnitCubes) = cube.grow(ImmutableArray.fill[Long](space.dim)(-1L), ImmutableArray.fill[Long](space.dim)(1L))
+        val newCube = cube.grow(ImmutableArray.fill[Long](space.dim)(-1L), ImmutableArray.fill[Long](space.dim)(1L))
+        val newHyperSpaceUnits = newCube.minus(cube)
 
-        kNearestInCube(newCandidatePoints, newCube, newUnitCubes)
+        kNearestInCube(newCandidatePoints, newCube, newHyperSpaceUnits)
       }
     }
 
     // initialize
-    val spaceUnitAroundTuple = space.hyperSpaceUnitAround(currentTuple)
+    val spaceUnitAroundTuple = space.hyperSpaceUnitAround(centerTuple)
     val kNearestCandidates = ImmutableArray.empty[ArrayIndex]
     kNearestInCube(kNearestCandidates, HyperCube.from(spaceUnitAroundTuple), ImmutableArray(spaceUnitAroundTuple)).map(_._1)
   }

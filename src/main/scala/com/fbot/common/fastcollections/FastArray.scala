@@ -17,6 +17,8 @@ trait FastArray[T, Self[T] <: FastArray[T, Self]] extends Any with FastTuple[T, 
 
   def makeTransformed[B](x: mutable.WrappedArray[B]): Self[B]
 
+  def make(x: mutable.WrappedArray[T]): Self[T] = makeTransformed(x)
+
 //  private def make(x: Array[T]): Self[T] = make(mutable.WrappedArray.make[T](x))
 
   def ++(that: Self[T])(implicit evidence: scala.reflect.ClassTag[T]): Self[T] = {
@@ -28,6 +30,23 @@ trait FastArray[T, Self[T] <: FastArray[T, Self]] extends Any with FastTuple[T, 
     System.arraycopy(that.repr.toArray, 0, x, thisLen, thatLen)
     make(x)
   }
+
+  def map[B: ClassTag](f: (T) ⇒ B): Self[B] = makeTransformed(repr.map(f))
+
+  def mapWithIndex[B: ClassTag](f: (T, ArrayIndex) ⇒ B): Self[B] = {
+    val len = length
+    val mapped = new Array[B](len)
+
+    var i = 0
+    while (i < len) {
+      mapped(i) = f(repr(i), ArrayIndex(i))
+      i += 1
+    }
+
+    makeTransformed(mapped)
+  }
+
+  def flatMap[B: ClassTag](f: T => GenTraversableOnce[B]): Self[B] = makeTransformed(repr.flatMap(f))
 
   def sortWith(lt: (T, T) ⇒ Boolean): Self[T] = make(repr.sortWith(lt))
 

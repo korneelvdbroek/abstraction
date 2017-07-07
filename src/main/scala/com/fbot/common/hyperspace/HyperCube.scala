@@ -14,31 +14,43 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
     HyperCube(left + HyperSpaceUnit(leftDirection.repr), right + HyperSpaceUnit(rightDirection.repr))
   }
 
+  def growCubeSidesToIncludeDistanceAround(epsilon: Double, point: Tuple,
+                                           unitCubeSize: Array[Double], distance: (Tuple, HyperCube) => Int => (Double, Double)): HyperCube = {
+    val unitsToGrow = ImmutableArray.range(0, dim).map(axis => {
+      val (l, r) = distance(point, this)(axis)
+      (if (l < epsilon) -((epsilon - l) / unitCubeSize(axis)).floor.toLong - 1L else 0L,
+       if (r < epsilon)  ((epsilon - r) / unitCubeSize(axis)).floor.toLong + 1L else 0L)
+    })
+    grow(unitsToGrow.map(_._1), unitsToGrow.map(_._2))
+  }
+
+
   def minus(innerCube: HyperCube): ImmutableArray[HyperSpaceUnit] = {
-    def cartesianProduct(xs: Traversable[Traversable[Long]]): Seq[HyperSpaceUnit] = {
+    def cartesianProduct(xs: ImmutableArray[IndexedSeq[Long]]): Seq[HyperSpaceUnit] = {
       xs.foldLeft(Seq(Seq.empty[Long]))((x, y) => {
         for (a <- x.view; b <- y)
           yield a :+ b
       }).map(unitHyperCubeLocation => HyperSpaceUnit(unitHyperCubeLocation.toArray))
     }
 
-    val leftDirection = innerCube.left - left
-    val rightDirection = right - innerCube.right
-
     ImmutableArray.indexRange(ArrayIndex(0), ArrayIndex(dim)).flatMap(axisToGrow => {
 
-      val positionRange: ImmutableArray[IndexedSeq[Long]] = ImmutableArray.indexRange(ArrayIndex(0), ArrayIndex(dim)).map(axis => {
+      if (left(axisToGrow) != innerCube.left(axisToGrow) || innerCube.right(axisToGrow) != right(axisToGrow)) {
+        val rangesTuple: ImmutableArray[IndexedSeq[Long]] = ImmutableArray.indexRange(ArrayIndex(0), ArrayIndex(dim)).map(axis => {
+          if (axis < axisToGrow) {
+            left(axis) until right(axis)
+          } else if (axisToGrow == axis) {
+            (left(axisToGrow) until innerCube.left(axisToGrow)) ++ (innerCube.right(axisToGrow) until right(axisToGrow))
+          } else {
+            innerCube.left(axis) until innerCube.right(axis)
+          }
+        })
 
-        if (axis < axisToGrow) {
-          left(axis) + leftDirection(axis) until right(axis) + rightDirection(axis)
-        } else if (axisToGrow == axis) {
-          ((left(axis) + leftDirection(axis)) until left(axis)) ++ (right(axisToGrow) until (right(axis) + rightDirection(axis)))
-        } else {
-          left(axis) until right(axis)
-        }
-      })
+        cartesianProduct(rangesTuple)
+      } else {
 
-      cartesianProduct(positionRange)
+        Seq.empty[HyperSpaceUnit]
+      }
     })
 
   }
@@ -47,19 +59,6 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
     unitHyperSpace.forallWithIndex((position, axis) => {
       left(axis) <= position && position < right(axis)
     })
-  }
-
-  def growCubeSidesToIncludeDistanceAround(epsilon: Double, point: Tuple, distance: (Tuple, HyperCube) => Int => (Double, Double)): (HyperCube, ImmutableArray[HyperSpaceUnit]) = {
-    val unitsToGrow = ImmutableArray.range(0, dim).map(axis => {
-      val (l, r) = distance(point, this)(axis)
-      (-(l / epsilon).floor.toLong, (r / epsilon).floor.toLong)
-    })
-
-    if (unitsToGrow.forall(_ == (0L, 0L))) {
-      (this, ImmutableArray.empty)
-    } else {
-      grow(unitsToGrow.map(_._1), unitsToGrow.map(_._2))
-    }
   }
 
 }
