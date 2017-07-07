@@ -46,6 +46,9 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
         val kNearestWithDistance = kNearestBruteForce(newCandidatePoints)(k, currentTuple)
         val epsilon = kNearestWithDistance.last._2
 
+
+        val (a, b) = cube.growCubeSidesToIncludeDistanceAround(epsilon, currentTuple, space.distanceToHyperPlanes)
+
         // make a .distanceToSide(tuple, axis) = (left, right)
         // and .growCubeSidesToIncludeDistance(epsilon) = (leftDirection, rightDirection) in HyperCube
         val growLeft = space.axes.map(axis => if ((currentTuple(axis) - cube.left.repr(axis) * space.unitCubeSize(axis)) < epsilon) -1L else 0L)
@@ -59,7 +62,7 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
         }
 
       } else {
-        val (newCube, newUnitCubes) = cube.grow(Array.fill[Long](space.dim)(-1L), Array.fill[Long](space.dim)(1L))
+        val (newCube, newUnitCubes) = cube.grow(ImmutableArray.fill[Long](space.dim)(-1L), ImmutableArray.fill[Long](space.dim)(1L))
 
         kNearestInCube(newCandidatePoints, newCube, newUnitCubes)
       }
