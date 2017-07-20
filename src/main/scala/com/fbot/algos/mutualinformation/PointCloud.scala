@@ -47,7 +47,7 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
         val epsilon = kNearestWithDistance.last._2
 
 
-        val newCube = cube.growCubeSidesToIncludeDistanceAround(epsilon, centerTuple, space.unitCubeSize, space.distanceToHyperPlanes)
+        val newCube = cube.growCubeSidesToIncludeDistanceAround(epsilon, centerTuple, space.unitCubeSize, space.normalCoordinate)
         val newHyperSpaceUnits = newCube.minus(cube)
 
         if (newHyperSpaceUnits.isEmpty) {

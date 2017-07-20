@@ -15,11 +15,11 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
   }
 
   def growCubeSidesToIncludeDistanceAround(epsilon: Double, point: Tuple,
-                                           unitCubeSize: Array[Double], distance: (Tuple, HyperCube) => Int => (Double, Double)): HyperCube = {
+                                           unitCubeSize: Array[Double], normalCoordinate: (Tuple, HyperCube) => Int => (Double, Double)): HyperCube = {
     val unitsToGrow = ImmutableArray.range(0, dim).map(axis => {
-      val (l, r) = distance(point, this)(axis)
+      val (l, r) = normalCoordinate(point, this)(axis)
       (if (l < epsilon) -((epsilon - l) / unitCubeSize(axis)).floor.toLong - 1L else 0L,
-       if (r < epsilon)  ((epsilon - r) / unitCubeSize(axis)).floor.toLong + 1L else 0L)
+       if (r <= epsilon) ((epsilon - r) / unitCubeSize(axis)).floor.toLong + 1L else 0L)
     })
     grow(unitsToGrow.map(_._1), unitsToGrow.map(_._2))
   }

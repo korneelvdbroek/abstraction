@@ -28,7 +28,7 @@ trait HyperSpace {
     })
   }
 
-  def distanceToHyperPlanes(point: Tuple, hyperCube: HyperCube)(axis: Int): (Double, Double) = {
+  def normalCoordinate(point: Tuple, hyperCube: HyperCube)(axis: Int): (Double, Double) = {
     val coordinate = point(axis)
     val unitLength = unitCubeSize(axis)
     (coordinate - hyperCube.left.repr(axis) * unitLength, hyperCube.right.repr(axis) * unitLength - coordinate)
