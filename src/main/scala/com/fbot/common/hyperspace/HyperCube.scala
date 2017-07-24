@@ -15,8 +15,8 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
   }
 
   def growCubeSidesToIncludeDistanceAround(epsilon: Double, point: Tuple,
-                                           unitCubeSize: Array[Double], normalCoordinate: (Tuple, HyperCube) => Int => (Double, Double)): HyperCube = {
-    val unitsToGrow = ImmutableArray.range(0, dim).map(axis => {
+                                           unitCubeSize: ImmutableArray[Double], normalCoordinate: (Tuple, HyperCube) => ArrayIndex => (Double, Double)): HyperCube = {
+    val unitsToGrow = ImmutableArray.indexRange(0, dim).map(axis => {
       val (l, r) = normalCoordinate(point, this)(axis)
       (if (l < epsilon) -((epsilon - l) / unitCubeSize(axis)).floor.toLong - 1L else 0L,
        if (r <= epsilon) ((epsilon - r) / unitCubeSize(axis)).floor.toLong + 1L else 0L)
@@ -24,19 +24,21 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
     grow(unitsToGrow.map(_._1), unitsToGrow.map(_._2))
   }
 
+  def hyperSpaceUnits: ImmutableArray[HyperSpaceUnit] = {
+    val rangesTuple: ImmutableArray[IndexedSeq[Long]] = ImmutableArray.indexRange(0, dim).map(axis => {
+      left(axis) until right(axis)
+    })
+
+    ImmutableArray(cartesianProduct(rangesTuple))
+  }
 
   def minus(innerCube: HyperCube): ImmutableArray[HyperSpaceUnit] = {
-    def cartesianProduct(xs: ImmutableArray[IndexedSeq[Long]]): Seq[HyperSpaceUnit] = {
-      xs.foldLeft(Seq(Seq.empty[Long]))((x, y) => {
-        for (a <- x.view; b <- y)
-          yield a :+ b
-      }).map(unitHyperCubeLocation => HyperSpaceUnit(unitHyperCubeLocation.toArray))
-    }
 
-    ImmutableArray.indexRange(ArrayIndex(0), ArrayIndex(dim)).flatMap(axisToGrow => {
+    // grow cube axis by axis
+    ImmutableArray.indexRange(0, dim).flatMap(axisToGrow => {
 
       if (left(axisToGrow) != innerCube.left(axisToGrow) || innerCube.right(axisToGrow) != right(axisToGrow)) {
-        val rangesTuple: ImmutableArray[IndexedSeq[Long]] = ImmutableArray.indexRange(ArrayIndex(0), ArrayIndex(dim)).map(axis => {
+        val rangesTuple: ImmutableArray[IndexedSeq[Long]] = ImmutableArray.indexRange(0, dim).map(axis => {
           if (axis < axisToGrow) {
             left(axis) until right(axis)
           } else if (axisToGrow == axis) {
@@ -59,6 +61,14 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
     unitHyperSpace.forallWithIndex((position, axis) => {
       left(axis) <= position && position < right(axis)
     })
+  }
+
+
+  protected def cartesianProduct(xs: ImmutableArray[IndexedSeq[Long]]): Seq[HyperSpaceUnit] = {
+    xs.foldLeft(Seq(Seq.empty[Long]))((x, y) => {
+      for (a <- x.view; b <- y)
+        yield a :+ b
+    }).map(unitHyperCubeLocation => HyperSpaceUnit(unitHyperCubeLocation.toArray))
   }
 
 }

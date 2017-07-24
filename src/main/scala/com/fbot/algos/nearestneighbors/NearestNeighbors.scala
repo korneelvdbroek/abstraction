@@ -1,5 +1,6 @@
-package com.fbot.algos.mutualinformation
+package com.fbot.algos.nearestneighbors
 
+import com.fbot.common.data.DataPoints
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace._
@@ -9,20 +10,20 @@ import scala.annotation.tailrec
 /**
   *
   */
-case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
+trait NearestNeighbors extends DataPoints {
 
-  def kNearestBruteForce(pointIndices: ImmutableArray[ArrayIndex])(k: Int, currentTuple: Tuple): ImmutableArray[(ArrayIndex, Double)] = {
-    val otherTuplesSortedByDistance = pointIndices
-      .map(index => (index, space.distance(points(index), currentTuple)))
-      .partialSort(k, (el1, el2) => el1._2 < el2._2)
+  // Slow initial computation
+  lazy val pointsBySpaceUnit: Map[HyperSpaceUnit, ImmutableArray[ArrayIndex]] = {
+    val binnedPoints: ImmutableArray[HyperSpaceUnit] = points.map(space.hyperSpaceUnitAround)
 
-    otherTuplesSortedByDistance
+    points.indexRange.groupBy(binnedPoints(_))
   }
 
-
-  lazy val binnedPoints: ImmutableArray[HyperSpaceUnit] = points.map(space.hyperSpaceUnitAround)
-
-  lazy val pointsByBin: Map[HyperSpaceUnit, ImmutableArray[ArrayIndex]] = points.indexRange.groupBy(binnedPoints(_))
+  def kNearestBruteForce(pointIndices: ImmutableArray[ArrayIndex])(k: Int, currentTuple: Tuple): ImmutableArray[(ArrayIndex, Double)] = {
+    pointIndices
+      .map(index => (index, space.distance(points(index), currentTuple)))
+      .partialSort(k, (el1, el2) => el1._2 < el2._2)
+  }
 
   def kNearest(k: Int, centerTupleIndex: ArrayIndex): ImmutableArray[ArrayIndex] = {
 
@@ -32,7 +33,7 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
     def kNearestInCube(kNearestCandidates: ImmutableArray[ArrayIndex],
                        cube: HyperCube, cubeSideUnitCubes: ImmutableArray[HyperSpaceUnit]): ImmutableArray[(ArrayIndex, Double)] = {
 
-      val pointsInNewUnitCubes = cubeSideUnitCubes.map(pointsByBin.getOrElse(_, ImmutableArray.empty[ArrayIndex])).flatten
+      val pointsInNewUnitCubes = cubeSideUnitCubes.map(pointsBySpaceUnit.getOrElse(_, ImmutableArray.empty[ArrayIndex])).flatten
 
       val newCandidatePoints = if (kNearestCandidates.isEmpty) {
         pointsInNewUnitCubes.filterNot(_ == centerTupleIndex)
@@ -47,7 +48,7 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
         val epsilon = kNearestWithDistance.last._2
 
 
-        val newCube = cube.growCubeSidesToIncludeDistanceAround(epsilon, centerTuple, space.unitCubeSize, space.normalCoordinate)
+        val newCube = cube.growCubeSidesToIncludeDistanceAround(epsilon, centerTuple, space.unitCubeSizes, space.normalCoordinate)
         val newHyperSpaceUnits = newCube.minus(cube)
 
         if (newHyperSpaceUnits.isEmpty) {
@@ -67,26 +68,28 @@ case class PointCloud(points: ImmutableArray[Tuple], space: HyperSpace) {
     // initialize
     val spaceUnitAroundTuple = space.hyperSpaceUnitAround(centerTuple)
     val kNearestCandidates = ImmutableArray.empty[ArrayIndex]
-    kNearestInCube(kNearestCandidates, HyperCube.from(spaceUnitAroundTuple), ImmutableArray(spaceUnitAroundTuple)).map(_._1)
+    kNearestInCube(kNearestCandidates, HyperCube.from(spaceUnitAroundTuple), ImmutableArray(spaceUnitAroundTuple))
+      .map(_._1)
   }
 
-  def numberOfPointsWithin(distance: Double, currentTupleIndex: ArrayIndex): Long = {
-    // TODO:
-    /**
-      * -1. do preparatory work (see HyperCube --> growCubeSidesToIncludeDistance())
-      * 0.  get cube of currentTupleIndex
-      * 1.  check distance to each side [make this part of HyperCube class]
-      * 2.  grow the cube accordingly, repeat 1 & 2 until cube grows no more   [no need for unitHyperCubes, so split it off]
-      * 3.  get all points of the found unit cubes (via pointsByBin), and .count(predicate)
-      */
-    ???
+
+  def numberOfCloseByPointsBruteForce(pointIndices: ImmutableArray[ArrayIndex])(distance: Double, centerTuple: Tuple): Int = {
+    pointIndices.count(index => space.distance(points(index), centerTuple) < distance)
+  }
+
+
+  def numberOfCloseByPoints(distance: Double, centerTupleIndex: ArrayIndex): Int = {
+    val centerTuple = points(centerTupleIndex)
+
+    val cube = HyperCube.from(space.hyperSpaceUnitAround(centerTuple))
+    val closeByHyperSpaceUnits = cube.growCubeSidesToIncludeDistanceAround(distance, centerTuple, space.unitCubeSizes, space.normalCoordinate)
+      .hyperSpaceUnits
+
+    val potentialCloseByPoints = closeByHyperSpaceUnits.map(pointsBySpaceUnit.getOrElse(_, ImmutableArray.empty[ArrayIndex])).flatten
+
+    numberOfCloseByPointsBruteForce(potentialCloseByPoints)(distance, centerTuple)
   }
 
 }
 
-object PointCloud {
-
-  def print[T](x: Array[T]): String = x.deep.mkString("Array(", ",", ")")
-
-}
 

@@ -18,14 +18,14 @@ object ImmutableArray {
 
   def apply[T: ClassTag](data: T*): ImmutableArray[T] = ImmutableArray[T](data.toArray)
 
+  def apply[T: ClassTag](data: TraversableOnce[T]): ImmutableArray[T] = ImmutableArray[T](data.toArray)
+
   def apply[T: ClassTag](data: Array[T]): ImmutableArray[T] = ImmutableArray[T](mutable.WrappedArray.make[T](data))
 
   def fill[T: ClassTag](n: Int)(elem: ⇒ T): ImmutableArray[T] = ImmutableArray(Array.fill[T](n)(elem))
 
   def empty[T: ClassTag]: ImmutableArray[T] = ImmutableArray(Array.empty[T])
 
-  def range(start: Int, end: Int): ImmutableArray[Int] = ImmutableArray(Array.range(start, end))
-
-  def indexRange(start: ArrayIndex, end: ArrayIndex): ImmutableArray[ArrayIndex] = ImmutableArray(Array.range(start.i, end.i).map(i => ArrayIndex(i)))
+  def indexRange(start: Int, end: Int): ImmutableArray[ArrayIndex] = ImmutableArray(Array.range(start, end).map(i => ArrayIndex(i)))
 
 }
