@@ -30,22 +30,15 @@ trait HyperSpace {
     })
   }
 
-  /**
-    * Coordinate of point along the normals on each of the sides of the hyperCube.
-    * Coordinate is negative on the side outside the cube, and positive on the other side.
-    *
-    * @param point      point to compute normal coordinate of
-    * @param hyperCube  the hyperplanes for the normals are the sides of this cube
-    * @param axisIndex       axis
-    * @return           the two normal coordinates corresponding to the normal coordinates of the point wrt the two hyperplanes of the cube along axis
-    */
-  def normalCoordinate(point: Tuple, hyperCube: HyperCube)(axisIndex: ArrayIndex): (Double, Double) = {
-    val coordinate = point(embeddingAxes(axisIndex))
-    val unitLength = unitCubeSizes(axisIndex)
-    (coordinate - hyperCube.left(embeddingAxes(axisIndex)) * unitLength, hyperCube.right(embeddingAxes(axisIndex)) * unitLength - coordinate)
+}
+
+case class Space(embeddingAxes: ImmutableArray[ArrayIndex], unitCubeSizes: ImmutableArray[Double]) extends HyperSpace {
+
+  def subSpace(subSpaceEmbeddingAxes: ImmutableArray[ArrayIndex], subSpaceUnitCubeSizes: ImmutableArray[Double]): HyperSpace = {
+    require(subSpaceEmbeddingAxes.length == subSpaceUnitCubeSizes.length, "Unable to create SubSpace: number of axis and unit sizes do not match")
+
+    Space(subSpaceEmbeddingAxes.map(embeddingAxes(_)), subSpaceUnitCubeSizes)
   }
 
 }
-
-case class Space(unitCubeSizes: ImmutableArray[Double], embeddingAxes: ImmutableArray[ArrayIndex]) extends HyperSpace
 

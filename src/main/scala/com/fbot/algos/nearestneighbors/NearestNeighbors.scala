@@ -1,6 +1,5 @@
 package com.fbot.algos.nearestneighbors
 
-import com.fbot.common.data.DataPoints
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace._
@@ -10,24 +9,23 @@ import scala.annotation.tailrec
 /**
   *
   */
-trait NearestNeighbors extends DataPoints {
+trait NearestNeighbors {
 
-  // Slow initial computation
-  lazy val pointsBySpaceUnit: Map[HyperSpaceUnit, ImmutableArray[ArrayIndex]] = {
-    val binnedPoints: ImmutableArray[HyperSpaceUnit] = points.map(space.hyperSpaceUnitAround)
+  def points: ImmutableArray[Tuple]
 
-    points.indexRange.groupBy(binnedPoints(_))
-  }
+  def pointsBySpaceUnitPerSpace: Map[HyperSpace, Map[HyperSpaceUnit, ImmutableArray[ArrayIndex]]]
 
-  def kNearestBruteForce(pointIndices: ImmutableArray[ArrayIndex])(k: Int, currentTuple: Tuple): ImmutableArray[(ArrayIndex, Double)] = {
-    pointIndices
+  def kNearestBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[ArrayIndex])
+                        (k: Int, currentTuple: Tuple): ImmutableArray[(ArrayIndex, Double)] = {
+    pointSubsetIndices
       .map(index => (index, space.distance(points(index), currentTuple)))
       .partialSort(k, (el1, el2) => el1._2 < el2._2)
   }
 
-  def kNearest(k: Int, centerTupleIndex: ArrayIndex): ImmutableArray[ArrayIndex] = {
+  def kNearest(space: HyperSpace)(k: Int, centerTupleIndex: ArrayIndex): ImmutableArray[ArrayIndex] = {
 
     val centerTuple = points(centerTupleIndex)
+    val pointsBySpaceUnit = pointsBySpaceUnitPerSpace(space)
 
     @tailrec
     def kNearestInCube(kNearestCandidates: ImmutableArray[ArrayIndex],
@@ -44,11 +42,11 @@ trait NearestNeighbors extends DataPoints {
       //println(f"$cube%60s: #candidates = ${kNearestCandidates.length }%3d + ${newCandidateBins.values.flatten.length }%3d")
 
       if (newCandidatePoints.length >= k) {
-        val kNearestWithDistance = kNearestBruteForce(newCandidatePoints)(k, centerTuple)
+        val kNearestWithDistance = kNearestBruteForce(space, newCandidatePoints)(k, centerTuple)
         val epsilon = kNearestWithDistance.last._2
 
 
-        val newCube = cube.growCubeSidesToIncludeDistanceAround(epsilon, centerTuple, space.unitCubeSizes, space.normalCoordinate)
+        val newCube = cube.growCubeSidesToIncludeDistanceAround(space)(epsilon, centerTuple)
         val newHyperSpaceUnits = newCube.minus(cube)
 
         if (newHyperSpaceUnits.isEmpty) {
@@ -73,23 +71,22 @@ trait NearestNeighbors extends DataPoints {
   }
 
 
-  def numberOfCloseByPointsBruteForce(pointIndices: ImmutableArray[ArrayIndex])(distance: Double, centerTuple: Tuple): Int = {
-    pointIndices.count(index => space.distance(points(index), centerTuple) < distance)
+  def numberOfCloseByPointsBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[ArrayIndex])
+                                     (distance: Double, centerTuple: Tuple): Int = {
+    pointSubsetIndices.count(index => space.distance(points(index), centerTuple) < distance)
   }
 
 
-  def numberOfCloseByPoints(distance: Double, centerTupleIndex: ArrayIndex): Int = {
+  def numberOfCloseByPoints(space: HyperSpace)(distance: Double, centerTupleIndex: ArrayIndex): Int = {
     val centerTuple = points(centerTupleIndex)
 
     val cube = HyperCube.from(space.hyperSpaceUnitAround(centerTuple))
-    val closeByHyperSpaceUnits = cube.growCubeSidesToIncludeDistanceAround(distance, centerTuple, space.unitCubeSizes, space.normalCoordinate)
+    val closeByHyperSpaceUnits = cube.growCubeSidesToIncludeDistanceAround(space)(distance, centerTuple)
       .hyperSpaceUnits
 
-    val potentialCloseByPoints = closeByHyperSpaceUnits.map(pointsBySpaceUnit.getOrElse(_, ImmutableArray.empty[ArrayIndex])).flatten
+    val potentialCloseByPoints = closeByHyperSpaceUnits.map(pointsBySpaceUnitPerSpace(space).getOrElse(_, ImmutableArray.empty[ArrayIndex])).flatten
 
-    numberOfCloseByPointsBruteForce(potentialCloseByPoints)(distance, centerTuple)
+    numberOfCloseByPointsBruteForce(space, potentialCloseByPoints)(distance, centerTuple)
   }
 
 }
-
-

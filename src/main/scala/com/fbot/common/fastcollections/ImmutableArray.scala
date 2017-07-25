@@ -16,7 +16,7 @@ case class ImmutableArray[T](repr: mutable.WrappedArray[T]) extends AnyVal with 
 
 object ImmutableArray {
 
-  def apply[T: ClassTag](data: T*): ImmutableArray[T] = ImmutableArray[T](data.toArray)
+  def apply[T: ClassTag](data0: T, dataRest: T*): ImmutableArray[T] = ImmutableArray[T]((data0 +: dataRest).toArray)
 
   def apply[T: ClassTag](data: TraversableOnce[T]): ImmutableArray[T] = ImmutableArray[T](data.toArray)
 

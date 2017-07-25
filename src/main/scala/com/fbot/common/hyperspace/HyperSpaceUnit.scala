@@ -13,6 +13,10 @@ case class HyperSpaceUnit(repr: mutable.WrappedArray[Long]) extends AnyVal with 
 
   def make(x: mutable.WrappedArray[Long]): HyperSpaceUnit = HyperSpaceUnit(x)
 
+  def project(space: HyperSpace): HyperSpaceUnit = {
+    HyperSpaceUnit(space.embeddingAxes.map(embeddingAxis => repr(embeddingAxis.i)).toArray)
+  }
+
   def dim: Int = repr.length
 
   override def toString: String = {

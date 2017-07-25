@@ -43,6 +43,16 @@ trait FastTuple[T, Self <: FastTuple[T, Self]] extends Any {
 
   def count(p: (T) => Boolean): Int = repr.count(p)
 
+  def ++(that: Self)(implicit evidence: scala.reflect.ClassTag[T]): Self = {
+    val thisLen = repr.toArray.length
+    val thatLen = that.repr.toArray.length
+
+    val x = new Array[T](thisLen + thatLen)
+    System.arraycopy(repr.toArray, 0, x, 0, thisLen)
+    System.arraycopy(that.repr.toArray, 0, x, thisLen, thatLen)
+    make(x)
+  }
+
   def toArray(implicit evidence: scala.reflect.ClassTag[T]): Array[T] = repr.toArray
 
   def toList: List[T] = repr.toList

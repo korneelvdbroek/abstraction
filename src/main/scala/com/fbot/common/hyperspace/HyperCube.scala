@@ -1,7 +1,6 @@
 package com.fbot.common.hyperspace
 
 import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.index.ArrayIndex
 
 /**
   *
@@ -14,12 +13,15 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
     HyperCube(left + HyperSpaceUnit(leftDirection.repr), right + HyperSpaceUnit(rightDirection.repr))
   }
 
-  def growCubeSidesToIncludeDistanceAround(epsilon: Double, point: Tuple,
-                                           unitCubeSize: ImmutableArray[Double], normalCoordinate: (Tuple, HyperCube) => ArrayIndex => (Double, Double)): HyperCube = {
+  def growCubeSidesToIncludeDistanceAround(space: HyperSpace)(epsilon: Double, point: Tuple): HyperCube = {
     val unitsToGrow = ImmutableArray.indexRange(0, dim).map(axis => {
-      val (l, r) = normalCoordinate(point, this)(axis)
-      (if (l < epsilon) -((epsilon - l) / unitCubeSize(axis)).floor.toLong - 1L else 0L,
-       if (r <= epsilon) ((epsilon - r) / unitCubeSize(axis)).floor.toLong + 1L else 0L)
+
+      val coordinate = point(space.embeddingAxes(axis))
+      val unitLength = space.unitCubeSizes(axis)
+      val (l, r) = (coordinate - left(space.embeddingAxes(axis)) * unitLength, right(space.embeddingAxes(axis)) * unitLength - coordinate)
+
+      (if (l < epsilon) -((epsilon - l) / unitLength).floor.toLong - 1L else 0L,
+       if (r <= epsilon) ((epsilon - r) / unitLength).floor.toLong + 1L else 0L)
     })
     grow(unitsToGrow.map(_._1), unitsToGrow.map(_._2))
   }
