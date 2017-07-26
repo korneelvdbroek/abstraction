@@ -4,7 +4,6 @@ import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.hyperspace.{HyperSpace, Tuple}
 
 /**
-  * Copyright (C) 7/24/2017 - REstore NV
   *
   */
 trait DataPoints {
