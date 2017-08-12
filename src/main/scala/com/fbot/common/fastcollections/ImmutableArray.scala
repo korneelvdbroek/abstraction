@@ -28,4 +28,6 @@ object ImmutableArray {
 
   def indexRange(start: Int, end: Int): ImmutableArray[ArrayIndex] = ImmutableArray(Array.range(start, end).map(i => ArrayIndex(i)))
 
+  implicit def builder[T: ClassTag](array: Array[T]): ImmutableArray[T] = ImmutableArray(array)
+
 }

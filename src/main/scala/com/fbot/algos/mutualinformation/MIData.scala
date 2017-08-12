@@ -6,13 +6,14 @@ import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.{HyperSpace, HyperSpaceUnit, Space, Tuple}
 
+
+
 /**
   *
   */
 case class MIData(dataX: ImmutableArray[Tuple], dataY: ImmutableArray[Tuple]) extends NearestNeighbors {
 
-  implicit def builder(array: Array[Tuple]): ImmutableArray[Tuple] = ImmutableArray(array)
-  val points: ImmutableArray[Tuple] = tuple2FastTuple2Zipped(dataX, dataY).map((x, y) => x ++ y)
+  val points: ImmutableArray[Tuple] = (dataX, dataY).map((x, y) => x ++ y)
 
 
   val dim: Int = dataX(ArrayIndex(0)).dim
@@ -30,6 +31,7 @@ case class MIData(dataX: ImmutableArray[Tuple], dataY: ImmutableArray[Tuple]) ex
     val pointsBySpaceUnit: Map[HyperSpaceUnit, ImmutableArray[ArrayIndex]] =
       points.indexRange.groupBy(index => space.hyperSpaceUnitAround(points(index)))
 
+    // Cut down on initialization calculation, if spaceX, spaceY are projected spaces:
     //    val spaceUnits = ImmutableArray(pointsBySpaceUnit.keys)
     //
     //    val pointsByProjectedSpaceXUnits: Map[HyperSpaceUnit, ImmutableArray[ArrayIndex]] =

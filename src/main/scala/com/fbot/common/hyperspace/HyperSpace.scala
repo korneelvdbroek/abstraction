@@ -6,7 +6,7 @@ import com.fbot.common.fastcollections.index.ArrayIndex
 /**
   *  HyperSpace is defined by
   *  1. a distance definition
-  *  2. an (axes-)embedding in the parent space
+  *  2. an (axes-)embedding in the parent Tuple-space (R^d)
   *  3. a grid of HyperSpaceUnits
   */
 trait HyperSpace {
