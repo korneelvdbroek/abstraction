@@ -97,6 +97,8 @@ trait FastArray[T, Self[T] <: FastArray[T, Self]] extends Any with FastTuple[T, 
 
   def indexRange: Self[ArrayIndex] = makeTransformed(Array.range(0, repr.length).map(ArrayIndex(_)))
 
+  def sum[B >: T](implicit num: Numeric[B]): B = repr.sum(num)
+
 }
 
 

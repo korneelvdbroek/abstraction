@@ -18,7 +18,7 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
 
       val coordinate = point(space.embeddingAxes(axis))
       val unitLength = space.unitCubeSizes(axis)
-      val (l, r) = (coordinate - left(space.embeddingAxes(axis)) * unitLength, right(space.embeddingAxes(axis)) * unitLength - coordinate)
+      val (l, r) = (coordinate - left(axis) * unitLength, right(axis) * unitLength - coordinate)
 
       (if (l < epsilon) -((epsilon - l) / unitLength).floor.toLong - 1L else 0L,
        if (r <= epsilon) ((epsilon - r) / unitLength).floor.toLong + 1L else 0L)

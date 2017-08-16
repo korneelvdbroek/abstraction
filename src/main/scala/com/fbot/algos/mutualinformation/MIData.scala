@@ -15,11 +15,12 @@ case class MIData(dataX: ImmutableArray[Tuple], dataY: ImmutableArray[Tuple]) ex
 
   val points: ImmutableArray[Tuple] = (dataX, dataY).map((x, y) => x ++ y)
 
+  val length: Int = points.length
 
   val dim: Int = dataX(ArrayIndex(0)).dim
 
-  val unitSize = 500d
-  val unitSizeProjected = 100d
+  val unitSize = 0.10d
+  val unitSizeProjected = 0.05d
 
   val space: HyperSpace = Space(ImmutableArray.indexRange(0, 2*dim), ImmutableArray.fill(2*dim)(unitSize))
   val spaceX: HyperSpace = Space(ImmutableArray.indexRange(0, dim), ImmutableArray.fill(dim)(unitSizeProjected))

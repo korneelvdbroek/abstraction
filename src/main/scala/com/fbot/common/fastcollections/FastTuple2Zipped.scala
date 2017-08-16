@@ -10,7 +10,7 @@ import scala.reflect.ClassTag
 class FastTuple2Zipped[El1, Self1[El1] <: FastTuple[El1, Self1[El1]], El2, Self2[El2] <: FastTuple[El2, Self2[El2]]]
                       (val zipTuple: (Self1[El1], Self2[El2])) extends AnyVal {
 
-  def map[B: ClassTag, Self](f: (El1, El2) => B)(implicit builder: Array[B] => Self): Self = {
+  def map[B: ClassTag, Self: ClassTag](f: (El1, El2) => B)(implicit builder: Array[B] => Self): Self = {
     val len = zipTuple._1.length
     val zipped = new Array[B](len)
 

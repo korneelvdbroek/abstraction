@@ -12,8 +12,8 @@ import breeze.numerics.digamma
   *  	arXiv:cond-mat/0305641
   */
 case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray[Tuple]) {
-  val x: Double = 7d
-  println(digamma(x))
+  val k: Int = 20
+  println(digamma(k))
   /**
     * TODO:
     * + generalize numberOfCloseByPointsBruteForce to work on subspaces

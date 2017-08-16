@@ -73,10 +73,13 @@ trait NearestNeighbors {
 
   def numberOfCloseByPointsBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[ArrayIndex])
                                      (distance: Double, centerTuple: Tuple): Int = {
-    pointSubsetIndices.count(index => space.distance(points(index), centerTuple) < distance)
+    pointSubsetIndices.count(index => space.distance(points(index), centerTuple) <= distance) - 1
   }
 
 
+  /**
+    * Number of points x_j which have ||x_j - x_i|| <= distance and j != i
+    */
   def numberOfCloseByPoints(space: HyperSpace)(distance: Double, centerTupleIndex: ArrayIndex): Int = {
     val centerTuple = points(centerTupleIndex)
 
