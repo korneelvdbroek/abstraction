@@ -12,17 +12,24 @@ import scala.util.Random
 object Test extends App {
   import Utils._
 
-  val k = 4
-  val cloud = RndDataXd(4, 1000000).data
+  val k = 10
+  val cloud = RndDataXd(1, 1000000).data
 
+  var aveTime: Long = 0L
   for (loop <- 0 to 20){
     val centerTupleIndex = ArrayIndex(Random.nextInt(cloud.points.length))
     val centerTuple = cloud.points(centerTupleIndex)
 
     val allPoints = cloud.points.indexRange.filterNot(_ == centerTupleIndex)
-    val (resultBF, tBruteForce) = timeIt { cloud.kNearestBruteForce(cloud.spaceX, allPoints)(k, centerTuple) }
+    val (resultBF, tBruteForce) = timeIt { cloud.kNearestBruteForce(cloud.space, allPoints)(k, centerTuple) }
     val resultBruteForce = resultBF.map(_._1)
-    val (result, t) = timeIt { cloud.kNearest(cloud.spaceX)(k, centerTupleIndex) }
+    val (result, t) = timeIt { cloud.kNearest(cloud.space)(k, centerTupleIndex) }
+
+    if (loop == 0) {
+      aveTime = 0L
+    } else {
+      aveTime = (aveTime * loop + t) / (loop + 1)
+    }
 
 //    val allPoints = cloud.points.indexRange
 //    val distance = 200d
@@ -35,6 +42,7 @@ object Test extends App {
     println(f"$loop%3d: Brute Force t = ${prettyPrintTime(tBruteForce)}; t = ${prettyPrintTime(t)}")
 
   }
+  println(f"ave time = $aveTime (${prettyPrintTime(aveTime)})")
 
   val centerTupleIndex = ArrayIndex(Random.nextInt(cloud.points.length))
   val centerTuple = cloud.points(centerTupleIndex)

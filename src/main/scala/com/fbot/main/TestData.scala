@@ -10,7 +10,6 @@ import com.fbot.common.hyperspace.{Space, Tuple}
 import scala.util.Random
 
 /**
-  * Copyright (C) 8/16/2017 - REstore NV
   *
   */
 trait TestData {
@@ -23,8 +22,7 @@ case class RndDataXd(dim: Int, N: Int) extends TestData {
 
   def data: MIData = {
     def randomDouble = {
-      val sign = if (Random.nextBoolean()) 1 else -1
-      sign * Random.nextInt(1000) * 1d
+      Random.nextDouble() * 1000d
     }
 
     val dataX = ImmutableArray(Array.fill[Tuple](N)(Tuple(Array.fill(dim)(randomDouble))))
@@ -43,11 +41,10 @@ case class FxDataXd(dim: Int, N: Int) extends TestData {
 
   def data: MIData = {
     def randomDouble = {
-      val sign = if (Random.nextBoolean()) 1 else -1
-      sign * Random.nextInt(1000) * 1d
+      Random.nextDouble() * 1000d
     }
     def f(tuple: Tuple): Tuple = {
-      Tuple(tuple.repr.map(2d * _))
+      Tuple(tuple.repr.map(x => if (x >= 500d) Random.nextDouble() * 1000d else 0d))
     }
 
     val dataX = ImmutableArray(Array.fill[Tuple](N)(Tuple(Array.fill(dim)(randomDouble))))
@@ -76,6 +73,18 @@ case class GaussianData2d(N: Int, r: Double) extends TestData {
     // 0 - 1,000   of 1,000,000 = 10^6
     // volume total space = 2000^8 = 2^8 10^(3*8)   = 256   10^24  --> 10^6  points
     // volume unit cube   =  500^8 = 1/2^8 10^(3*8) = 1/256 10^24  --> 15.25 points
+    MIData(dataX, dataY)
+  }
+
+}
+
+
+object KraskovData extends TestData {
+
+  def data: MIData = {
+    val dataX = ImmutableArray( 39,  65, 101, 169, 171, 205, 232, 243, 258, 277, 302, 355, 381).map(Tuple(_))
+    val dataY = ImmutableArray(358, 205, 126, 150, 350, 227, 390,  94, 268,  41, 328, 365, 119).map(Tuple(_))
+
     MIData(dataX, dataY)
   }
 

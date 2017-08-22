@@ -6,23 +6,25 @@ import com.fbot.common.fastcollections.ImmutableArray
 
 
 /**
-  * Copyright (C) 8/16/2017 - REstore NV
+  * TODO:
+  * - make this into a case class/trait
+  * - implement the clustering algo
   *
   */
 object TestMI extends App {
-  val k: Int = 10
-  val r: Double = 0.9d
-  val sampleData: MIData = GaussianData2d(4000, r).data
-  val N = sampleData.length
+  val k: Int = 10   // higher k is lower statistical error, but higher systematic error
+  val r: Double = 0.5d
+  val N: Int = 40000
+  val dim: Int = 1
+  val sampleData: MIData = RndDataXd(dim, N).data // FxDataXd(dim, N).data // GaussianData2d(N, r).data
   println(s"Sample size (N) = $N")
 
   val nxy: ImmutableArray[(Int, Int)] = ImmutableArray.indexRange(0, N).map(i => {
-    val (iNear, t1) = Utils.timeIt{
-      val kNearest = sampleData.kNearest(sampleData.space)(k, i)
-      kNearest.last
+    val (kNearestIndices, t1) = Utils.timeIt{
+      sampleData.kNearest(sampleData.space)(k, i)
     }
-    val epsilonX = sampleData.spaceX.distance(sampleData.points(i), sampleData.points(iNear))
-    val epsilonY = sampleData.spaceY.distance(sampleData.points(i), sampleData.points(iNear))
+    val epsilonX = kNearestIndices.map(kNearestIndex => sampleData.spaceX.distance(sampleData.points(i), sampleData.points(kNearestIndex))).max
+    val epsilonY = kNearestIndices.map(kNearestIndex => sampleData.spaceY.distance(sampleData.points(i), sampleData.points(kNearestIndex))).max
 
     val (x, t2) = Utils.timeIt{
       (sampleData.numberOfCloseByPoints(sampleData.spaceX)(epsilonX, i),
@@ -33,6 +35,6 @@ object TestMI extends App {
   })
 
   println(s"${digamma(k)} - ${1d / k} - ${nxy.map(nxyi => digamma(nxyi._1) + digamma(nxyi._2)).sum / N} + ${digamma(N)} = ")
-  println(digamma(k) - 1d / k - nxy.map(nxyi => digamma(nxyi._1) + digamma(nxyi._2)).sum / N + digamma(N))
-  println(-1d / 2d * log(1 - r*r))
+  println(f" = ${digamma(k) - 1d / k - nxy.map(nxyi => digamma(nxyi._1) + digamma(nxyi._2)).sum / N + digamma(N)}")
+  println(f"ideal Gaussian = ${-1d / 2d * log(1 - r*r)}")
 }

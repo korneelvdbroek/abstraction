@@ -99,6 +99,8 @@ trait FastArray[T, Self[T] <: FastArray[T, Self]] extends Any with FastTuple[T, 
 
   def sum[B >: T](implicit num: Numeric[B]): B = repr.sum(num)
 
+  def max[B >: T](implicit cmp: Ordering[B]): T = repr.max(cmp)
+
 }
 
 

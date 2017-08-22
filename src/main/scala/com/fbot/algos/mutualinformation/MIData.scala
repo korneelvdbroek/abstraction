@@ -1,5 +1,6 @@
 package com.fbot.algos.mutualinformation
 
+import breeze.numerics.pow
 import com.fbot.algos.nearestneighbors.NearestNeighbors
 import com.fbot.common.fastcollections.FastTuple2Zipped._
 import com.fbot.common.fastcollections.ImmutableArray
@@ -19,12 +20,27 @@ case class MIData(dataX: ImmutableArray[Tuple], dataY: ImmutableArray[Tuple]) ex
 
   val dim: Int = dataX(ArrayIndex(0)).dim
 
-  val unitSize = 0.10d
-  val unitSizeProjected = 0.05d
+  // determine where the mass of the distribution is located
+  val percentileLow = .10d
+  val percentileHigh = .90d
+  val massCube: Array[Double] = Array.range(0, 2*dim).map(d => {
+    val sortedCoordinate = points.map(tuple => tuple(d)).sortBy(x => x)
+    val xLow = sortedCoordinate(ArrayIndex((percentileLow * length).floor.toInt))
+    val xHigh = sortedCoordinate(ArrayIndex((percentileHigh * length).floor.toInt))
 
-  val space: HyperSpace = Space(ImmutableArray.indexRange(0, 2*dim), ImmutableArray.fill(2*dim)(unitSize))
-  val spaceX: HyperSpace = Space(ImmutableArray.indexRange(0, dim), ImmutableArray.fill(dim)(unitSizeProjected))
-  val spaceY: HyperSpace = Space(ImmutableArray.indexRange(dim, 2*dim), ImmutableArray.fill(dim)(unitSizeProjected))
+    val edgeLength = xHigh - xLow
+    if (edgeLength == 0) 1d else edgeLength
+  })
+
+  // empirically we established that it is optimal to have ~100 points in a HyperSpaceUnit (for k = 10)
+  val optimalPointsPerSpaceUnit = 100d
+  val unitSizes: Array[Double] = massCube.map(pow(optimalPointsPerSpaceUnit / ((percentileHigh - percentileLow) * length), 1d / (2*dim)) * _)
+  val unitSizesX: Array[Double] = massCube.slice(0, dim).map(pow(optimalPointsPerSpaceUnit / ((percentileHigh - percentileLow) * length), 1d / dim) * _)
+  val unitSizesY: Array[Double] = massCube.slice(dim, 2*dim).map(pow(optimalPointsPerSpaceUnit / ((percentileHigh - percentileLow) * length), 1d / dim) * _)
+
+  val space: HyperSpace = Space(ImmutableArray.indexRange(0, 2*dim), unitSizes)
+  val spaceX: HyperSpace = Space(ImmutableArray.indexRange(0, dim), unitSizesX)
+  val spaceY: HyperSpace = Space(ImmutableArray.indexRange(dim, 2*dim), unitSizesY)
 
 
   lazy val pointsBySpaceUnitPerSpace: Map[HyperSpace, Map[HyperSpaceUnit, ImmutableArray[ArrayIndex]]] = {
