@@ -1,1 +1,7 @@
-'.idea' 
+# sbt specific
+.history/
+target/
+# IntelliJ
+.idea
+doc/
+spark-warehouse/
