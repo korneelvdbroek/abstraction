@@ -20,5 +20,8 @@ libraryDependencies ++= Seq(
 
   // The visualization library is distributed separately as well.
   // It depends on LGPL code
-  "org.scalanlp" %% "breeze-viz" % "0.13.1"
+  "org.scalanlp" %% "breeze-viz" % "0.13.1",
+
+  // Apache Spark
+  "org.apache.spark" %% "spark-sql" % "2.2.0"
 )

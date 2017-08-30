@@ -34,9 +34,10 @@ case class MIData(dataX: ImmutableArray[Tuple], dataY: ImmutableArray[Tuple]) ex
 
   // empirically we established that it is optimal to have ~100 points in a HyperSpaceUnit (for k = 10)
   val optimalPointsPerSpaceUnit = 100d
-  val unitSizes: Array[Double] = massCube.map(pow(optimalPointsPerSpaceUnit / ((percentileHigh - percentileLow) * length), 1d / (2*dim)) * _)
-  val unitSizesX: Array[Double] = massCube.slice(0, dim).map(pow(optimalPointsPerSpaceUnit / ((percentileHigh - percentileLow) * length), 1d / dim) * _)
-  val unitSizesY: Array[Double] = massCube.slice(dim, 2*dim).map(pow(optimalPointsPerSpaceUnit / ((percentileHigh - percentileLow) * length), 1d / dim) * _)
+  val numberOfPointsInMassCube: Double = (percentileHigh - percentileLow) * length
+  val unitSizes: Array[Double] = massCube.map(pow(optimalPointsPerSpaceUnit / numberOfPointsInMassCube, 1d / (2*dim)) * _)
+  val unitSizesX: Array[Double] = massCube.slice(0, dim).map(pow(optimalPointsPerSpaceUnit / numberOfPointsInMassCube, 1d / dim) * _)
+  val unitSizesY: Array[Double] = massCube.slice(dim, 2*dim).map(pow(optimalPointsPerSpaceUnit / numberOfPointsInMassCube, 1d / dim) * _)
 
   val space: HyperSpace = Space(ImmutableArray.indexRange(0, 2*dim), unitSizes)
   val spaceX: HyperSpace = Space(ImmutableArray.indexRange(0, dim), unitSizesX)
