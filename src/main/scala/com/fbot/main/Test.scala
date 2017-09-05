@@ -1,8 +1,10 @@
 package com.fbot.main
 
+import com.fbot.algos.mutualinformation.MIData
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace._
+import org.apache.spark.sql.SparkSession
 
 import scala.util.Random
 
@@ -12,8 +14,12 @@ import scala.util.Random
 object Test extends App {
   import Utils._
 
+  val spark = SparkSession.builder.appName("Simple Application").getOrCreate()
+  implicit val sc = spark.sparkContext
+
   val k = 10
-  val cloud = RndDataXd(1, 1000000).data
+  val bigData = RndDataXd(1, 1000000).data
+  val cloud: MIData = MIData(bigData(0), bigData(1))
 
   var aveTime: Long = 0L
   for (loop <- 0 to 20){

@@ -26,6 +26,8 @@ object Tuple {
 
   def apply(data: Double*): Tuple = new Tuple(data.toArray)
 
+  def fill(dim: Int)(elem: ⇒ Double): Tuple = Tuple(Array.fill(dim)(elem))
+
 }
 
 

@@ -10,7 +10,11 @@ import com.fbot.common.hyperspace.{HyperSpace, HyperSpaceUnit, Space, Tuple}
 
 
 /**
-  *
+  * References:
+  * + Estimating Mutual Information
+  *   Alexander Kraskov, Harald Stogbauer, Peter Grassberger
+  *   Phys. Rev. E 69, 066138
+  *  	arXiv:cond-mat/0305641
   */
 case class MIData(dataX: ImmutableArray[Tuple], dataY: ImmutableArray[Tuple]) extends NearestNeighbors {
 
