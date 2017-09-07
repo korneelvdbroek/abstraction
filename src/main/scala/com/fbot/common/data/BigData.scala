@@ -44,7 +44,7 @@ object BigData {
     val matrix = rows.mapWithIndex((row, index) => (index, row)).toArray
 
     // https://stackoverflow.com/questions/40636554/spark-ui-dag-stage-disconnected
-    // .partitionBy is advantageous since we partition by the row index
+    // .partitionBy right after parallelization is still advantageous since we partition by the row index
     val rdd = sc.parallelize(matrix).partitionBy(new HashPartitioner(sc.defaultParallelism)).cache()
 
     BigData(rdd, rows.length)

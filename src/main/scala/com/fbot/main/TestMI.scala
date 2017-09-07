@@ -11,7 +11,8 @@ import org.apache.spark.sql.SparkSession
 
 /**
   * TODO:
-  * - make this into a case class/trait (add to MIData and rename to MutualInformation)
+  * - slight cleanup around pairing rows in matrix: (List[Rows], PairingInfo).map(pickRow).join().map( => (List[Rows], PairingInfo))
+  * - encapsulate stuff in MIData (and rename it to MutualInformation)
   * - implement the clustering algo
   *
   */
@@ -32,17 +33,19 @@ object TestMI {
 
     println(sc.defaultParallelism)
 
-    val seriesPairs = (0 until data.rows).combinations(2).toList
+    val seriesPairs = (0 until data.rows).map(ArrayIndex(_)).combinations(2).toList
       .zipWithIndex
       .map(pairIndex => ((pairIndex._1(0), pairIndex._1(1)), pairIndex._2))
-      .groupBy(_._1._1).map(x => (ArrayIndex(x._1), x._2.map(y => (ArrayIndex(y._1._2), y._2))))
+      .groupBy(_._1._1)
 
     // For every action performed on a dataframe, all transformations (=lazy) will be recomputed.
     // Some transformations (zipWithIndex) trigger a job!
     val parallelSeriesPairs = data
-      .flatMap(row => seriesPairs.getOrElse(row.index, Nil).map(pairIndex => (pairIndex._1, (row, pairIndex._2))))
-      .join(data.series).map(x => (x._2._1._2, (x._2._1._1, Row(x._1, x._2._2))))
-      .partitionBy(new HashPartitioner(sc.defaultParallelism))
+      .flatMap(row => seriesPairs.getOrElse(row.index, Nil).map(pairIndex => (row, pairIndex)))
+      .map(x => (x._2._1._2, x)).join(data.series).map(x => ((x._2._1._1, Row(x._1, x._2._2)), x._2._1._2))
+      .map(x => (x._2._2, x._1)).partitionBy(new HashPartitioner(sc.defaultParallelism)).cache()
+
+    printPartition(parallelSeriesPairs)
 
     parallelSeriesPairs.map(dataPair => {
 
@@ -80,7 +83,7 @@ object TestMI {
   }
 
 
-  def printPartition[T](partition: RDD[(ArrayIndex, (Row, Row))]): Unit = {
+  def printPartition[T](partition: RDD[(Int, (Row, Row))]): Unit = {
     partition.foreachPartition(it => {
       val contentStr = it.foldLeft("")((str, i) => str ++ s"${i._1}(${i._2._1.index}, ${i._2._2.index}), ")
       println(s"partition: $contentStr")
