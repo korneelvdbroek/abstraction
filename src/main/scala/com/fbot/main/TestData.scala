@@ -77,7 +77,7 @@ case class GaussianData2d(N: Int, rho: Double,
     // 0 - 1,000   of 1,000,000 = 10^6
     // volume total space = 2000^8 = 2^8 10^(3*8)   = 256   10^24  --> 10^6  points
     // volume unit cube   =  500^8 = 1/2^8 10^(3*8) = 1/256 10^24  --> 15.25 points
-    BigData(dataX, dataY)
+    BigData(dataX, dataY, dataX, dataY)
   }
 
 }
