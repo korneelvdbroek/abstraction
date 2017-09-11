@@ -23,5 +23,6 @@ libraryDependencies ++= Seq(
   "org.scalanlp" %% "breeze-viz" % "0.13.1",
 
   // Apache Spark
-  "org.apache.spark" %% "spark-sql" % "2.2.0"
+  "org.apache.spark" %% "spark-sql" % "2.2.0",
+  "org.apache.spark" %% "spark-mllib" % "2.2.0"
 )

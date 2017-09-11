@@ -24,7 +24,6 @@ object Row {
 }
 
 
-
 case class BigData(series: RDD[(ArrayIndex, ImmutableArray[Tuple])], rows: Int) {
 
   def apply(i: ArrayIndex): ImmutableArray[Tuple] = series.lookup(i).head
