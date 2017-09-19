@@ -66,18 +66,26 @@ case class GaussianData2d(N: Int, rho: Double,
 
   def data: BigData = {
     val mu = DenseVector(muX, muY)
-    val sigma = DenseMatrix((sigmaX*sigmaX, rho*sigmaX*sigmaY),
-                            (rho*sigmaX*sigmaY, sigmaY*sigmaY))
+    val sigma = DenseMatrix((sigmaX * sigmaX, rho * sigmaX * sigmaY),
+                            (rho * sigmaX * sigmaY, sigmaY * sigmaY))
+
+    GaussianData(2, N, 1, sigma, mu).data
+  }
+
+}
+
+case class GaussianData(numberOfDataSets: Int, samplesSize: Int, sampleDim: Int,
+                        sigma: DenseMatrix[Double], mu: DenseVector[Double])(implicit sc: SparkContext) extends TestData {
+
+  require(numberOfDataSets*sampleDim == mu.size, s"Dimension of mu matrix provided does not match $numberOfDataSets*$sampleDim")
+  require(numberOfDataSets*sampleDim == sigma.rows, s"Dimension of sigma matrix provided does not match $numberOfDataSets*$sampleDim")
+
+  def data: BigData = {
     val gaussian = MultivariateGaussian(mu, sigma)
 
-    val sample = ImmutableArray.fill[Tuple](N)(Tuple(gaussian.draw().toArray))
-    val dataX = sample.map(tuple => Tuple(tuple(0)))
-    val dataY = sample.map(tuple => Tuple(tuple(1)))
+    val sampledData = ImmutableArray.fill[Tuple](samplesSize)(Tuple(gaussian.draw().toArray))
 
-    // 0 - 1,000   of 1,000,000 = 10^6
-    // volume total space = 2000^8 = 2^8 10^(3*8)   = 256   10^24  --> 10^6  points
-    // volume unit cube   =  500^8 = 1/2^8 10^(3*8) = 1/256 10^24  --> 15.25 points
-    BigData(dataX, dataY, dataX, dataY)
+    BigData((0 until numberOfDataSets).map(d => sampledData.map(tuple => tuple.slice(d * sampleDim, d * sampleDim + sampleDim - 1))): _*)
   }
 
 }

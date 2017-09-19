@@ -1,23 +1,26 @@
 package com.fbot.main
 
+import breeze.linalg.{DenseMatrix, DenseVector, det}
 import breeze.numerics.log
 import com.fbot.algos.mutualinformation.MutualInformation
 import com.fbot.common.data.{BigData, Row}
 import com.fbot.common.fastcollections.index.ArrayIndex
-import org.apache.spark.ml.linalg.Matrices
+import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.{HashPartitioner, SparkContext}
 
 /**
   * TODO:
+  * - improve boxing for high dimensions (minus and cartesian are headaches) -- currently we shortcut to the bruteforce which is way faster!
+  * - find formula accuracy for d = 1000  (use realistic sigma)
   * - implement the clustering algo
   *
   * References:
   * + Information based clustering
-  *   Noam Slonim, Gurinder Singh Atwal, Gasper Tkacik, and William Bialek
-  *  	https://arxiv.org/pdf/q-bio/0511043.pdf
-  *  	https://arxiv.org/pdf/q-bio/0511042.pdf
+  * Noam Slonim, Gurinder Singh Atwal, Gasper Tkacik, and William Bialek
+  * https://arxiv.org/pdf/q-bio/0511043.pdf
+  * https://arxiv.org/pdf/q-bio/0511042.pdf
   */
 object TestMI {
 
@@ -39,12 +42,22 @@ object TestMI {
 
 
     // Data source
-    val k: Int = 10
+    val k: Int = 1
     // higher k is lower statistical error, but higher systematic error
     val rho: Double = 0.89d
-    val N: Int = 100000
-    val dim: Int = 1
-    val data: BigData = GaussianData2d(N, rho).data // RndDataXd(dim, N).data // FxDataXd(dim, N).data // GaussianData2d(N, rho).data
+    val N: Int = 1000
+    val dim: Int = 1000
+
+    val mu = DenseVector(Array.fill(dim)(0d))
+    val sigma = {
+      val a = DenseMatrix.eye[Double](dim)
+      a(dim - 1, 0 until dim - 1) := .05d
+      a(0 until dim - 1, dim - 1) := .05d
+      a
+    }
+    println(s"sigma = $sigma")
+    val data: BigData = GaussianData(2, N, dim / 2, sigma, mu)
+      .data // GaussianData.data // RndDataXd(dim, N).data // FxDataXd(dim, N).data // GaussianData2d(N, rho).data
 
     println(sc.defaultParallelism)
 
@@ -62,7 +75,7 @@ object TestMI {
 
     //    printPartition(parallelSeriesPairs)
 
-    val similarityMatrix = parallelSeriesPairs.map(dataPair => {
+    val similarityMatrix = new CoordinateMatrix(parallelSeriesPairs.map(dataPair => {
 
       // Sample data
       val sampleData = MutualInformation(dataPair._2(0).rowData, dataPair._2(1).rowData)
@@ -70,19 +83,14 @@ object TestMI {
 
       val MI = sampleData.MI(k)
 
-      println(f"$MI%7.4f vs ${-1d / 2d * log(1 - rho * rho) }%7.4f")
+      println(f"$MI%7.4f vs ${-1d / 2d * log(det(sigma)) }" +
+              f" + ${1d / 2d * log(det(sigma(0 until dim / 2, 0 until dim / 2))) }" +
+              f" + ${1d / 2d * log(det(sigma(dim / 2 until dim, dim / 2 until dim))) }%7.4f")
 
-      ((dataPair._2(0).index, dataPair._2(1).index), MI)
-    }).collect()
+      MatrixEntry(dataPair._2(0).index.toLong, dataPair._2(1).index.toLong, MI)
+    }).cache(), data.rows, data.rows)
 
-
-    similarityMatrix.map(x => {
-      val ((i, j), value) = x
-      val pos = data.rows * j.i + i.i
-
-
-      ???
-    })
+    println(similarityMatrix.toBlockMatrix.toLocalMatrix)
 
     spark.stop()
   }

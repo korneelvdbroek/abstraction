@@ -12,6 +12,10 @@ final case class ArrayIndex(i: Int) extends AnyVal {
     s"index_$i"
   }
 
+  def toInt: Int = i
+
+  def toLong: Long = i.toLong
+
 }
 
 object ArrayIndex {

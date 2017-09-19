@@ -16,6 +16,8 @@ case class Tuple(repr: mutable.WrappedArray[Double]) extends AnyVal with FastTup
 
   def apply(i: Int): Double = repr(i)
 
+  def slice(from: Int, until: Int): Tuple = Tuple(repr.slice(from, until))
+
   override def toString: String = {
     repr.mkString("(", ", ", ")")
   }

@@ -25,7 +25,7 @@ trait FastTuple[T, Self <: FastTuple[T, Self]] extends Any {
 
   def isEmpty: Boolean = repr.isEmpty
 
-  def apply(index: ArrayIndex): T = repr(index.i)
+  def apply(index: ArrayIndex): T = repr(index.toInt)
 
   def last: T = repr(length - 1)
 

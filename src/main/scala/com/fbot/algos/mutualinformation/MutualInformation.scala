@@ -7,6 +7,7 @@ import com.fbot.common.fastcollections.FastTuple2Zipped._
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.{HyperSpace, HyperSpaceUnit, Space, Tuple}
+import com.fbot.main.Utils
 
 /**
   * References:
@@ -46,6 +47,9 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
   val spaceX: HyperSpace = Space(ImmutableArray.indexRange(0, dim), unitSizesX)
   val spaceY: HyperSpace = Space(ImmutableArray.indexRange(dim, 2 * dim), unitSizesY)
 
+  println(s"space  = $space")
+  println(s"spaceX = $spaceX")
+  println(s"spaceY = $spaceY")
 
   lazy val pointsBySpaceUnitPerSpace: Map[HyperSpace, Map[HyperSpaceUnit, ImmutableArray[ArrayIndex]]] = {
     // Slow initial computation
@@ -67,6 +71,7 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
     val pointsByProjectedSpaceYUnits: Map[HyperSpaceUnit, ImmutableArray[ArrayIndex]] =
       points.indexRange.groupBy(index => spaceY.hyperSpaceUnitAround(points(index)))
 
+    println(s"done init...")
     Map(space -> pointsBySpaceUnit,
         spaceX -> pointsByProjectedSpaceXUnits,
         spaceY -> pointsByProjectedSpaceYUnits)
@@ -77,12 +82,22 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
     val nxy: IndexedSeq[(Int, Int)] = (0 until length).map(ii => {
       val i = ArrayIndex(ii)
 
-      val kNearestIndices = kNearest(space)(k, i)
+      val (kNearestIndices, t1) = Utils.timeIt {
+//        kNearest(space)(k, i)
+        kNearestBruteForce(space, ImmutableArray.indexRange(0, length).filterNot(_ == i))(k, points(i)).map(_._1)
+      }
 
       val epsilonX = kNearestIndices.map(kNearestIndex => spaceX.distance(points(i), points(kNearestIndex))).max
       val epsilonY = kNearestIndices.map(kNearestIndex => spaceY.distance(points(i), points(kNearestIndex))).max
 
-      (numberOfCloseByPoints(spaceX)(epsilonX, i), numberOfCloseByPoints(spaceY)(epsilonY, i))
+      val (x, t2) = Utils.timeIt {
+//        (numberOfCloseByPoints(spaceX)(epsilonX, i), numberOfCloseByPoints(spaceY)(epsilonY, i))
+        (numberOfCloseByPointsBruteForce(spaceX, ImmutableArray.indexRange(0, length))(epsilonX, points(i)),
+          numberOfCloseByPointsBruteForce(spaceY, ImmutableArray.indexRange(0, length))(epsilonY, points(i)))
+      }
+
+      if (ii % 1 == 0) println(f"$i%12s:  ${ Utils.prettyPrintTime(t1) } // ${ Utils.prettyPrintTime(t2) }: $x")
+      x
     })
 
     val ave = nxy.map(nxyi => digamma(nxyi._1) + digamma(nxyi._2)).sum / length

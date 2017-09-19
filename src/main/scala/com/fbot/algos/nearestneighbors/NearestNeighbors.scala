@@ -73,6 +73,7 @@ trait NearestNeighbors {
 
   def numberOfCloseByPointsBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[ArrayIndex])
                                      (distance: Double, centerTuple: Tuple): Int = {
+    // minus 1 to exclude the self (so self should be in pointSubsetIndices)
     pointSubsetIndices.count(index => space.distance(points(index), centerTuple) <= distance) - 1
   }
 
