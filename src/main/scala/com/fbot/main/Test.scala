@@ -9,7 +9,9 @@ import org.apache.spark.sql.SparkSession
 import scala.util.Random
 
 /**
-  *
+  *  TODO:
+  *  - even though we should not be partitioning // we still are (and have blocks with super small amount of points in them) ==> BUG IN ALGO
+  *  - find heuristic for optimal number in a spaceUnit (based on uniform distribution)
   */
 object Test extends App {
   import Utils._
@@ -18,7 +20,7 @@ object Test extends App {
   implicit val sc = spark.sparkContext
 
   val k = 10
-  val bigData = RndDataXd(1, 1000000).data
+  val bigData = RndDataXd(10, 100000).data
   val cloud: MutualInformation = MutualInformation(bigData(0), bigData(1))
 
   var aveTime: Long = 0L
@@ -26,9 +28,12 @@ object Test extends App {
     val centerTupleIndex = ArrayIndex(Random.nextInt(cloud.points.length))
     val centerTuple = cloud.points(centerTupleIndex)
 
+    // Brute force
     val allPoints = cloud.points.indexRange.filterNot(_ == centerTupleIndex)
     val (resultBF, tBruteForce) = timeIt { cloud.kNearestBruteForce(cloud.space, allPoints)(k, centerTuple) }
     val resultBruteForce = resultBF.map(_._1)
+
+    // Optimized
     val (result, t) = timeIt { cloud.kNearest(cloud.space)(k, centerTupleIndex) }
 
     if (loop == 0) {

@@ -73,6 +73,8 @@ trait FastArray[T, Self[T] <: FastArray[T, Self]] extends Any with FastTuple[T, 
     make(x)
   }
 
+  def slice(from: Int, until: Int): Self[T] = make(repr.slice(from, until))
+
   def flatten[U: ClassTag](implicit asArray: (T) ⇒ Self[U]): Self[U] = {
     val n = repr.map(elem => asArray(elem).length).sum
     val x = new Array[U](n)

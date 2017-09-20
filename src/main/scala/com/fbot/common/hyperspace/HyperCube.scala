@@ -26,6 +26,10 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
     grow(unitsToGrow.map(_._1), unitsToGrow.map(_._2))
   }
 
+  /**
+    * Expensive in high dimensions \(~n**d\)
+    * @return
+    */
   def hyperSpaceUnits: ImmutableArray[HyperSpaceUnit] = {
     val rangesTuple: ImmutableArray[IndexedSeq[Long]] = ImmutableArray.indexRange(0, dim).map(axis => {
       left(axis) until right(axis)
@@ -34,6 +38,10 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
     ImmutableArray(cartesianProduct(rangesTuple))
   }
 
+  /**
+    * Expensive in high dimensions (~ d n**{d-1})
+    * @return
+    */
   def minus(innerCube: HyperCube): ImmutableArray[HyperSpaceUnit] = {
 
     // grow cube axis by axis
@@ -79,6 +87,10 @@ object HyperCube {
 
   def from(hyperSpaceUnit: HyperSpaceUnit): HyperCube = {
     HyperCube(hyperSpaceUnit, hyperSpaceUnit + HyperSpaceUnit.unit(hyperSpaceUnit.length))
+  }
+
+  def empty(hyperSpaceUnit: HyperSpaceUnit): HyperCube = {
+    HyperCube(hyperSpaceUnit, hyperSpaceUnit)
   }
 
 }

@@ -26,8 +26,27 @@ object ImmutableArray {
 
   def empty[T: ClassTag]: ImmutableArray[T] = ImmutableArray(Array.empty[T])
 
-  def indexRange(start: Int, end: Int): ImmutableArray[ArrayIndex] = ImmutableArray(Array.range(start, end).map(i => ArrayIndex(i)))
+  def range(start: Int, end: Int): ImmutableArray[Int] = ImmutableArray(Array.range(start, end))
+
+  def indexRange(start: Int, end: Int): ImmutableArray[ArrayIndex] = range(start, end).map(i => ArrayIndex(i))
 
   implicit def builder[T: ClassTag](array: Array[T]): ImmutableArray[T] = ImmutableArray(array)
+
+//  implicit class RichIterable[T](val it: Iterable[ImmutableArray[T]]) extends AnyVal {
+//
+//    def flattenToImmutableArray(implicit tag: ClassTag[T]): ImmutableArray[T] = {
+//      val n = it.map(_.length).sum
+//      val x = new Array[T](n)
+//
+//      var i = 0
+//      it foreach { elem =>
+//        System.arraycopy(elem.toArray, 0, x, i, elem.length)
+//        i += elem.length
+//      }
+//
+//      ImmutableArray(x)
+//    }
+//
+//  }
 
 }

@@ -50,9 +50,16 @@ object TestMI {
 
     val mu = DenseVector(Array.fill(dim)(0d))
     val sigma = {
-      val a = DenseMatrix.eye[Double](dim)
-      a(dim - 1, 0 until dim - 1) := .05d
-      a(0 until dim - 1, dim - 1) := .05d
+      val sigmaX = DenseMatrix.eye[Double](dim/2)
+      val sigmaY = DenseMatrix.eye[Double](dim/2)
+      val sigmaXY = DenseMatrix.eye[Double](dim/2) * 0.1
+
+      val a = DenseMatrix.zeros[Double](dim, dim)
+      a(0 until dim/2, 0 until dim/2) := sigmaX
+      a(dim/2 until dim, dim/2 until dim) := sigmaY
+      a(0 until dim/2, dim/2 until dim) := sigmaXY
+      a(dim/2 until dim, 0 until dim/2) := sigmaXY.t
+
       a
     }
     println(s"sigma = $sigma")
