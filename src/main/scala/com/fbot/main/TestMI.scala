@@ -44,26 +44,27 @@ object TestMI {
     // Data source
     val k: Int = 1
     // higher k is lower statistical error, but higher systematic error
+
     val rho: Double = 0.89d
-    val N: Int = 1000
-    val dim: Int = 1000
+    val N: Int = 10000
+    val dim: Int = 2
 
-    val mu = DenseVector(Array.fill(dim)(0d))
+    val mu = DenseVector(Array.fill(2*dim)(0d))
     val sigma = {
-      val sigmaX = DenseMatrix.eye[Double](dim/2)
-      val sigmaY = DenseMatrix.eye[Double](dim/2)
-      val sigmaXY = DenseMatrix.eye[Double](dim/2) * 0.1
+      val sigmaX = DenseMatrix.eye[Double](dim)
+      val sigmaY = DenseMatrix.eye[Double](dim) + DenseMatrix((0.0, 0.3), (0.3, 0.0))
+      val sigmaXY = DenseMatrix((0.1, 0.5), (0.0, -0.2))
 
-      val a = DenseMatrix.zeros[Double](dim, dim)
-      a(0 until dim/2, 0 until dim/2) := sigmaX
-      a(dim/2 until dim, dim/2 until dim) := sigmaY
-      a(0 until dim/2, dim/2 until dim) := sigmaXY
-      a(dim/2 until dim, 0 until dim/2) := sigmaXY.t
+      val a = DenseMatrix.zeros[Double](2*dim, 2*dim)
+      a(  0 until   dim,   0 until   dim) := sigmaX
+      a(dim until 2*dim, dim until 2*dim) := sigmaY
+      a(  0 until   dim, dim until 2*dim) := sigmaXY
+      a(dim until 2*dim,   0 until   dim) := sigmaXY.t
 
       a
     }
     println(s"sigma = $sigma")
-    val data: BigData = GaussianData(2, N, dim / 2, sigma, mu)
+    val data: BigData = GaussianData(2, N, dim, sigma, mu)
       .data // GaussianData.data // RndDataXd(dim, N).data // FxDataXd(dim, N).data // GaussianData2d(N, rho).data
 
     println(sc.defaultParallelism)
@@ -91,8 +92,8 @@ object TestMI {
       val MI = sampleData.MI(k)
 
       println(f"$MI%7.4f vs ${-1d / 2d * log(det(sigma)) }" +
-              f" + ${1d / 2d * log(det(sigma(0 until dim / 2, 0 until dim / 2))) }" +
-              f" + ${1d / 2d * log(det(sigma(dim / 2 until dim, dim / 2 until dim))) }%7.4f")
+              f" + ${1d / 2d * log(det(sigma(0 until dim, 0 until dim))) }" +
+              f" + ${1d / 2d * log(det(sigma(dim until 2*dim, dim until 2*dim))) }%7.4f")
 
       MatrixEntry(dataPair._2(0).index.toLong, dataPair._2(1).index.toLong, MI)
     }).cache(), data.rows, data.rows)

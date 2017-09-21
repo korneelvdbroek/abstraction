@@ -59,7 +59,11 @@ trait FastTuple[T, Self <: FastTuple[T, Self]] extends Any {
 
   def toSet: Set[T] = repr.toSet
 
-  override def toString: String = repr.mkString("[", ",\n", "]")
+  override def toString: String = mkString("[", ", ", "]")
+
+  def mkString(start: String, sep: String, end: String): String = {
+    repr.mkString(start, sep, end)
+  }
 
 }
 

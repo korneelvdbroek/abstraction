@@ -32,21 +32,4 @@ object ImmutableArray {
 
   implicit def builder[T: ClassTag](array: Array[T]): ImmutableArray[T] = ImmutableArray(array)
 
-//  implicit class RichIterable[T](val it: Iterable[ImmutableArray[T]]) extends AnyVal {
-//
-//    def flattenToImmutableArray(implicit tag: ClassTag[T]): ImmutableArray[T] = {
-//      val n = it.map(_.length).sum
-//      val x = new Array[T](n)
-//
-//      var i = 0
-//      it foreach { elem =>
-//        System.arraycopy(elem.toArray, 0, x, i, elem.length)
-//        i += elem.length
-//      }
-//
-//      ImmutableArray(x)
-//    }
-//
-//  }
-
 }

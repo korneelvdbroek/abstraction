@@ -4,6 +4,7 @@ import breeze.linalg.{DenseMatrix, DenseVector}
 import breeze.stats.distributions.{Gaussian, MultivariateGaussian}
 import com.fbot.common.data.BigData
 import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.Tuple
 import org.apache.spark.SparkContext
 
@@ -85,7 +86,7 @@ case class GaussianData(numberOfDataSets: Int, samplesSize: Int, sampleDim: Int,
 
     val sampledData = ImmutableArray.fill[Tuple](samplesSize)(Tuple(gaussian.draw().toArray))
 
-    BigData((0 until numberOfDataSets).map(d => sampledData.map(tuple => tuple.slice(d * sampleDim, d * sampleDim + sampleDim - 1))): _*)
+    BigData((0 until numberOfDataSets).map(d => sampledData.map(tuple => tuple.slice(d * sampleDim, d * sampleDim + sampleDim))): _*)
   }
 
 }
@@ -97,8 +98,8 @@ case class ConstGaussianData2d(N: Int, const: Double, sigma: Double = 1d, mu: Do
     val gaussian = Gaussian(mu, sigma)
 
     val sample = ImmutableArray.fill[Tuple](N)(Tuple(const, const))
-    val dataX = sample.map(tuple => Tuple(tuple(0)))
-    val dataY = sample.map(tuple => Tuple(tuple(1)))
+    val dataX = sample.map(tuple => Tuple(tuple(ArrayIndex(0))))
+    val dataY = sample.map(tuple => Tuple(tuple(ArrayIndex(1))))
 
     // 0 - 1,000   of 1,000,000 = 10^6
     // volume total space = 2000^8 = 2^8 10^(3*8)   = 256   10^24  --> 10^6  points

@@ -7,7 +7,7 @@ import scala.collection.mutable
 /**
   *
   */
-trait FastArrayBooleanMath[Self <: FastTuple[Boolean, Self]] extends Any with ElementWiseFastArrayOps[Boolean] with FastTuple[Boolean, Self] {
+trait FastTupleBooleanMath[Self <: FastTuple[Boolean, Self]] extends Any with ElementWiseFastArrayOps[Boolean] with FastTuple[Boolean, Self] {
 
   def make(x: mutable.WrappedArray[Boolean]): Self
 
@@ -17,12 +17,12 @@ trait FastArrayBooleanMath[Self <: FastTuple[Boolean, Self]] extends Any with El
   }
 
 
-  def &&(rhs: FastTuple[Boolean, Self]): Self = {
+  def &&(rhs: Self): Self = {
     val res: Array[Boolean] = new Array[Boolean](this.length)
     make(elementWise(_ && _)(this.repr.toArray, rhs.repr.toArray)(res))
   }
 
-  def ||(rhs: FastTuple[Boolean, Self]): Self = {
+  def ||(rhs: Self): Self = {
     val res: Array[Boolean] = new Array[Boolean](this.length)
     make(elementWise(_ || _)(this.repr.toArray, rhs.repr.toArray)(res))
   }

@@ -1,5 +1,6 @@
 package com.fbot.main
 
+import breeze.linalg.{DenseMatrix, DenseVector}
 import com.fbot.algos.mutualinformation.MutualInformation
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
@@ -12,6 +13,7 @@ import scala.util.Random
   *  TODO:
   *  - even though we should not be partitioning // we still are (and have blocks with super small amount of points in them) ==> BUG IN ALGO
   *  - find heuristic for optimal number in a spaceUnit (based on uniform distribution)
+  *  - make MI based on RDD
   */
 object Test extends App {
   import Utils._
@@ -20,8 +22,29 @@ object Test extends App {
   implicit val sc = spark.sparkContext
 
   val k = 10
-  val bigData = RndDataXd(10, 100000).data
+  val dim = 1
+  val N = 1000000
+
+  val mu = DenseVector(Array.fill(2*dim)(0d))
+  val sigma = {
+    val sigmaX = DenseMatrix.eye[Double](dim)
+    val sigmaY = DenseMatrix.eye[Double](dim)
+    val sigmaXY = DenseMatrix.eye[Double](dim) * 0.1
+
+    val a = DenseMatrix.zeros[Double](2*dim, 2*dim)
+    a(  0 until   dim,   0 until   dim) := sigmaX
+    a(dim until 2*dim, dim until 2*dim) := sigmaY
+    a(  0 until   dim, dim until 2*dim) := sigmaXY
+    a(dim until 2*dim,   0 until   dim) := sigmaXY.t
+
+    a
+  }
+
+  val bigData = GaussianData(2, N, dim, sigma, mu).data // GaussianData(2, N, dim, sigma, mu).data // RndDataXd(dim, N).data
   val cloud: MutualInformation = MutualInformation(bigData(0), bigData(1))
+
+  val space = cloud.space
+
 
   var aveTime: Long = 0L
   for (loop <- 0 to 20){
@@ -30,11 +53,11 @@ object Test extends App {
 
     // Brute force
     val allPoints = cloud.points.indexRange.filterNot(_ == centerTupleIndex)
-    val (resultBF, tBruteForce) = timeIt { cloud.kNearestBruteForce(cloud.space, allPoints)(k, centerTuple) }
+    val (resultBF, tBruteForce) = timeIt { cloud.kNearestBruteForce(space, allPoints)(k, centerTuple) }
     val resultBruteForce = resultBF.map(_._1)
 
     // Optimized
-    val (result, t) = timeIt { cloud.kNearest(cloud.space)(k, centerTupleIndex) }
+    val (result, t) = timeIt { cloud.kNearest(space)(k, centerTupleIndex) }
 
     if (loop == 0) {
       aveTime = 0L
@@ -48,7 +71,7 @@ object Test extends App {
 //    val (result, t) = timeIt { cloud.numberOfCloseByPoints(space)(distance, centerTupleIndex) }
 //    println(s"$resultBruteForce -- $result")
 
-    checkIfEqual(cloud.spaceX)(cloud.points(centerTupleIndex), resultBruteForce, result)
+    checkIfEqual(space)(cloud.points(centerTupleIndex), resultBruteForce, result)
 
     println(f"$loop%3d: Brute Force t = ${prettyPrintTime(tBruteForce)}; t = ${prettyPrintTime(t)}")
 
@@ -61,12 +84,13 @@ object Test extends App {
 
 
 
-  val x = cloud.kNearestBruteForce(cloud.spaceX, cloud.points.indexRange.filterNot(_ == centerTupleIndex))(k+1, centerTuple)
-  val y = cloud.kNearest(cloud.spaceX)(k, centerTupleIndex)
-  println(x.map(index => (cloud.points(index._1), index._2)))
+  val x = cloud.kNearestBruteForce(space, cloud.points.indexRange.filterNot(_ == centerTupleIndex))(k+1, centerTuple)
+  val y = cloud.kNearest(space)(k, centerTupleIndex)
+  println("BF:")
+  println(x)
   println()
   println("fast algo")
-  println(y.map(index => cloud.points(index)))
+  println(y)
 
 
 
@@ -80,8 +104,24 @@ object Test extends App {
     }
 
     if (removeLargestDistance(resultBFWithDistance) != removeLargestDistance(resultWithDistance)) {
-      println(removeLargestDistance(resultBFWithDistance))
-      println(removeLargestDistance(resultWithDistance))
+      val byDistanceBF = removeLargestDistance(resultBFWithDistance)
+      val byDistanceBFKeys = byDistanceBF.keys.toList.sorted
+
+      println(s"centerTuple = $centerTuple")
+
+      println(s"BF: ")
+      byDistanceBFKeys foreach (distance => {
+        println(s" $distance --> Set(${byDistanceBF(distance).map(pointIndex => space.hyperSpaceUnitAround(cloud.points(pointIndex)))})")
+      })
+
+      val byDistance = removeLargestDistance(resultWithDistance)
+      val byDistanceKeys = byDistance.keys.toList.sorted
+
+      println(s"Fast: ")
+      byDistanceKeys foreach (distance => {
+        println(s" $distance --> Set(${byDistance(distance).map(pointIndex => space.hyperSpaceUnitAround(cloud.points(pointIndex)))})")
+      })
+
       throw new RuntimeException("data from algo does not match brute force")
     }
   }

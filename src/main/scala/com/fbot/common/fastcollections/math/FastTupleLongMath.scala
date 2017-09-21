@@ -7,7 +7,7 @@ import scala.collection.mutable
 /**
   *
   */
-trait FastArrayLongMath[Self <: FastTuple[Long, Self]] extends Any with ElementWiseFastArrayOps[Long] with FastTuple[Long, Self] {
+trait FastTupleLongMath[Self <: FastTuple[Long, Self]] extends Any with ElementWiseFastArrayOps[Long] with FastTuple[Long, Self] {
 
   def make(x: mutable.WrappedArray[Long]): Self
 
@@ -38,25 +38,3 @@ trait FastArrayLongMath[Self <: FastTuple[Long, Self]] extends Any with ElementW
 
 }
 
-object ArrayLongMath extends ElementWiseFastArrayOps[Long] {
-
-  def plus(lhs: ImmutableArray[Long], rhs: ImmutableArray[Long]): ImmutableArray[Long] = {
-    val res: Array[Long] = new Array[Long](lhs.length)
-    ImmutableArray(elementWise(_ + _)(lhs.toArray, rhs.toArray)(res))
-  }
-
-  def minus(lhs: ImmutableArray[Long], rhs: ImmutableArray[Long]): ImmutableArray[Long] = {
-    val res: Array[Long] = new Array[Long](lhs.length)
-    ImmutableArray(elementWise(_ - _)(lhs.toArray, rhs.toArray)(res))
-  }
-
-  def times(lhs: ImmutableArray[Long], rhs: ImmutableArray[Long]): ImmutableArray[Long] = {
-    val res: Array[Long] = new Array[Long](lhs.length)
-    ImmutableArray(elementWise(_ * _)(lhs.toArray, rhs.toArray)(res))
-  }
-
-  def negate(lhs: ImmutableArray[Long]): ImmutableArray[Long] = {
-    lhs.map(-_)
-  }
-
-}
