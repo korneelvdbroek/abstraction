@@ -8,6 +8,7 @@ import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.{HyperSpace, HyperSpaceUnit, Space, Tuple}
 import com.fbot.main.Utils
+import grizzled.slf4j.Logging
 
 /**
   * References:
@@ -16,7 +17,7 @@ import com.fbot.main.Utils
   *   Phys. Rev. E 69, 066138
   *  	arXiv:cond-mat/0305641
   */
-case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray[Tuple]) extends NearestNeighbors {
+case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray[Tuple]) extends NearestNeighbors with Logging {
 
   val points: ImmutableArray[Tuple] = (dataX, dataY).map((x, y) => x ++ y)
 
@@ -108,7 +109,7 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
         (numberOfCloseByPoints(spaceX)(epsilonX, i), numberOfCloseByPoints(spaceY)(epsilonY, i))
       }
 
-      if (ii % 1000 == 0) println(f"$i%12s:  ${ Utils.prettyPrintTime(t1) } // ${ Utils.prettyPrintTime(t2) }: $x")
+      if (ii % 1000 == 0) info(f"$i%12s:  ${ Utils.prettyPrintTime(t1) } // ${ Utils.prettyPrintTime(t2) }: $x")
       x
     })
 

@@ -24,5 +24,12 @@ libraryDependencies ++= Seq(
 
   // Apache Spark
   "org.apache.spark" %% "spark-sql" % "2.2.0",
-  "org.apache.spark" %% "spark-mllib" % "2.2.0"
+  "org.apache.spark" %% "spark-mllib" % "2.2.0",
+
+  // Logging dependencies
+  "org.slf4j" % "slf4j-api" % "1.7.16",
+  "ch.qos.logback" % "logback-core" % "1.0.+",
+  "ch.qos.logback" % "logback-classic" % "1.0.+",
+  "org.clapper" %% "grizzled-scala" % "1.3",
+  "org.clapper" %% "grizzled-slf4j" % "1.3.1"
 )

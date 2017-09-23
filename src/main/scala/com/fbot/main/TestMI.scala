@@ -9,6 +9,7 @@ import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.{HashPartitioner, SparkContext}
+import grizzled.slf4j.Logging
 
 /**
   * TODO:
@@ -22,7 +23,7 @@ import org.apache.spark.{HashPartitioner, SparkContext}
   * https://arxiv.org/pdf/q-bio/0511043.pdf
   * https://arxiv.org/pdf/q-bio/0511042.pdf
   */
-object TestMI {
+object TestMI extends Logging {
 
   implicit class RichRows(val pairedRows: RDD[(Vector[Row], (Vector[ArrayIndex], Int))]) extends AnyVal {
 
@@ -45,29 +46,30 @@ object TestMI {
     val k: Int = 1
     // higher k is lower statistical error, but higher systematic error
 
-    val rho: Double = 0.89d
+    val rho: Double = -0.5d
     val N: Int = 10000
-    val dim: Int = 2
+    val dim: Int = 1000
 
-    val mu = DenseVector(Array.fill(2*dim)(0d))
+    val mu = DenseVector(Array.fill(2 * dim)(0d))
     val sigma = {
       val sigmaX = DenseMatrix.eye[Double](dim)
-      val sigmaY = DenseMatrix.eye[Double](dim) + DenseMatrix((0.0, 0.3), (0.3, 0.0))
-      val sigmaXY = DenseMatrix((0.1, 0.5), (0.0, -0.2))
+      val sigmaY = DenseMatrix.eye[Double](dim)
+      //+ DenseMatrix((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
+      val sigmaXY = DenseMatrix.eye[Double](dim) * rho // ((0.1, 0.0, 0.0), (0.0, 0.1, 0.0), (0.0, 0.0, 0.1))
 
-      val a = DenseMatrix.zeros[Double](2*dim, 2*dim)
-      a(  0 until   dim,   0 until   dim) := sigmaX
-      a(dim until 2*dim, dim until 2*dim) := sigmaY
-      a(  0 until   dim, dim until 2*dim) := sigmaXY
-      a(dim until 2*dim,   0 until   dim) := sigmaXY.t
+      val a = DenseMatrix.zeros[Double](2 * dim, 2 * dim)
+      a(0 until dim, 0 until dim) := sigmaX
+      a(dim until 2 * dim, dim until 2 * dim) := sigmaY
+      a(0 until dim, dim until 2 * dim) := sigmaXY
+      a(dim until 2 * dim, 0 until dim) := sigmaXY.t
 
       a
     }
-    println(s"sigma = $sigma")
+    info(s"sigma = $sigma")
     val data: BigData = GaussianData(2, N, dim, sigma, mu)
       .data // GaussianData.data // RndDataXd(dim, N).data // FxDataXd(dim, N).data // GaussianData2d(N, rho).data
 
-    println(sc.defaultParallelism)
+    info(sc.defaultParallelism)
 
     val seriesPairs = (0 until data.rows).map(ArrayIndex(_)).combinations(2).toList.map(_.toVector)
       .zipWithIndex
@@ -87,18 +89,21 @@ object TestMI {
 
       // Sample data
       val sampleData = MutualInformation(dataPair._2(0).rowData, dataPair._2(1).rowData)
-      println(s"Sample size (N) = ${sampleData.length }")
+      info(s"Sample size (N) = ${sampleData.length }")
 
       val MI = sampleData.MI(k)
 
-      println(f"$MI%7.4f vs ${-1d / 2d * log(det(sigma)) }" +
-              f" + ${1d / 2d * log(det(sigma(0 until dim, 0 until dim))) }" +
-              f" + ${1d / 2d * log(det(sigma(dim until 2*dim, dim until 2*dim))) }%7.4f")
+      val MIGaussian1 = -1d / 2d * log(det(sigma))
+      val MIGaussian2 = 1d / 2d * log(det(sigma(0 until dim, 0 until dim)))
+      val MIGaussian3 = 1d / 2d * log(det(sigma(dim until 2 * dim, dim until 2 * dim)))
+
+      info(f"$MI%7.4f vs ${MIGaussian1 + MIGaussian2 + MIGaussian3 }%7.4f = $MIGaussian1%7.4f + $MIGaussian2%7.4f + $MIGaussian3%7.4f  " +
+              f"${100.0 * (MI - (MIGaussian1 + MIGaussian2 + MIGaussian3)) / (MIGaussian1 + MIGaussian2 + MIGaussian3) }%7.2f%%")
 
       MatrixEntry(dataPair._2(0).index.toLong, dataPair._2(1).index.toLong, MI)
     }).cache(), data.rows, data.rows)
 
-    println(similarityMatrix.toBlockMatrix.toLocalMatrix)
+    info(similarityMatrix.toBlockMatrix.toLocalMatrix)
 
     spark.stop()
   }
@@ -107,7 +112,7 @@ object TestMI {
   def printPartition[T](partition: RDD[(Int, Vector[Row])]): Unit = {
     partition.foreachPartition(it => {
       val contentStr = it.foldLeft("")((str, i) => str ++ s"${i._1 }(${i._2.map(_.index) }), ")
-      println(s"partition: $contentStr")
+      info(s"partition: $contentStr")
     })
   }
 
