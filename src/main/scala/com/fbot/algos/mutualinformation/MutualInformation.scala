@@ -3,6 +3,7 @@ package com.fbot.algos.mutualinformation
 import breeze.linalg.max
 import breeze.numerics.{digamma, pow, sqrt}
 import com.fbot.algos.nearestneighbors.NearestNeighbors
+import com.fbot.common.data.Series
 import com.fbot.common.fastcollections.FastTuple2Zipped._
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
@@ -95,27 +96,35 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
   }
 
   def MI(k: Int): Double = {
-    val nxy: IndexedSeq[(Int, Int)] = (0 until length).map(ii => {
-      val i = ArrayIndex(ii)
+    val (mean, _): (Double, Double) = (0 until length).foldLeft((0d, 0d))((acc, i) => {
+      val (oldMean, oldVariance) = acc
+      val index = ArrayIndex(i)
+      val n = i + 1
 
       val (kNearestIndices, t1) = Utils.timeIt {
-        kNearest(space)(k, i)
+        kNearest(space)(k, index)
       }
 
-      val epsilonX = kNearestIndices.map(kNearestIndex => spaceX.distance(points(i), points(kNearestIndex))).max
-      val epsilonY = kNearestIndices.map(kNearestIndex => spaceY.distance(points(i), points(kNearestIndex))).max
+      val epsilonX = kNearestIndices.map(kNearestIndex => spaceX.distance(points(index), points(kNearestIndex))).max
+      val epsilonY = kNearestIndices.map(kNearestIndex => spaceY.distance(points(index), points(kNearestIndex))).max
 
       val (x, t2) = Utils.timeIt {
-        (numberOfCloseByPoints(spaceX)(epsilonX, i), numberOfCloseByPoints(spaceY)(epsilonY, i))
+        digamma(numberOfCloseByPoints(spaceX)(epsilonX, index)) + digamma(numberOfCloseByPoints(spaceY)(epsilonY, index))
       }
 
-      if (ii % 1000 == 0) info(f"$i%12s:  ${ Utils.prettyPrintTime(t1) } // ${ Utils.prettyPrintTime(t2) }: $x")
-      x
+      val result = (((n-1d)*oldMean + x) / n, if (n>1) (n-2d)/(n-1d) * oldVariance + (x-oldMean)*(x-oldMean) / n else 0d)
+
+      if (i % 100 == 0) info(f"$index%12s:  ${ Utils.prettyPrintTime(t1) } // ${ Utils.prettyPrintTime(t2) }: " +
+                             f"${digamma(k) - 1d / k + digamma(length) - result._1}%7.4f +/- ${ sqrt(result._2 / n) }%7.4f")
+
+      result
     })
 
-    val ave = nxy.map(nxyi => digamma(nxyi._1) + digamma(nxyi._2)).sum / length
+    max(digamma(k) - 1d / k - mean + digamma(length), 0d)
+  }
 
-    max(digamma(k) - 1d / k - ave + digamma(length), 0d)
+  def MIMax(k: Int): Double = {
+    max(- digamma(k) - 1d / k + digamma(length), 0d)
   }
 
 }

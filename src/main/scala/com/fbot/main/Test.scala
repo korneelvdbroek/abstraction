@@ -22,8 +22,8 @@ object Test extends App {
   implicit val sc = spark.sparkContext
 
   val k = 10
-  val dim = 1
-  val N = 1000000
+  val dim = 3
+  val N = 10000
 
   val mu = DenseVector(Array.fill(2*dim)(0d))
   val sigma = {
@@ -47,7 +47,7 @@ object Test extends App {
 
 
   var aveTime: Long = 0L
-  for (loop <- 0 to 20){
+  for (loop <- 0 until 20){
     val centerTupleIndex = ArrayIndex(Random.nextInt(cloud.points.length))
     val centerTuple = cloud.points(centerTupleIndex)
 
@@ -59,11 +59,7 @@ object Test extends App {
     // Optimized
     val (result, t) = timeIt { cloud.kNearest(space)(k, centerTupleIndex) }
 
-    if (loop == 0) {
-      aveTime = 0L
-    } else {
-      aveTime = (aveTime * loop + t) / (loop + 1)
-    }
+    aveTime = (aveTime * loop + t) / (loop + 1)
 
 //    val allPoints = cloud.points.indexRange
 //    val distance = 200d
