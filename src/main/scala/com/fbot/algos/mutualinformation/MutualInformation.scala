@@ -1,7 +1,7 @@
 package com.fbot.algos.mutualinformation
 
 import breeze.linalg.max
-import breeze.numerics.{digamma, pow, sqrt}
+import breeze.numerics.{abs, digamma, pow, sqrt}
 import com.fbot.algos.nearestneighbors.NearestNeighbors
 import com.fbot.common.data.Series
 import com.fbot.common.fastcollections.FastTuple2Zipped._
@@ -10,6 +10,8 @@ import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.{HyperSpace, HyperSpaceUnit, Space, Tuple}
 import com.fbot.main.Utils
 import grizzled.slf4j.Logging
+
+import scala.util.Random
 
 /**
   * References:
@@ -47,7 +49,7 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
     * Note that simply cutting up the massCube edges in n (real) spaceUnits where n^d = N / \sqrt{N} can result in too many spaceUnits
     * since effectively we have (n.floor + 1)^d spaceUnits which can be >> n^k (n+1)^(d-k)
     *
-    * @param massCubeEdgeSize            edges of the cube that contains all datapoints
+    * @param massCubeEdgeSize            edges of the cube that contains all data points
     * @param numberOfPointsInMassCube    number of data points
     * @param optimalPointsPerSpaceUnit   ideal number of data points per spaceUnit (in case of uniform distribution)
     * @return                            unitSizes defining the grid in the space
@@ -70,6 +72,8 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
       }
     })._2.reverse
 
+    info(s"${massCubeEdgeSize.length}d space: split into ${Tuple(massCubeEdgeSize.toArray) / Tuple(partitionVector)} space units")
+
     Tuple(partitionVector)
   }
 
@@ -86,6 +90,8 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
     val (pointsBySpaceUnitKeys, pointsBySpaceUnitValues) =
       points.indexRange.groupBy(index => space.hyperSpaceUnitAround(points(index))).unzip
 
+    info(s"${space.dim}d space: actual ${pointsBySpaceUnitKeys.size} space units")
+
     (ImmutableArray(pointsBySpaceUnitKeys), ImmutableArray(pointsBySpaceUnitValues))
   }
 
@@ -95,29 +101,35 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
         spaceY -> groupPointsBySpaceUnits(spaceY, points))
   }
 
-  def MI(k: Int): Double = {
-    val (mean, _): (Double, Double) = (0 until length).foldLeft((0d, 0d))((acc, i) => {
-      val (oldMean, oldVariance) = acc
-      val index = ArrayIndex(i)
-      val n = i + 1
+  def MI(k: Int, tolerance: Double = 0.01): Double = {
+    val sampleIndices = ImmutableArray.indexRange(0, length).map(i => (i, Random.nextDouble())).sortBy(_._2).mapWithIndex((x, index) => (x._1, index))
+
+    val (mean, _): (Double, Double) = sampleIndices.foldLeftOrBreak((0d, 0d))((acc, doubleIndex) => {
+      val (sampleIndex, countIndex) = doubleIndex
+      val (oldMean, oldSumOfSquares) = acc
 
       val (kNearestIndices, t1) = Utils.timeIt {
-        kNearest(space)(k, index)
+        kNearest(space)(k, sampleIndex)
       }
 
-      val epsilonX = kNearestIndices.map(kNearestIndex => spaceX.distance(points(index), points(kNearestIndex))).max
-      val epsilonY = kNearestIndices.map(kNearestIndex => spaceY.distance(points(index), points(kNearestIndex))).max
+      val epsilonX = kNearestIndices.map(kNearestIndex => spaceX.distance(points(sampleIndex), points(kNearestIndex))).max
+      val epsilonY = kNearestIndices.map(kNearestIndex => spaceY.distance(points(sampleIndex), points(kNearestIndex))).max
 
       val (x, t2) = Utils.timeIt {
-        digamma(numberOfCloseByPoints(spaceX)(epsilonX, index)) + digamma(numberOfCloseByPoints(spaceY)(epsilonY, index))
+        digamma(numberOfCloseByPoints(spaceX)(epsilonX, sampleIndex)) + digamma(numberOfCloseByPoints(spaceY)(epsilonY, sampleIndex))
       }
 
-      val result = (((n-1d)*oldMean + x) / n, if (n>1) (n-2d)/(n-1d) * oldVariance + (x-oldMean)*(x-oldMean) / n else 0d)
+      // Welford's online algorithm for sample mean and variance (https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance)
+      val n = countIndex.toInt + 1d
+      val mean = ((n-1d)*oldMean + x) / n
+      val sumOfSquares = oldSumOfSquares + (x-oldMean)*(x-mean)
+      val standardErrorOfMean = if (n>1d) sqrt(sumOfSquares / ((n-1d)*n)) else Double.PositiveInfinity
 
-      if (i % 100 == 0) info(f"$index%12s:  ${ Utils.prettyPrintTime(t1) } // ${ Utils.prettyPrintTime(t2) }: " +
-                             f"${digamma(k) - 1d / k + digamma(length) - result._1}%7.4f +/- ${ sqrt(result._2 / n) }%7.4f")
+      val MI = digamma(k) - 1d / k + digamma(length) - mean
 
-      result
+      if (countIndex.toInt % 100 == 0) info(f"${countIndex.toInt}%7d ($sampleIndex%12s):  ${ Utils.prettyPrintTime(t1) } // ${ Utils.prettyPrintTime(t2) }: $MI%7.4f +/- $standardErrorOfMean%7.4f")
+
+      ((mean, sumOfSquares), standardErrorOfMean < tolerance)
     })
 
     max(digamma(k) - 1d / k - mean + digamma(length), 0d)

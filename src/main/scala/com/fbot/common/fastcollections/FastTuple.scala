@@ -2,8 +2,8 @@ package com.fbot.common.fastcollections
 
 import com.fbot.common.fastcollections.index.ArrayIndex
 
-import scala.collection.{GenTraversableOnce, mutable}
-import scala.reflect.ClassTag
+import scala.annotation.tailrec
+import scala.collection.mutable
 
 /**
   * Notes:
@@ -18,7 +18,6 @@ trait FastTuple[T, Self <: FastTuple[T, Self]] extends Any {
   def make(x: mutable.WrappedArray[T]): Self
 
 
-
   def makeFromArray(x: Array[T]): Self = make(mutable.WrappedArray.make[T](x))
 
   def length: Int = repr.length
@@ -31,19 +30,32 @@ trait FastTuple[T, Self <: FastTuple[T, Self]] extends Any {
 
   def foldLeft[B](z: B)(op: (B, T) => B): B = repr.foldLeft(z)(op)
 
+  def foldLeftOrBreak[B](z: B)(op: (B, T) => (B, Boolean)): B = foldl(ArrayIndex(0), ArrayIndex(length), (z, false), op)
+
+  @tailrec
+  private def foldl[B](start: ArrayIndex, end: ArrayIndex, z: (B, Boolean), op: (B, T) => (B, Boolean)): B = {
+    if (start == end || z._2) {
+      z._1
+    } else {
+      foldl(start.next, end, op(z._1, this (start)), op)
+    }
+  }
+
   def forall(p: (T) => Boolean): Boolean = repr.forall(p)
 
   def forallWithIndex(p: (T, ArrayIndex) => Boolean): Boolean = {
     val len = length
 
     var i = 0
-    while (i < len && p(repr(i), ArrayIndex(i))) i += 1
+    while (i < len && p(repr(i), ArrayIndex(i))) {
+      i += 1
+    }
     i == len
   }
 
   def count(p: (T) => Boolean): Int = repr.count(p)
 
-  def ++(that: Self)(implicit evidence: scala.reflect.ClassTag[T]): Self = {
+  def ++ (that: Self)(implicit evidence: scala.reflect.ClassTag[T]): Self = {
     val thisLen = repr.toArray.length
     val thatLen = that.repr.toArray.length
 

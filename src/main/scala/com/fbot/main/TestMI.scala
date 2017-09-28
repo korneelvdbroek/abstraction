@@ -13,7 +13,7 @@ import org.apache.spark.sql.SparkSession
 
 /**
   * TODO:
-  * - random sampling to get good and fast convergence
+  * - random sampling to get good and fast convergence --> foldLeft with early stopping criteria in ImmutableArray
   * - Series as RDD[ImmutableArray[Tuple]]
   * - implement the clustering algo
   *
@@ -34,20 +34,16 @@ object TestMI extends Logging {
     val k: Int = 10
     // higher k is lower statistical error, but higher systematic error
 
-    val rho: Double = -0.5d
+    val rho: Double = 0.0d
     val N: Int = 1000000
     val dim: Int = 3
-
-
-    info(s"estimator <= ${digamma(k) - 1d / k + digamma(N) }")
 
 
     val mu = DenseVector(Array.fill(2 * dim)(0d))
     val sigma = {
       val sigmaX = DenseMatrix.eye[Double](dim)
-      val sigmaY = DenseMatrix.eye[Double](dim)
-      //+ DenseMatrix((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
-      val sigmaXY = DenseMatrix.eye[Double](dim) * rho // ((0.1, 0.0, 0.0), (0.0, 0.1, 0.0), (0.0, 0.0, 0.1))
+      val sigmaY = DenseMatrix.eye[Double](dim) + DenseMatrix((0.0, 0.2, 0.0), (0.2, 0.0, 0.0), (0.0, 0.0, 0.0))
+      val sigmaXY = DenseMatrix.eye[Double](dim) * rho + DenseMatrix((0.4, 0.0, -0.3), (0.0, 0.0, 0.0), (0.5, 0.0, 0.4))
 
       val a = DenseMatrix.zeros[Double](2 * dim, 2 * dim)
       a(0 until dim, 0 until dim) := sigmaX
@@ -78,19 +74,20 @@ object TestMI extends Logging {
 
       // Sample data
       val sampleData = MutualInformation(dataPair(0).series.toImmutableArray, dataPair(1).series.toImmutableArray)
-      info(s"Sample size (N) = ${sampleData.length }")
 
-      val MI = sampleData.MI(k)
 
       val MIGaussian1 = -1d / 2d * log(det(sigma))
       val MIGaussian2 = 1d / 2d * log(det(sigma(0 until dim, 0 until dim)))
       val MIGaussian3 = 1d / 2d * log(det(sigma(dim until 2 * dim, dim until 2 * dim)))
 
-      info(f"$MI%7.4f vs ${MIGaussian1 + MIGaussian2 + MIGaussian3 }%7.4f = $MIGaussian1%7.4f + $MIGaussian2%7.4f + $MIGaussian3%7.4f  " +
-           f"${100.0 * (MI - (MIGaussian1 + MIGaussian2 + MIGaussian3)) / (MIGaussian1 + MIGaussian2 + MIGaussian3) }%7.2f%% vs max ${
-             sampleData
-               .MIMax(k)
-           }%7.4f")
+      info(s"Sample size (N) = ${sampleData.length }")
+      info(f"Gaussian MI = ${MIGaussian1 + MIGaussian2 + MIGaussian3 }%7.4f = $MIGaussian1%7.4f + $MIGaussian2%7.4f + $MIGaussian3%7.4f")
+      info(f"Max      MI = ${sampleData.MIMax(k)}%7.4f")
+      val MI = sampleData.MI(k)
+
+      info(f"$MI%7.4f " +
+           f"vs ${MIGaussian1 + MIGaussian2 + MIGaussian3 }%7.4f " +
+           f"(${100.0 * (MI - (MIGaussian1 + MIGaussian2 + MIGaussian3)) / (MIGaussian1 + MIGaussian2 + MIGaussian3) }%7.2f%%) ")
 
       MatrixEntry(dataPair(0).index.toLong, dataPair(1).index.toLong, MI)
     }).cache(), data.rows, data.rows)
