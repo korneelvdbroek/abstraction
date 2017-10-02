@@ -20,8 +20,8 @@ import org.apache.spark.sql.SparkSession
   * References:
   * + Information based clustering
   * Noam Slonim, Gurinder Singh Atwal, Gasper Tkacik, and William Bialek
-  * https://arxiv.org/pdf/q-bio/0511043.pdf
-  * https://arxiv.org/pdf/q-bio/0511042.pdf
+  * https://arxiv.org/pdf/q-bio/0511043.pdf  (main paper)
+  * https://arxiv.org/pdf/q-bio/0511042.pdf  (supplementary material)
   */
 object TestMI extends Logging {
 
@@ -35,7 +35,7 @@ object TestMI extends Logging {
     // higher k is lower statistical error, but higher systematic error
 
     val rho: Double = 0.0d
-    val N: Int = 1000000
+    val N: Int = 1000000  // should be > 10^{2d}
     val dim: Int = 3
 
 
