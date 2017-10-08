@@ -1,7 +1,7 @@
 package com.fbot.algos.clustering
 
-import com.fbot.common.fastcollections.ImmutableDoubleArray
-import org.apache.spark.rdd.RDD
+import org.apache.spark.SparkContext
+import org.apache.spark.mllib.linalg.distributed.BlockMatrix
 
 /**
   *
@@ -9,8 +9,17 @@ import org.apache.spark.rdd.RDD
 class HelmholtzClustering {
 
   val x: ColMatrix = ???
-  x.cols.treeReduce((x, y) => x + y)
 }
 
 
-case class ColMatrix(cols: RDD[ImmutableDoubleArray])
+case class ColMatrix(cols: BlockMatrix) {
+
+  def sumRow: BlockMatrix = {
+    ???
+  }
+
+}
+
+object ColMatrix {
+
+}
