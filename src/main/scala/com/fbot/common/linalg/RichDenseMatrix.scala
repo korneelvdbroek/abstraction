@@ -7,6 +7,7 @@ import org.apache.spark.mllib.linalg.{DenseMatrix, Matrix, SparseMatrix}
   */
 class RichDenseMatrix(val matrix: DenseMatrix) extends AnyVal {
 
+  // additional matrix operations
   def rowSums: DenseMatrix = {
     val colValues = new Array[Double](numRows)
 
@@ -45,9 +46,12 @@ class RichDenseMatrix(val matrix: DenseMatrix) extends AnyVal {
     new DenseMatrix(numRows, 1, colValues)
   }
 
+
+  // arithmetic
   def + (other: DenseMatrix): DenseMatrix = {
     require(numRows == other.numRows && numCols == other.numCols,
             s"Matrices cannot be added since dimensions (${numRows}x$numCols vs ${other.numRows}x${other.numCols}) do not match.")
+
     val resultValues = new Array[Double](numRows * numCols)
     if (!other.isTransposed) {
       foreachActive { (i, j, value) =>
@@ -59,6 +63,55 @@ class RichDenseMatrix(val matrix: DenseMatrix) extends AnyVal {
       }
     }
     new DenseMatrix(numRows, numCols, resultValues)
+  }
+
+
+  // logical tests on matrix
+  def forall(p: (Double) => Boolean): Boolean = {
+    val len = values.length
+    var i = 0
+    while (i < len && p(values(i))) {
+      i += 1
+    }
+    i == len
+  }
+
+  def forallWithIndex(p: (Double, Int, Int) => Boolean): Boolean = {
+    var i = 0
+    var j = 0
+    var forall = true
+    if (!isTransposed) {
+      // outer loop over columns
+      while (j < numCols && forall) {
+        i = 0
+        val indStart = j * numRows
+        while (i < numRows && forall) {
+          forall = p(values(indStart + i), i, j)
+          i += 1
+        }
+        j += 1
+      }
+    } else {
+      // outer loop over rows
+      while (i < numRows && forall) {
+        j = 0
+        val indStart = i * numCols
+        while (j < numCols && forall) {
+          forall = p(values(indStart + j), i, j)
+          j += 1
+        }
+        i += 1
+      }
+    }
+    forall
+  }
+
+  def count(p: (Double) => Boolean): Int = {
+    var cnt = 0
+    for (x <- values)
+      if (p(x)) cnt += 1
+
+    cnt
   }
 
 
