@@ -36,21 +36,21 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
 
     val edgeLength = if (xHigh - xLow == 0) 1d else xHigh - xLow
 
-    (xLow - margin * edgeLength, edgeLength * (1d + 2d*margin))
+    (xLow - margin * edgeLength, edgeLength * (1d + 2d * margin))
   })
 
   val numberOfPointsInMassCube: Double = length
-  val optimalPointsPerSpaceUnit: Double = sqrt(length)   // optimal given our search strategy which is a tree of hyperSpaceUnits
+  val optimalPointsPerSpaceUnit: Double = sqrt(length) // optimal given our search strategy which is a tree of hyperSpaceUnits
 
   /**
     * Partitions the massCube into n^k (n+1)^(d-k) spaceUnits where N / n^k (n+1)^(d-k) = \sqrt{N} and n, k are integers.
     * Note that simply cutting up the massCube edges in n (real) spaceUnits where n^d = N / \sqrt{N} can result in too many spaceUnits
     * since effectively we have (n.floor + 1)^d spaceUnits which can be >> n^k (n+1)^(d-k)
     *
-    * @param massCubeEdgeSize            edges of the cube that contains all data points
-    * @param numberOfPointsInMassCube    number of data points
-    * @param optimalPointsPerSpaceUnit   ideal number of data points per spaceUnit (in case of uniform distribution)
-    * @return                            unitSizes defining the grid in the space
+    * @param massCubeEdgeSize          edges of the cube that contains all data points
+    * @param numberOfPointsInMassCube  number of data points
+    * @param optimalPointsPerSpaceUnit ideal number of data points per spaceUnit (in case of uniform distribution)
+    * @return unitSizes defining the grid in the space
     */
   def getUnitSizes(massCubeEdgeSize: ImmutableArray[Double], numberOfPointsInMassCube: Double, optimalPointsPerSpaceUnit: Double): Tuple = {
     val dim = massCubeEdgeSize.length
@@ -70,7 +70,7 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
       }
     })._2.reverse
 
-    info(s"${massCubeEdgeSize.length}d space: split into ${Tuple(massCubeEdgeSize.toArray) / Tuple(partitionVector)} space units")
+    info(s"${massCubeEdgeSize.length }d space: split into ${Tuple(massCubeEdgeSize.toArray) / Tuple(partitionVector) } space units")
 
     Tuple(partitionVector)
   }
@@ -83,12 +83,13 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
   val spaceX: HyperSpace = Space(ImmutableArray.indexRange(0, dim), massCubeVectors.map(_._1).slice(0, dim), unitSizesX)
   val spaceY: HyperSpace = Space(ImmutableArray.indexRange(dim, 2 * dim), massCubeVectors.map(_._1).slice(dim, 2 * dim), unitSizesY)
 
-  def groupPointsBySpaceUnits(space: HyperSpace, points: ImmutableArray[Tuple]): (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[ArrayIndex]]) = {
+  def groupPointsBySpaceUnits(space: HyperSpace,
+                              points: ImmutableArray[Tuple]): (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[ArrayIndex]]) = {
     // Slow initial computation
     val (pointsBySpaceUnitKeys, pointsBySpaceUnitValues) =
       points.indexRange.groupBy(index => space.hyperSpaceUnitAround(points(index))).unzip
 
-    info(s"${space.dim}d space: actual ${pointsBySpaceUnitKeys.size} space units")
+    info(s"${space.dim }d space: actual ${pointsBySpaceUnitKeys.size } space units")
 
     (ImmutableArray(pointsBySpaceUnitKeys), ImmutableArray(pointsBySpaceUnitValues))
   }
@@ -99,7 +100,7 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
         spaceY -> groupPointsBySpaceUnits(spaceY, points))
   }
 
-  def MI(k: Int, tolerance: Double = 0.01): Double = {
+  def MI(k: Int = 10, absoluteTolerance: Double = 0.01): Double = {
     val sampleIndices = ImmutableArray.indexRange(0, length).map(i => (i, Random.nextDouble())).sortBy(_._2).mapWithIndex((x, index) => (x._1, index))
 
     val (mean, _): (Double, Double) = sampleIndices.foldLeftOrBreak((0d, 0d))((acc, doubleIndex) => {
@@ -119,22 +120,29 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
 
       // Welford's online algorithm for sample mean and variance (https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance)
       val n = countIndex.toInt + 1d
-      val mean = ((n-1d)*oldMean + x) / n
-      val sumOfSquares = oldSumOfSquares + (x-oldMean)*(x-mean)
-      val standardErrorOfMean = if (n>1d) sqrt(sumOfSquares / ((n-1d)*n)) else Double.PositiveInfinity
+      val mean = ((n - 1d) * oldMean + x) / n
+      val sumOfSquares = oldSumOfSquares + (x - oldMean) * (x - mean)
+      val standardErrorOfMean = if (n > 1d) sqrt(sumOfSquares / ((n - 1d) * n)) else Double.PositiveInfinity
 
       val MI = digamma(k) - 1d / k + digamma(length) - mean
 
-      if (countIndex.toInt % 100 == 0) info(f"${countIndex.toInt}%7d ($sampleIndex%12s):  ${ Utils.prettyPrintTime(t1) } // ${ Utils.prettyPrintTime(t2) }: $MI%7.4f +/- $standardErrorOfMean%7.4f")
+      if (countIndex.toInt % 100 == 0) info(f"${countIndex.toInt }%7d ($sampleIndex%12s):  ${Utils.prettyPrintTime(t1) } // ${
+        Utils
+          .prettyPrintTime(t2)
+      }: $MI%7.4f +/- $standardErrorOfMean%7.4f")
 
-      ((mean, sumOfSquares), standardErrorOfMean < tolerance)
+      ((mean, sumOfSquares), standardErrorOfMean < absoluteTolerance)
     })
 
     max(digamma(k) - 1d / k - mean + digamma(length), 0d)
   }
+}
 
-  def MIMax(k: Int): Double = {
-    max(- digamma(k) - 1d / k + digamma(length), 0d)
+
+object MutualInformation {
+
+  def MIMax(seriesLength: Int, k: Int = 10): Double = {
+    max(- digamma(k) - 1d / k + digamma(seriesLength), 0d)
   }
 
 }

@@ -82,7 +82,7 @@ object TestMI extends Logging {
 
       info(s"Sample size (N) = ${sampleData.length }")
       info(f"Gaussian MI = ${MIGaussian1 + MIGaussian2 + MIGaussian3 }%7.4f = $MIGaussian1%7.4f + $MIGaussian2%7.4f + $MIGaussian3%7.4f")
-      info(f"Max      MI = ${sampleData.MIMax(k)}%7.4f")
+      info(f"Max      MI = ${MutualInformation.MIMax(sampleData.length, k)}%7.4f")
       val MI = sampleData.MI(k)
 
       info(f"$MI%7.4f " +

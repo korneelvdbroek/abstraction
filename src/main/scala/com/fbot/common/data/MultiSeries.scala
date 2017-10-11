@@ -36,6 +36,10 @@ case class MultiSeries(series: RDD[(ArrayIndex, ImmutableArray[Tuple])], rows: I
 
   def apply(i: => Int): ImmutableArray[Tuple] = apply(ArrayIndex(i))
 
+  def map[U](f: (IndexedSeries) ⇒ U)(implicit arg0: ClassTag[U]): RDD[U] = {
+    series.map(x => f(IndexedSeries(x)))
+  }
+
   def flatMap[U](f: IndexedSeries ⇒ TraversableOnce[U])(implicit classTag: ClassTag[U]): RDD[U] = {
     series.flatMap(x => f(IndexedSeries(x)))
   }

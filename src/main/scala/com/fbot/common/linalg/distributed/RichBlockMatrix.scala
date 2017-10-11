@@ -56,6 +56,8 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
     BlockVector(colBlocks, matrix.rowsPerBlock)
   }
 
+  def mkString: String = matrix.toLocalMatrix().toString()
+
   // make private stuff accessible again
   private def blocks: RDD[MatrixBlock] = matrix.blocks
 
