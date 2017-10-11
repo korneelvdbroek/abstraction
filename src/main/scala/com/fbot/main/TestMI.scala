@@ -1,7 +1,7 @@
 package com.fbot.main
 
 import breeze.linalg.{DenseMatrix, DenseVector, det}
-import breeze.numerics.{digamma, log}
+import breeze.numerics.log
 import com.fbot.algos.mutualinformation.MutualInformation
 import com.fbot.common.data.MultiSeries.SeriesIndexCombination
 import com.fbot.common.data.{IndexedSeries, MultiSeries}

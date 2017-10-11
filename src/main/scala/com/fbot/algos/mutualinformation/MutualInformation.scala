@@ -1,9 +1,8 @@
 package com.fbot.algos.mutualinformation
 
 import breeze.linalg.max
-import breeze.numerics.{abs, digamma, pow, sqrt}
+import breeze.numerics.{digamma, pow, sqrt}
 import com.fbot.algos.nearestneighbors.NearestNeighbors
-import com.fbot.common.data.Series
 import com.fbot.common.fastcollections.FastTuple2Zipped._
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
@@ -42,7 +41,6 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
 
   val numberOfPointsInMassCube: Double = length
   val optimalPointsPerSpaceUnit: Double = sqrt(length)   // optimal given our search strategy which is a tree of hyperSpaceUnits
-
 
   /**
     * Partitions the massCube into n^k (n+1)^(d-k) spaceUnits where N / n^k (n+1)^(d-k) = \sqrt{N} and n, k are integers.

@@ -3,6 +3,7 @@ package com.fbot.common.linalg.distributed
 import org.apache.spark.mllib.linalg.Matrix
 import org.apache.spark.mllib.linalg.distributed.BlockMatrix
 import org.apache.spark.rdd.RDD
+import RichBlockMatrix._
 
 import scala.annotation.tailrec
 import scala.reflect.ClassTag
@@ -11,13 +12,13 @@ import scala.reflect.ClassTag
   *
   */
 class BlockVector(override val blocks: RDD[((Int, Int), Matrix)],
-                  val elementsPerBlock: Int) extends BlockMatrix(blocks, elementsPerBlock, 1, 0L, 0L) {
+                  val elementsPerBlock: Int) extends BlockMatrix(blocks, elementsPerBlock, 1) {
 
   def length: Long = numRows
 
   def isEmpty: Boolean = { numRows == 0 }
 
-  def apply(i: Long): Double = new RichBlockMatrix(this).apply(i, 0L)
+  def apply(i: Long): Double = this.apply(i, 0L)
 
   def last: Double = this(length - 1)
 
@@ -43,7 +44,7 @@ class BlockVector(override val blocks: RDD[((Int, Int), Matrix)],
     }, combOb)
   }
 
-  def forallWithIndex(p: (Double, Long) => Boolean): Boolean = new RichBlockMatrix(this).forallWithIndex((v, i, _) => p(v, i))
+  def forallWithIndex(p: (Double, Long) => Boolean): Boolean = this.forallWithIndex((v: Double, i: Long, _: Long) => p(v, i))
 
   def toLocalVector: Matrix = toLocalMatrix()
 
