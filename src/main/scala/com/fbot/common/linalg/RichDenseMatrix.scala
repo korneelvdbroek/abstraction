@@ -46,6 +46,69 @@ class RichDenseMatrix(val matrix: DenseMatrix) extends AnyVal {
     new DenseMatrix(numRows, 1, colValues)
   }
 
+  def diagMultiply(other: DenseMatrix): DenseMatrix = {
+    // TODO: cleanup this mess with macros without hurting speed...
+    require(numCols == other.numRows, s"Cannot multiply: the columns of A don't match the rows of B. A: $numCols, B: ${other.numRows})")
+    require(numRows == other.numCols, s"Cannot get diagonal: the rows of A don't match the columns of B. A: $numRows, B: ${other.numCols})")
+
+    val rowValues = new Array[Double](numRows)
+
+    (matrix.isTransposed, other.isTransposed) match {
+      case (false, false) =>
+        var i = 0
+        while (i < numRows) {
+          var k = 0
+          var element = 0d
+          while (k < numCols) {
+            element += matrix.values(i + numRows * k) * other.values(k + numRows * i)
+            k += 1
+          }
+          rowValues(i) = element
+          i += 1
+        }
+      case (false, true) =>
+        var i = 0
+        while (i < numRows) {
+          var k = 0
+          var element = 0d
+          while (k < numCols) {
+            element += matrix.values(i + numRows * k) * other.values(i + numCols * k)
+            k += 1
+          }
+          rowValues(i) = element
+          i += 1
+        }
+      case (true, false) =>
+        var i = 0
+        while (i < numRows) {
+          var k = 0
+          var element = 0d
+          while (k < numCols) {
+            element += matrix.values(k + numCols * i) * other.values(k + numRows * i)
+            k += 1
+          }
+          rowValues(i) = element
+          i += 1
+        }
+      case (true, true) =>
+        var i = 0
+        while (i < numRows) {
+          var k = 0
+          var element = 0d
+          while (k < numCols) {
+            element += matrix.values(k + numCols * i) * other.values(i + numCols * k)
+            k += 1
+          }
+          rowValues(i) = element
+          i += 1
+        }
+    }
+
+    new DenseMatrix(1, numRows, rowValues)
+  }
+
+
+  def toMatrix: Matrix = matrix
 
   // arithmetic
   def + (other: DenseMatrix): DenseMatrix = {

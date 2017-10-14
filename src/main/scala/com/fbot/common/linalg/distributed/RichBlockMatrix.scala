@@ -3,8 +3,9 @@ package com.fbot.common.linalg.distributed
 import com.fbot.common.linalg.RichDenseMatrix._
 import com.fbot.common.linalg.distributed.BlockVector.VectorBlock
 import com.fbot.common.linalg.distributed.RichBlockMatrix.MatrixBlock
+import org.apache.spark.Partitioner
 import org.apache.spark.mllib.linalg.distributed.BlockMatrix
-import org.apache.spark.mllib.linalg.{DenseMatrix, Matrix}
+import org.apache.spark.mllib.linalg.{DenseMatrix, Matrix, SparseMatrix}
 import org.apache.spark.rdd.RDD
 
 /**
@@ -56,9 +57,116 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
     BlockVector(colBlocks, matrix.rowsPerBlock)
   }
 
+
+  /**
+    * Simulate the multiplication with just block indices in order to cut costs on communication,
+    * when we are actually shuffling the matrices.
+    * The `colsPerBlock` of this matrix must equal the `rowsPerBlock` of `other`.
+    * Exposed for tests.
+    *
+    * @param other The BlockMatrix to multiply
+    * @param partitioner The partitioner that will be used for the resulting matrix `C = A * B`
+    * @return A tuple of [[BlockDestination]]. The first element is the Map of the set of partitions
+    *         that we need to shuffle each blocks of `this`, and the second element is the Map for
+    *         `other`.
+    */
+  def simulateDiagMultiply(other: BlockMatrix,
+                           partitioner: GridPartitioner,
+                           midDimSplitNum: Int): (BlockDestination, BlockDestination) = {
+    val leftMatrix = blockInfo.keys.collect()
+    val rightMatrix = new RichBlockMatrix(other).blockInfo.keys.collect()
+
+    val leftDestinations = leftMatrix.map { case (rowIndex, colIndex) =>
+      val pid = partitioner.getPartition((0, rowIndex))
+      val midDimSplitIndex = colIndex % midDimSplitNum
+      ((rowIndex, colIndex),
+        pid * midDimSplitNum + midDimSplitIndex)
+    }.toMap
+
+    val rightDestinations = rightMatrix.map { case (rowIndex, colIndex) =>
+      val pid = partitioner.getPartition((0, colIndex))
+      val midDimSplitIndex = rowIndex % midDimSplitNum
+      ((rowIndex, colIndex),
+        pid * midDimSplitNum + midDimSplitIndex)
+    }.toMap
+
+    (leftDestinations, rightDestinations)
+  }
+
+  /**
+    * Left multiplies this [[BlockMatrix]] to `other`, another [[BlockMatrix]]. The `colsPerBlock`
+    * of this matrix must equal the `rowsPerBlock` of `other`. If `other` contains
+    * `SparseMatrix`, they will have to be converted to a `DenseMatrix`. The output
+    * [[BlockMatrix]] will only consist of blocks of `DenseMatrix`. This may cause
+    * some performance issues until support for multiplying two sparse matrices is added.
+    * Blocks with duplicate indices will be added with each other.
+    *
+    * @param other Matrix `B` in `A * B = C`
+    * @param numMidDimSplits Number of splits to cut on the middle dimension when doing
+    *                        multiplication. For example, when multiplying a Matrix `A` of
+    *                        size `m x n` with Matrix `B` of size `n x k`, this parameter
+    *                        configures the parallelism to use when grouping the matrices. The
+    *                        parallelism will increase from `m x k` to `m x k x numMidDimSplits`,
+    *                        which in some cases also reduces total shuffled data.
+    */
+  def diagMultiply(other: BlockMatrix,
+                   numMidDimSplits: Int): BlockMatrix = {
+    require(matrix.numCols == other.numRows(), "The number of columns of A and the number of rows " +
+                                              s"of B must be equal. A.numCols: ${matrix.numCols}, B.numRows: ${other.numRows()}. If you " +
+                                               "think they should be equal, try setting the dimensions of A and B explicitly while " +
+                                               "initializing them.")
+    require(numMidDimSplits > 0, "numMidDimSplits should be a positive integer.")
+
+    if (colsPerBlock == other.rowsPerBlock) {
+      val resultPartitioner = GridPartitioner(1, other.numColBlocks,
+                                              math.max(blocks.partitions.length, other.blocks.partitions.length))
+      val (leftDestinations, rightDestinations)
+      = simulateDiagMultiply(other, resultPartitioner, numMidDimSplits)
+      // Each block of A must be multiplied with the corresponding blocks in the columns of B.
+      val flatA = blocks.flatMap { case ((blockRowIndex, blockColIndex), block) =>
+        val destination = leftDestinations.get((blockRowIndex, blockColIndex))
+        destination.map(j => (j, (blockRowIndex, blockColIndex, block)))
+      }
+      // Each block of B must be multiplied with the corresponding blocks in each row of A.
+      val flatB = other.blocks.flatMap { case ((blockRowIndex, blockColIndex), block) =>
+        val destination = rightDestinations.get((blockRowIndex, blockColIndex))
+        destination.map(j => (j, (blockRowIndex, blockColIndex, block)))
+      }
+      val intermediatePartitioner = new Partitioner {
+        override def numPartitions: Int = resultPartitioner.numPartitions * numMidDimSplits
+        override def getPartition(key: Any): Int = key.asInstanceOf[Int]
+      }
+      val newBlocks = flatA.cogroup(flatB, intermediatePartitioner).flatMap { case (_, (a, b)) =>
+        a.flatMap { case (_, leftColIndex, leftBlock) =>
+          b.filter(_._1 == leftColIndex).map { case (_, rightColIndex, rightBlock) =>
+            val C = rightBlock match {
+              case dense: DenseMatrix => leftBlock.diagMultiply(dense)
+              case sparse: SparseMatrix => leftBlock.diagMultiply(sparse.toDense)
+              case _ =>
+                throw new IllegalArgumentException(s"Unrecognized matrix type ${rightBlock.getClass}.")
+            }
+            ((0, rightColIndex), C)
+          }
+        }
+      }.reduceByKey(resultPartitioner, (a, b) => a + b).mapValues(_.toMatrix)
+      // TODO: Try to use aggregateByKey instead of reduceByKey to get rid of intermediate matrices
+      new BlockMatrix(newBlocks, 1, other.colsPerBlock, 1, other.numCols())
+    } else {
+      throw new IllegalArgumentException("colsPerBlock of A doesn't match rowsPerBlock of B. " +
+                                         s"A.colsPerBlock: $colsPerBlock, B.rowsPerBlock: ${other.rowsPerBlock}")
+    }
+  }
+
+
   def mkString: String = matrix.toLocalMatrix().toString()
 
+
   // make private stuff accessible again
+  /** Block (i,j) --> Set of destination partitions */
+  private type BlockDestination = Map[(Int, Int), Int]
+
+  def blockInfo: RDD[((Int, Int), (Int, Int))] = blocks.mapValues(block => (block.numRows, block.numCols)).cache()
+
   private def blocks: RDD[MatrixBlock] = matrix.blocks
 
   private def rowsPerBlock: Int = matrix.rowsPerBlock
