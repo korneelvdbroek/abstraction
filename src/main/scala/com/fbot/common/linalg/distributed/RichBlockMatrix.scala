@@ -1,9 +1,8 @@
 package com.fbot.common.linalg.distributed
 
 import com.fbot.common.linalg.RichDenseMatrix._
-import com.fbot.common.linalg.distributed.BlockVector.VectorBlock
 import com.fbot.common.linalg.distributed.RichBlockMatrix.MatrixBlock
-import org.apache.spark.Partitioner
+import org.apache.spark.{Partitioner, SparkContext}
 import org.apache.spark.mllib.linalg.distributed.BlockMatrix
 import org.apache.spark.mllib.linalg.{DenseMatrix, Matrix, SparseMatrix}
 import org.apache.spark.rdd.RDD
@@ -14,10 +13,15 @@ import org.apache.spark.rdd.RDD
 class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
 
   private def blockRowIndex(i: Long): Int = (i / rowsPerBlock).toInt
+
   private def blockColIndex(j: Long): Int = (j / colsPerBlock).toInt
+
   private def subMatrixRowIndex(i: Long): Int = (i - blockRowIndex(i).toLong * rowsPerBlock).toInt
+
   private def subMatrixColIndex(j: Long): Int = (j - blockColIndex(j).toLong * colsPerBlock).toInt
+
   private def row(blockRowIndex: Int, subMatrixRowIndex: Int): Long = blockRowIndex.toLong * rowsPerBlock + subMatrixRowIndex.toLong
+
   private def col(blockColIndex: Int, subMatrixColIndex: Int): Long = blockColIndex.toLong * colsPerBlock + subMatrixColIndex.toLong
 
   def apply(i: Long, j: Long): Double = {
@@ -25,6 +29,12 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
       .lookup((blockRowIndex(i), blockColIndex(j)))
       .map(matrix => matrix(subMatrixRowIndex(i), subMatrixColIndex(j)))
       .headOption.getOrElse(0d)
+  }
+
+  def fold(zeroValue: Double)(f: (Double, Double) => Double): Double = {
+    blocks.treeAggregate(zeroValue)((acc, matrix) => {
+      f(acc, matrix._2.fold(zeroValue)(f))
+    }, f)
   }
 
   def forallWithIndex(p: (Double, Long, Long) => Boolean): Boolean = {
@@ -39,9 +49,43 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
       .treeAggregate(0L)((acc, matrixBlock) => acc + matrixBlock._2.count(p), _ + _)
   }
 
-  def rowSums: BlockVector = {
+  /**
+    * If an entire row is zero, then this zero row is returned.
+    *
+    * @return
+    */
+  def normalizeByRow: BlockMatrix = {
+    val resultPartitioner = GridPartitioner(matrix.numRowBlocks, matrix.numColBlocks, suggestedNumPartitions = blocks.partitions.length)
+
+    val blocksByBlockRowIndex = blocks
+      .map(matrixBlock => (matrixBlock._1._1, matrixBlock))
+
+    val rowSumsByBlockRowIndex: RDD[(Int, Option[DenseMatrix])] = blocksByBlockRowIndex
+      .aggregateByKey(Option.empty[DenseMatrix])((accCol, matrix) => {
+        val newRowSums = matrix._2.rowSums
+        accCol.map(_ + newRowSums).orElse(Some(newRowSums))
+      }, (col1, col2) => {
+        (col1 ++ col2).reduceOption(_ + _)
+      })
+
+    val normalizedBlocks = blocksByBlockRowIndex
+      .join(rowSumsByBlockRowIndex, resultPartitioner).map(x => {
+      val originalBlock = x._2._1
+      val normalizationConstant = x._2._2.get
+
+      val normalizedMatrix = originalBlock._2.mapWithIndex((i, _, value) => {
+        value / normalizationConstant(i, 0)
+      })
+
+      (originalBlock._1, normalizedMatrix.toMatrix)
+    })
+
+    new BlockMatrix(normalizedBlocks, matrix.rowsPerBlock, matrix.colsPerBlock)
+  }
+
+  def rowSums: BlockMatrix = {
     // use treeAggregate approach here?
-    val colBlocks: RDD[VectorBlock] = blocks
+    val colBlocks: RDD[MatrixBlock] = blocks
       .map(matrixBlock => (matrixBlock._1._1, matrixBlock._2))
       .aggregateByKey(Option.empty[DenseMatrix])((accCol, matrix) => {
         val newRowSums = matrix.rowSums
@@ -51,10 +95,41 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
       })
       .flatMap(x => {
         val (blockRowIndex, optionalMatrix) = x
-        optionalMatrix.map(matrix => (blockRowIndex, matrix))
+        optionalMatrix.map(matrix => ((blockRowIndex, 0), matrix))
       })
 
-    BlockVector(colBlocks, matrix.rowsPerBlock)
+    new BlockMatrix(colBlocks, matrix.rowsPerBlock, 1)
+  }
+
+  def colSums: BlockMatrix = {
+    val colBlocks: RDD[MatrixBlock] = blocks
+      .map(matrixBlock => (matrixBlock._1._2, matrixBlock._2))
+      .aggregateByKey(Option.empty[DenseMatrix])((accRow, matrix) => {
+        val newRowSums = matrix.colSums
+        accRow.map(_ + newRowSums).orElse(Some(newRowSums))
+      }, (col1, col2) => {
+        (col1 ++ col2).reduceOption(_ + _)
+      })
+      .flatMap(x => {
+        val (blockColIndex, optionalMatrix) = x
+        optionalMatrix.map(matrix => ((0, blockColIndex), matrix))
+      })
+
+    new BlockMatrix(colBlocks, 1, matrix.colsPerBlock)
+  }
+
+  def mapWithIndex(f: (Long, Long, Double) => Double): BlockMatrix = {
+    val mappedBlocks: RDD[MatrixBlock] = blocks.map(matrixBlock => {
+      val (blockRowIndex, blockColIndex) = matrixBlock._1
+
+      val mappedMatrix: Matrix = matrixBlock._2.mapWithIndex((subMatrixRowIndex, subMatrixColIndex, value) => {
+        f(row(blockRowIndex, subMatrixRowIndex), col(blockColIndex, subMatrixColIndex), value)
+      })
+
+      ((blockRowIndex, blockColIndex), mappedMatrix)
+    })
+
+    new BlockMatrix(mappedBlocks, matrix.rowsPerBlock, matrix.colsPerBlock)
   }
 
 
@@ -64,7 +139,7 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
     * The `colsPerBlock` of this matrix must equal the `rowsPerBlock` of `other`.
     * Exposed for tests.
     *
-    * @param other The BlockMatrix to multiply
+    * @param other       The BlockMatrix to multiply
     * @param partitioner The partitioner that will be used for the resulting matrix `C = A * B`
     * @return A tuple of [[BlockDestination]]. The first element is the Map of the set of partitions
     *         that we need to shuffle each blocks of `this`, and the second element is the Map for
@@ -101,7 +176,7 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
     * some performance issues until support for multiplying two sparse matrices is added.
     * Blocks with duplicate indices will be added with each other.
     *
-    * @param other Matrix `B` in `A * B = C`
+    * @param other           Matrix `B` in `A * B = C`
     * @param numMidDimSplits Number of splits to cut on the middle dimension when doing
     *                        multiplication. For example, when multiplying a Matrix `A` of
     *                        size `m x n` with Matrix `B` of size `n x k`, this parameter
@@ -110,9 +185,9 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
     *                        which in some cases also reduces total shuffled data.
     */
   def diagMultiply(other: BlockMatrix,
-                   numMidDimSplits: Int): BlockMatrix = {
+                   numMidDimSplits: Int = 1): BlockMatrix = {
     require(matrix.numCols == other.numRows(), "The number of columns of A and the number of rows " +
-                                              s"of B must be equal. A.numCols: ${matrix.numCols}, B.numRows: ${other.numRows()}. If you " +
+                                               s"of B must be equal. A.numCols: ${matrix.numCols }, B.numRows: ${other.numRows() }. If you " +
                                                "think they should be equal, try setting the dimensions of A and B explicitly while " +
                                                "initializing them.")
     require(numMidDimSplits > 0, "numMidDimSplits should be a positive integer.")
@@ -120,8 +195,7 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
     if (colsPerBlock == other.rowsPerBlock) {
       val resultPartitioner = GridPartitioner(1, other.numColBlocks,
                                               math.max(blocks.partitions.length, other.blocks.partitions.length))
-      val (leftDestinations, rightDestinations)
-      = simulateDiagMultiply(other, resultPartitioner, numMidDimSplits)
+      val (leftDestinations, rightDestinations) = simulateDiagMultiply(other, resultPartitioner, numMidDimSplits)
       // Each block of A must be multiplied with the corresponding blocks in the columns of B.
       val flatA = blocks.flatMap { case ((blockRowIndex, blockColIndex), block) =>
         val destination = leftDestinations.get((blockRowIndex, blockColIndex))
@@ -134,6 +208,7 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
       }
       val intermediatePartitioner = new Partitioner {
         override def numPartitions: Int = resultPartitioner.numPartitions * numMidDimSplits
+
         override def getPartition(key: Any): Int = key.asInstanceOf[Int]
       }
       val newBlocks = flatA.cogroup(flatB, intermediatePartitioner).flatMap { case (_, (a, b)) =>
@@ -143,7 +218,7 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
               case dense: DenseMatrix => leftBlock.diagMultiply(dense)
               case sparse: SparseMatrix => leftBlock.diagMultiply(sparse.toDense)
               case _ =>
-                throw new IllegalArgumentException(s"Unrecognized matrix type ${rightBlock.getClass}.")
+                throw new IllegalArgumentException(s"Unrecognized matrix type ${rightBlock.getClass }.")
             }
             ((0, rightColIndex), C)
           }
@@ -153,7 +228,7 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
       new BlockMatrix(newBlocks, 1, other.colsPerBlock, 1, other.numCols())
     } else {
       throw new IllegalArgumentException("colsPerBlock of A doesn't match rowsPerBlock of B. " +
-                                         s"A.colsPerBlock: $colsPerBlock, B.rowsPerBlock: ${other.rowsPerBlock}")
+                                         s"A.colsPerBlock: $colsPerBlock, B.rowsPerBlock: ${other.rowsPerBlock }")
     }
   }
 
@@ -180,5 +255,10 @@ object RichBlockMatrix {
   type MatrixBlock = ((Int, Int), Matrix)
 
   implicit def blockMatrixToRichBlockMatrix(matrix: BlockMatrix): RichBlockMatrix = new RichBlockMatrix(matrix)
+
+  implicit def denseMatrixToBlockMatrix(matrix: DenseMatrix)(implicit sc: SparkContext): BlockMatrix = {
+    val rdd = sc.parallelize(Seq(((0, 0), matrix.toMatrix)))
+    new BlockMatrix(rdd, matrix.numRows, matrix.numCols)
+  }
 
 }

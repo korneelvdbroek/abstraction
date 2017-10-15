@@ -9,11 +9,11 @@ class RichDenseMatrix(val matrix: DenseMatrix) extends AnyVal {
 
   // additional matrix operations
   def rowSums: DenseMatrix = {
-    val colValues = new Array[Double](numRows)
+    val rowValues = new Array[Double](numRows)
 
     if (!isTransposed) {
       // copy of first column
-      System.arraycopy(values, 0, colValues, 0, numRows)
+      System.arraycopy(values, 0, rowValues, 0, numRows)
 
       // outer loop over columns
       var j = 1
@@ -21,7 +21,7 @@ class RichDenseMatrix(val matrix: DenseMatrix) extends AnyVal {
         var i = 0
         val jOffset = j * numRows
         while (i < numRows) {
-          colValues(i) += values(jOffset + i)
+          rowValues(i) += values(jOffset + i)
           i += 1
         }
         j += 1
@@ -38,12 +38,50 @@ class RichDenseMatrix(val matrix: DenseMatrix) extends AnyVal {
           colSum += values(iOffset + j)
           j += 1
         }
-        colValues(i) = colSum
+        rowValues(i) = colSum
         i += 1
       }
     }
 
-    new DenseMatrix(numRows, 1, colValues)
+    new DenseMatrix(numRows, 1, rowValues)
+  }
+
+
+  def colSums: DenseMatrix = {
+    val colValues = new Array[Double](numCols)
+
+    if (!isTransposed) {
+      // outer loop over cols
+      var j = 0
+      while (j < numCols) {
+        var i = 0
+        val jOffset = j * numRows
+        var rowSum = 0d
+        while (i < numRows) {
+          rowSum += values(jOffset + i)
+          i += 1
+        }
+        colValues(j) = rowSum
+        j += 1
+      }
+    } else {
+      // copy of first column
+      System.arraycopy(values, 0, colValues, 0, numCols)
+
+      // outer loop over rows
+      var i = 1
+      while (i < numRows) {
+        var j = 0
+        val iOffset = i * numCols
+        while (j < numCols) {
+          colValues(j) += values(iOffset + j)
+          j += 1
+        }
+        i += 1
+      }
+    }
+
+    new DenseMatrix(1, numCols, colValues)
   }
 
   def diagMultiply(other: DenseMatrix): DenseMatrix = {
@@ -107,6 +145,26 @@ class RichDenseMatrix(val matrix: DenseMatrix) extends AnyVal {
     new DenseMatrix(1, numRows, rowValues)
   }
 
+  def mapWithIndex(f: (Int, Int, Double) => Double): DenseMatrix = {
+    val resultValues = new Array[Double](numRows * numCols)
+    foreachActive { (i, j, value) =>
+      resultValues(i + numRows * j) = f(i, j, value)
+    }
+    new DenseMatrix(numRows, numCols, resultValues)
+  }
+
+  def fold(zeroValue: Double)(f: (Double, Double) => Double): Double = {
+    var acc = zeroValue
+
+    val len = values.length
+    var i = 0
+    while (i < len) {
+      acc = f(acc, values(i))
+      i += 1
+    }
+
+    acc
+  }
 
   def toMatrix: Matrix = matrix
 

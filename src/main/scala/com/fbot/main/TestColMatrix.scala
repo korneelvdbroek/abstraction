@@ -1,6 +1,9 @@
 package com.fbot.main
 
-import breeze.linalg.{DenseMatrix => BDM, DenseVector => BDV}
+import java.util.Random
+
+import breeze.linalg.{max, DenseMatrix => BDM, DenseVector => BDV, Matrix => BM}
+import breeze.numerics.abs
 import ch.qos.logback.classic.{Level, Logger}
 import com.fbot.algos.clustering.HelmholtzClustering
 import com.fbot.common.data.{IndexedSeries, MultiSeries, Series}
@@ -9,10 +12,12 @@ import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.Tuple
 import com.fbot.common.linalg.distributed.RichBlockMatrix._
 import grizzled.slf4j.Logging
+import org.apache.spark.mllib.linalg.distributed.BlockMatrix
 import org.apache.spark.mllib.linalg.{DenseMatrix, Matrix, SparseMatrix}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.slf4j.LoggerFactory
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 /**
@@ -37,25 +42,26 @@ object TestColMatrix extends Logging {
                                    classOf[IndexedSeries],
                                    classOf[Series],
                                    classOf[MultiSeries.SeriesIndexCombination],
-                                   classOf[SparseMatrix]))
+                                   classOf[SparseMatrix],
+                                   classOf[breeze.linalg.DenseMatrix$mcD$sp]))
     implicit val sc = new SparkContext(conf)
 
 
     // Data source
     val rho: Double = 0.0d
-    val N: Int = 500000
+    val Nsample: Int = 10000
     // should be > 10^{2 seriesDim}
     val seriesDim: Int = 2
-    val numberOfSeries = 4
+    val N = 4
 
 
-    val mu = BDV(Array.fill(numberOfSeries * seriesDim)(0d))
+    val mu = BDV(Array.fill(N * seriesDim)(0d))
     val sigma = {
       val dim = 4
 
-      val sigmaX = BDM.eye[Double](dim)
-      val sigmaY = BDM.eye[Double](dim) + BDM((0.0, 0.2, 0.0, 0.0), (0.2, 0.0, 0.0, 0.0), (0.0, 0.0, 0.0, 0.0), (0.0, 0.0, 0.0, 0.0))
-      val sigmaXY = BDM.eye[Double](dim) * rho + BDM((0.4, 0.0, -0.3, 0.0), (0.0, 0.0, 0.0, 0.0), (0.5, 0.0, 0.4, 0.0), (0.1, 0.0, 0.2, 0.0))
+      val sigmaX = BDM.eye[Double](dim) + BDM((0.0, 0.0, 0.4, 0.4), (0.0, 0.0, 0.4, 0.4), (0.4, 0.4, 0.0, 0.0), (0.4, 0.4, 0.0, 0.0))
+      val sigmaY = BDM.eye[Double](dim) + BDM((0.0, 0.0, 0.4, 0.4), (0.0, 0.0, 0.4, 0.4), (0.4, 0.4, 0.0, 0.0), (0.4, 0.4, 0.0, 0.0))
+      val sigmaXY = BDM.eye[Double](dim) * rho //+ BDM((0.4, 0.0, -0.3, 0.0), (0.0, 0.0, 0.0, 0.0), (0.5, 0.0, 0.4, 0.0), (0.1, 0.0, 0.2, 0.0))
 
       val a = BDM.zeros[Double](2 * dim, 2 * dim)
       a(0 until dim, 0 until dim) := sigmaX
@@ -68,10 +74,32 @@ object TestColMatrix extends Logging {
 
     info(s"sigma = $sigma")
     info(s"parallelism = ${sc.defaultParallelism }")
-    val data: MultiSeries = GaussianData(numberOfSeries, N, seriesDim, sigma, mu)
+    val data: MultiSeries = GaussianData(N, Nsample, seriesDim, sigma, mu)
       .data // GaussianData.data // RndDataXd(dim, N).data // FxDataXd(dim, N).data // GaussianData2d(N, rho).data
 
-    info(HelmholtzClustering(data).similarityMatrix.mkString)
+    val helmholtz = HelmholtzClustering(data, 0.4d, 4, 2)
+    val S = helmholtz.similarityMatrix
+    info(s"S = \n${S.mkString }")
+
+    val Nclusters = 2
+
+
+    @tailrec
+    def loopie(Qci: BlockMatrix): BlockMatrix = {
+      val QciUpdated = helmholtz.singlePass(S, Qci)
+
+      info(s"Qci = \n${QciUpdated.mkString}")
+
+      val diff = QciUpdated.subtract(Qci)
+      if (diff.fold(abs(diff(0L, 0L)))((a, b) => max(abs(a), abs(b))) < 0.01) {
+        QciUpdated
+      } else {
+        loopie(QciUpdated)
+      }
+    }
+
+    val QciInit: BlockMatrix = DenseMatrix.rand(N, Nclusters, new Random)
+    loopie(QciInit)
 
     // get rid of annoying ERROR messages when spark-submit shuts down
     LoggerFactory.getLogger("org.apache.spark.SparkEnv").asInstanceOf[Logger].setLevel(Level.OFF)
