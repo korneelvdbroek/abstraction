@@ -26,8 +26,8 @@ import scala.collection.mutable
 object TestHelmholtz extends Logging {
 
   def main(args: Array[String]): Unit = {
-    LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.INFO)
-    LoggerFactory.getLogger("com.fbot.main.TestColMatrix").asInstanceOf[Logger].setLevel(Level.INFO)
+    LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.WARN)
+    LoggerFactory.getLogger("com.fbot.main.TestHelmholtz").asInstanceOf[Logger].setLevel(Level.INFO)
 
 
     val conf = new SparkConf().setAppName("Simple Application")
@@ -83,7 +83,10 @@ object TestHelmholtz extends Logging {
 
     val N = data.length
     val Nclusters = 20
-    val T = 1d/35d
+
+    // low temp => each its own
+    // high temp => 1 cluster
+    val T = 1d/500000d
     val helmholtz = HelmholtzClustering(data, T, N, Nclusters)
 
 
@@ -91,21 +94,56 @@ object TestHelmholtz extends Logging {
     info(s"S = \n${S.mkString }")
 
     @tailrec
-    def loopie(Qci: BlockMatrix): BlockMatrix = {
+    def loopie(Qci: BlockMatrix, iteration: Int): (BlockMatrix, Int) = {
       val QciUpdated = helmholtz.singlePass(S, Qci)
 
       info(s"Qci = \n${QciUpdated.mkString}")
 
       val diff = QciUpdated.subtract(Qci)
       if (diff.fold(abs(diff(0L, 0L)))((a, b) => max(abs(a), abs(b))) < 0.01) {
-        QciUpdated
+        (QciUpdated, iteration)
       } else {
-        loopie(QciUpdated)
+        loopie(QciUpdated, iteration + 1)
       }
     }
 
     val QciInit: BlockMatrix = DenseMatrix.rand(N, Nclusters, new Random)
-    loopie(QciInit)
+    val result = loopie(QciInit, 0)
+
+
+
+
+    val printableMatrix = {
+      val numRows = result._1.numRows.toInt
+      val numCols = result._1.numCols.toInt
+      val flatArray = result._1.toLocalMatrix.toArray
+
+      var i = 0
+      val matrix = new Array[ImmutableArray[Double]](numRows)
+      while (i < numRows) {
+
+        var j = 0
+        val row = new Array[Double](numCols)
+        while (j < numCols) {
+          row(j) = flatArray(j * numRows + i)
+          j += 1
+        }
+
+        matrix(i) = ImmutableArray(row)
+        i += 1
+      }
+      ImmutableArray(matrix)
+    }
+
+    info(s"${result._2} iterations")
+    printableMatrix.toList.foreach(row => {
+      print("[")
+      row.toList.foreach(value =>{
+        print(f"$value%5.3f, ")
+      })
+      print("]\n")
+    })
+
 
     // get rid of annoying ERROR messages when spark-submit shuts down
     LoggerFactory.getLogger("org.apache.spark.SparkEnv").asInstanceOf[Logger].setLevel(Level.OFF)
