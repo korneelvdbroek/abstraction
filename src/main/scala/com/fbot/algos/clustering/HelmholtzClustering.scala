@@ -4,6 +4,7 @@ import breeze.numerics.exp
 import com.fbot.algos.mutualinformation.MutualInformation
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.data.MultiSeries.SeriesIndexCombination
+import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.linalg.distributed.RichBlockMatrix._
 import org.apache.spark.SparkContext
@@ -16,11 +17,12 @@ case class HelmholtzClustering(data: MultiSeries, T: Double, blockSizeN: Int, bl
 
 
   def singlePass(S: BlockMatrix, Qci: BlockMatrix): BlockMatrix = {
+    println("hello")
     val Qc = sc.broadcast(Qci.colSums.toLocalMatrix)  // 1 x Nc
     val Sc = sc.broadcast(Qci.transpose.multiply(S).diagMultiply(Qci).toLocalMatrix)  // 1 x Nc
     val Sci = S.multiply(Qci)
 
-    val N: Int = data.rows
+    val N: Int = data.length
     val beta: Double = 1d / T
 
     val QciUpdated = Sci.mapWithIndex((_, j, Sci) => {
@@ -33,8 +35,16 @@ case class HelmholtzClustering(data: MultiSeries, T: Double, blockSizeN: Int, bl
   }
 
   def similarityMatrix: BlockMatrix = {
-    val seriesPairs = (0 until data.rows).map(ArrayIndex(_)).combinations(2).toList.map(_.toVector)
-      .zipWithIndex.map(x => SeriesIndexCombination(x._1, x._2))
+//    val seriesPairs: List[SeriesIndexCombination] = (0 until data.length).map(ArrayIndex(_)).combinations(2).toList.map(_.toVector)
+//      .zipWithIndex.map(x => SeriesIndexCombination(x._1, x._2))
+
+    val seriesPairs = Array.fill(data.length - 1)(1).scanLeft(0)(_ + _).flatMap(i => {
+      val pair = Array.fill(data.length - i - 1)(i+1).scanLeft(0)(_ + _)
+      pair.map(j => Array(ArrayIndex(i), ArrayIndex(j)))
+    }).zipWithIndex.map(x => SeriesIndexCombination(x._1, x._2))
+
+    println(seriesPairs)
+    println("helloY")
 
     // this is the slow step
     val offDiagonalEntries = data.makeSeriesPairs(seriesPairs).flatMap(dataPair => {
@@ -49,7 +59,7 @@ case class HelmholtzClustering(data: MultiSeries, T: Double, blockSizeN: Int, bl
       MatrixEntry(indexedSeries.index.toLong, indexedSeries.index.toLong, MI)
     })
 
-    new CoordinateMatrix(offDiagonalEntries ++ diagonalEntries, data.rows, data.rows).toBlockMatrix(blockSizeN, blockSizeN).cache()
+    new CoordinateMatrix(offDiagonalEntries ++ diagonalEntries, data.length, data.length).toBlockMatrix(blockSizeN, blockSizeN).cache()
   }
 
 }

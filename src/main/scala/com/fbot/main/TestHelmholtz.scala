@@ -23,10 +23,10 @@ import scala.collection.mutable
 /**
   *
   */
-object TestColMatrix extends Logging {
+object TestHelmholtz extends Logging {
 
   def main(args: Array[String]): Unit = {
-    LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.WARN)
+    LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.INFO)
     LoggerFactory.getLogger("com.fbot.main.TestColMatrix").asInstanceOf[Logger].setLevel(Level.INFO)
 
 
@@ -43,46 +43,52 @@ object TestColMatrix extends Logging {
                                    classOf[Series],
                                    classOf[MultiSeries.SeriesIndexCombination],
                                    classOf[SparseMatrix],
-                                   classOf[breeze.linalg.DenseMatrix$mcD$sp]))
+                                   classOf[breeze.linalg.DenseMatrix$mcD$sp],
+                                   classOf[Array[ArrayIndex]]))
     implicit val sc = new SparkContext(conf)
 
 
     // Data source
-    val rho: Double = 0.0d
-    val Nsample: Int = 10000
-    // should be > 10^{2 seriesDim}
-    val seriesDim: Int = 2
-    val N = 4
+    val data: MultiSeries = if (false) {
+      val rho: Double = 0.0d
+      val Nsample: Int = 10000
+      // should be > 10^{2 seriesDim}
+      val seriesDim: Int = 2
+      val N = 4
 
+      val mu = BDV(Array.fill(N * seriesDim)(0d))
+      val sigma = {
+        val dim = 4
 
-    val mu = BDV(Array.fill(N * seriesDim)(0d))
-    val sigma = {
-      val dim = 4
+        val sigmaX = BDM.eye[Double](dim) + BDM((0.0, 0.0, 0.4, 0.4), (0.0, 0.0, 0.4, 0.4), (0.4, 0.4, 0.0, 0.0), (0.4, 0.4, 0.0, 0.0))
+        val sigmaY = BDM.eye[Double](dim) + BDM((0.0, 0.0, 0.4, 0.4), (0.0, 0.0, 0.4, 0.4), (0.4, 0.4, 0.0, 0.0), (0.4, 0.4, 0.0, 0.0))
+        val sigmaXY = BDM.eye[Double](dim) * rho //+ BDM((0.4, 0.0, -0.3, 0.0), (0.0, 0.0, 0.0, 0.0), (0.5, 0.0, 0.4, 0.0), (0.1, 0.0, 0.2, 0.0))
 
-      val sigmaX = BDM.eye[Double](dim) + BDM((0.0, 0.0, 0.4, 0.4), (0.0, 0.0, 0.4, 0.4), (0.4, 0.4, 0.0, 0.0), (0.4, 0.4, 0.0, 0.0))
-      val sigmaY = BDM.eye[Double](dim) + BDM((0.0, 0.0, 0.4, 0.4), (0.0, 0.0, 0.4, 0.4), (0.4, 0.4, 0.0, 0.0), (0.4, 0.4, 0.0, 0.0))
-      val sigmaXY = BDM.eye[Double](dim) * rho //+ BDM((0.4, 0.0, -0.3, 0.0), (0.0, 0.0, 0.0, 0.0), (0.5, 0.0, 0.4, 0.0), (0.1, 0.0, 0.2, 0.0))
+        val a = BDM.zeros[Double](2 * dim, 2 * dim)
+        a(0 until dim, 0 until dim) := sigmaX
+        a(dim until 2 * dim, dim until 2 * dim) := sigmaY
+        a(0 until dim, dim until 2 * dim) := sigmaXY
+        a(dim until 2 * dim, 0 until dim) := sigmaXY.t
 
-      val a = BDM.zeros[Double](2 * dim, 2 * dim)
-      a(0 until dim, 0 until dim) := sigmaX
-      a(dim until 2 * dim, dim until 2 * dim) := sigmaY
-      a(0 until dim, dim until 2 * dim) := sigmaXY
-      a(dim until 2 * dim, 0 until dim) := sigmaXY.t
+        a
+      }
 
-      a
+      info(s"sigma = \n$sigma")
+      info(s"parallelism = ${sc.defaultParallelism }")
+      GaussianData(N, Nsample, seriesDim, sigma, mu)
+        .data // GaussianData.data // RndDataXd(dim, N).data // FxDataXd(dim, N).data // GaussianData2d(N, rho).data
+    } else {
+      InputDataYeast().data
     }
 
-    info(s"sigma = $sigma")
-    info(s"parallelism = ${sc.defaultParallelism }")
-    val data: MultiSeries = GaussianData(N, Nsample, seriesDim, sigma, mu)
-      .data // GaussianData.data // RndDataXd(dim, N).data // FxDataXd(dim, N).data // GaussianData2d(N, rho).data
+    val N = data.length
+    val Nclusters = 20
+    val T = 1d/35d
+    val helmholtz = HelmholtzClustering(data, T, N, Nclusters)
 
-    val helmholtz = HelmholtzClustering(data, 0.4d, 4, 2)
+
     val S = helmholtz.similarityMatrix
     info(s"S = \n${S.mkString }")
-
-    val Nclusters = 2
-
 
     @tailrec
     def loopie(Qci: BlockMatrix): BlockMatrix = {

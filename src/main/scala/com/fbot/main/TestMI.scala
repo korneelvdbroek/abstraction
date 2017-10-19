@@ -59,7 +59,7 @@ object TestMI extends Logging {
 
     info(sc.defaultParallelism)
 
-    val seriesPairs = (0 until data.rows).map(ArrayIndex(_)).combinations(2).toList.map(_.toVector)
+    val seriesPairs = (0 until data.length).map(ArrayIndex(_)).combinations(2).toArray.map(_.toArray)
       .zipWithIndex.map(x => SeriesIndexCombination(x._1, x._2))
 
 
@@ -90,7 +90,7 @@ object TestMI extends Logging {
            f"(${100.0 * (MI - (MIGaussian1 + MIGaussian2 + MIGaussian3)) / (MIGaussian1 + MIGaussian2 + MIGaussian3) }%7.2f%%) ")
 
       MatrixEntry(dataPair(0).index.toLong, dataPair(1).index.toLong, MI)
-    }).cache(), data.rows, data.rows)
+    }).cache(), data.length, data.length)
 
     info(similarityMatrix.toBlockMatrix.toLocalMatrix)
 

@@ -30,7 +30,7 @@ object IndexedSeries {
 }
 
 
-case class MultiSeries(series: RDD[(ArrayIndex, ImmutableArray[Tuple])], rows: Int) {
+case class MultiSeries(series: RDD[(ArrayIndex, ImmutableArray[Tuple])], length: Int) {
 
   def apply(i: ArrayIndex): ImmutableArray[Tuple] = series.lookup(i).head
 
@@ -44,7 +44,7 @@ case class MultiSeries(series: RDD[(ArrayIndex, ImmutableArray[Tuple])], rows: I
     series.flatMap(x => f(IndexedSeries(x)))
   }
 
-  def makeSeriesPairs(pairings: List[SeriesIndexCombination])(implicit sc: SparkContext): RDD[SeriesCombination] = {
+  def makeSeriesPairs(pairings: Array[SeriesIndexCombination])(implicit sc: SparkContext): RDD[SeriesCombination] = {
     def joinOnSeries(acc: RDD[(Vector[IndexedSeries], SeriesIndexCombination)], pairIndex: Int): RDD[(Vector[IndexedSeries], SeriesIndexCombination)] = {
       acc
         .map(x => (x._2(pairIndex), x))
@@ -73,17 +73,24 @@ case class MultiSeries(series: RDD[(ArrayIndex, ImmutableArray[Tuple])], rows: I
 object MultiSeries {
 
   def apply(series: ImmutableArray[Tuple]*)(implicit sc: SparkContext): MultiSeries = {
-    val rows = series.toArray
-    val matrix = rows.mapWithIndex((row, index) => (index, row)).toArray
+    MultiSeries(series.toList)
+  }
+
+  def apply(series: TraversableOnce[ImmutableArray[Tuple]])(implicit sc: SparkContext): MultiSeries = {
+    MultiSeries(ImmutableArray(series))
+  }
+
+  def apply(series: ImmutableArray[ImmutableArray[Tuple]])(implicit sc: SparkContext): MultiSeries = {
+    val matrix = series.mapWithIndex((row, index) => (index, row)).toArray
 
     // https://stackoverflow.com/questions/40636554/spark-ui-dag-stage-disconnected
     // .partitionBy right after parallelization is still advantageous since we partition by the row index
     val rdd = sc.parallelize(matrix).partitionBy(new HashPartitioner(sc.defaultParallelism)).cache()
 
-    MultiSeries(rdd, rows.length)
+    new MultiSeries(rdd, series.length)
   }
 
-  case class SeriesIndexCombination(combination: Vector[ArrayIndex], partitionIndex: Int) {
+  case class SeriesIndexCombination(combination: Array[ArrayIndex], partitionIndex: Int) {
     def apply(pairIndex: Int): ArrayIndex = combination(pairIndex)
   }
 
