@@ -15,7 +15,7 @@ import scala.util.Try
 case class InputDataYeast(implicit sc: SparkContext) extends TestData {
 
   def data: MultiSeries = {
-    val bufferedSource = Source.fromFile("C:/Users/Korneel/Korneel_local/program/abstraction/doc/yeast/figure3_173microarray_colcleaned.cdt.txt")
+    val bufferedSource = Source.fromFile("doc/yeast/figure3_173microarray_colcleaned.cdt.txt")
 
     val dataSeries = ImmutableArray(bufferedSource.getLines.map(line => {
       val cells = line.split("\t", -1).toList

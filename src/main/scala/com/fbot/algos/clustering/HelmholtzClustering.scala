@@ -28,12 +28,14 @@ case class HelmholtzClustering(data: MultiSeries, temp: Double, blockSizeN: Int,
     val qciUpdated = sci.mapWithIndex((_, j, sciValue) => {
       val qcValue = qc.value(0, j.toInt) / N
 
-      if (qcValue == 0.0) throw new IllegalArgumentException("Qc = zero...")
-      if (qcValue.isNaN) throw new IllegalArgumentException("Naan...")
+      val x = if (qcValue == 0d) {
+        // means qci(i, j) = 0 forall i, so sCluster(0, j) = 0 and sci(i, j) = 0, so qciUpdated(i, j) = 0 forall i
+        0d
+      } else {
+        qcValue * exp(beta * (sciValue * 2d / N / qcValue - sCluster.value(0, j.toInt) / (N * N * qcValue * qcValue)))
+      }
 
-      val x = qcValue * exp(beta * (sciValue * 2d / N / qcValue - sCluster.value(0, j.toInt) / (N * N * qcValue * qcValue)))
-
-      println(f"$x%f  =  $qcValue%f * exp($beta x (2 / ($N%d x $qcValue%f) x $sciValue%f - 1 / ($N%d^2 x $qcValue%f^2) x ${sCluster.value(0, j.toInt)}%f))    (cluster $j%d)")
+//      println(f"$x%f  =  $qcValue%f * exp($beta x (2 / ($N%d x $qcValue%f) x $sciValue%f - 1 / ($N%d^2 x $qcValue%f^2) x ${sCluster.value(0, j.toInt)}%f))    (cluster $j%d)")
 
       x
     })

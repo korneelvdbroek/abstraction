@@ -11,6 +11,7 @@ import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.Tuple
 import com.fbot.common.linalg.RichDenseMatrix._
+import com.fbot.common.linalg.distributed.RichBlockMatrix
 import com.fbot.common.linalg.distributed.RichBlockMatrix._
 import grizzled.slf4j.Logging
 import org.apache.spark.mllib.linalg.distributed.BlockMatrix
@@ -91,8 +92,12 @@ object TestHelmholtz extends Logging {
     val helmholtz = HelmholtzClustering(data, temp, N, Nclusters)
 
 
-    val s = helmholtz.similarityMatrix
-    info(s"S = \n${s.mkString }")
+
+//    val s = helmholtz.similarityMatrix
+//    info(s"S = \n${s.mkString }")
+//    s.save("data/")
+
+    val s = RichBlockMatrix.load("data/")
 
     @tailrec
     def loopie(qci: BlockMatrix, iteration: Int): (BlockMatrix, Int) = {

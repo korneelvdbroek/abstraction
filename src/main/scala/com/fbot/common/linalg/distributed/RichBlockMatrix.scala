@@ -1,11 +1,16 @@
 package com.fbot.common.linalg.distributed
 
+import java.io.{File, PrintWriter}
+
 import com.fbot.common.linalg.RichDenseMatrix._
 import com.fbot.common.linalg.distributed.RichBlockMatrix.MatrixBlock
 import org.apache.spark.{Partitioner, SparkContext}
 import org.apache.spark.mllib.linalg.distributed.BlockMatrix
 import org.apache.spark.mllib.linalg.{DenseMatrix, Matrix, SparseMatrix}
 import org.apache.spark.rdd.RDD
+
+import scala.io.Source
+import scala.util.Try
 
 /**
   *
@@ -234,6 +239,17 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
   }
 
 
+  def save(path: String): Unit = {
+    val writer = new PrintWriter(new File(s"$path/${ RichBlockMatrix.metaDataFileName }"))
+    writer.write(s"${matrix.rowsPerBlock}\n")
+    writer.write(s"${matrix.colsPerBlock}\n")
+    writer.write(s"${matrix.numRows()}\n")
+    writer.write(s"${matrix.numCols()}\n")
+    writer.close()
+    matrix.blocks.saveAsObjectFile(s"$path/${ RichBlockMatrix.dataDirectory }")
+  }
+
+
   def mkString: String = matrix.toLocalMatrix().toString()
 
 
@@ -253,6 +269,9 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
 
 object RichBlockMatrix {
 
+  val metaDataFileName = "blockMatrixMetaData.dat"
+  val dataDirectory = "blockMatrixData"
+
   type MatrixBlock = ((Int, Int), Matrix)
 
   implicit def blockMatrixToRichBlockMatrix(matrix: BlockMatrix): RichBlockMatrix = new RichBlockMatrix(matrix)
@@ -260,6 +279,20 @@ object RichBlockMatrix {
   implicit def denseMatrixToBlockMatrix(matrix: DenseMatrix)(implicit sc: SparkContext): BlockMatrix = {
     val rdd = sc.parallelize(Seq(((0, 0), matrix.toMatrix)))
     new BlockMatrix(rdd, matrix.numRows, matrix.numCols)
+  }
+
+  def load(path: String)(implicit sc: SparkContext): BlockMatrix = {
+    val bufferedSource = Source.fromFile(s"$path/$metaDataFileName")
+    val blockMatrixData = bufferedSource.getLines
+    val rowsPerBlock: Int = Try(blockMatrixData.next().toInt).getOrElse(throw new IllegalArgumentException(s"Cannot read rowsPerBlock from file $path/$metaDataFileName"))
+    val colsPerBlock: Int = Try(blockMatrixData.next().toInt).getOrElse(throw new IllegalArgumentException(s"Cannot read colsPerBlock from file $path/$metaDataFileName"))
+    val nRows: Long = Try(blockMatrixData.next().toLong).getOrElse(throw new IllegalArgumentException(s"Cannot read numRows from file $path/$metaDataFileName"))
+    val nCols: Long = Try(blockMatrixData.next().toLong).getOrElse(throw new IllegalArgumentException(s"Cannot read numCols from file $path/$metaDataFileName"))
+    bufferedSource.close
+
+    val blocks: RDD[MatrixBlock] = sc.objectFile(s"$path/$dataDirectory")
+
+    new BlockMatrix(blocks, rowsPerBlock, colsPerBlock, nRows, nCols)
   }
 
 }
