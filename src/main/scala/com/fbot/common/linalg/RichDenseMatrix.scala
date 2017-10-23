@@ -1,5 +1,6 @@
 package com.fbot.common.linalg
 
+import com.fbot.common.fastcollections.ImmutableArray
 import org.apache.spark.mllib.linalg.{DenseMatrix, Matrix, SparseMatrix}
 
 /**
@@ -272,6 +273,29 @@ class RichDenseMatrix(val matrix: DenseMatrix) extends AnyVal {
       }
     }
   }
+
+  def toImmutableArray: ImmutableArray[ImmutableArray[Double]] = {
+    val flatArray = matrix.toArray
+    val numRows = matrix.numRows
+    val numCols = matrix.numCols
+
+    var i = 0
+    val matrixAsArray = new Array[ImmutableArray[Double]](numRows)
+    while (i < numRows) {
+
+      var j = 0
+      val row = new Array[Double](numCols)
+      while (j < numCols) {
+        row(j) = flatArray(j * numRows + i)
+        j += 1
+      }
+      matrixAsArray(i) = ImmutableArray(row)
+
+      i += 1
+    }
+    ImmutableArray(matrixAsArray)
+  }
+
 }
 
 

@@ -70,14 +70,15 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
 
     val normalizedBlocks = blocksByBlockRowIndex
       .join(rowSumsByBlockRowIndex, resultPartitioner).map(x => {
-      val originalBlock = x._2._1
-      val normalizationConstant = x._2._2.get
+      val originalMatrixBlock = x._2._1
+      val normalizationVector = x._2._2.get
 
-      val normalizedMatrix = originalBlock._2.mapWithIndex((i, _, value) => {
-        value / normalizationConstant(i, 0)
+      val normalizedMatrix = originalMatrixBlock._2.mapWithIndex((i, _, value) => {
+        if (normalizationVector(i, 0) == 0) throw new IllegalArgumentException("division by zero...")
+        value / normalizationVector(i, 0)
       })
 
-      (originalBlock._1, normalizedMatrix.toMatrix)
+      (originalMatrixBlock._1, normalizedMatrix.toMatrix)
     })
 
     new BlockMatrix(normalizedBlocks, matrix.rowsPerBlock, matrix.colsPerBlock)
@@ -104,9 +105,9 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
   def colSums: BlockMatrix = {
     val colBlocks: RDD[MatrixBlock] = blocks
       .map(matrixBlock => (matrixBlock._1._2, matrixBlock._2))
-      .aggregateByKey(Option.empty[DenseMatrix])((accRow, matrix) => {
-        val newRowSums = matrix.colSums
-        accRow.map(_ + newRowSums).orElse(Some(newRowSums))
+      .aggregateByKey(Option.empty[DenseMatrix])((accColSum, matrix) => {
+        val newColSums = matrix.colSums
+        accColSum.map(_ + newColSums).orElse(Some(newColSums))
       }, (col1, col2) => {
         (col1 ++ col2).reduceOption(_ + _)
       })

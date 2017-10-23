@@ -15,11 +15,11 @@ import scala.util.Try
 case class InputDataYeast(implicit sc: SparkContext) extends TestData {
 
   def data: MultiSeries = {
-    val bufferedSource = Source.fromFile("C:/Users/Korneel/Korneel_local/program/abstraction/doc/yeast/complete_dataset_part2.txt")
+    val bufferedSource = Source.fromFile("C:/Users/Korneel/Korneel_local/program/abstraction/doc/yeast/figure3_173microarray_colcleaned.cdt.txt")
 
     val dataSeries = ImmutableArray(bufferedSource.getLines.map(line => {
       val cells = line.split("\t", -1).toList
-      val dataCells = cells.slice(6, cells.length)
+      val dataCells = cells.slice(7, cells.length)
       ImmutableArray(dataCells.map(dataCell => {
         Tuple(Try(dataCell.toDouble).getOrElse(0.0))
       }))

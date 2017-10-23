@@ -85,7 +85,7 @@ object MultiSeries {
 
     // https://stackoverflow.com/questions/40636554/spark-ui-dag-stage-disconnected
     // .partitionBy right after parallelization is still advantageous since we partition by the row index
-    val rdd = sc.parallelize(matrix).partitionBy(new HashPartitioner(sc.defaultParallelism)).cache()
+    val rdd = sc.parallelize(matrix).partitionBy(new HashPartitioner(sc.defaultParallelism * 4)).cache()
 
     new MultiSeries(rdd, series.length)
   }

@@ -4,7 +4,6 @@ import breeze.numerics.exp
 import com.fbot.algos.mutualinformation.MutualInformation
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.data.MultiSeries.SeriesIndexCombination
-import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.linalg.distributed.RichBlockMatrix._
 import org.apache.spark.SparkContext
@@ -13,29 +12,38 @@ import org.apache.spark.mllib.linalg.distributed.{BlockMatrix, CoordinateMatrix,
 /**
   *
   */
-case class HelmholtzClustering(data: MultiSeries, T: Double, blockSizeN: Int, blockSizeNc: Int)(implicit sc: SparkContext) {
+case class HelmholtzClustering(data: MultiSeries, temp: Double, blockSizeN: Int, blockSizeNc: Int)(implicit sc: SparkContext) {
 
 
-  def singlePass(S: BlockMatrix, Qci: BlockMatrix): BlockMatrix = {
-    val Qc = sc.broadcast(Qci.colSums.toLocalMatrix)  // 1 x Nc
-    val Sc = sc.broadcast(Qci.transpose.multiply(S).diagMultiply(Qci).toLocalMatrix)  // 1 x Nc
-    val Sci = S.multiply(Qci)
-
+  def singlePass(s: BlockMatrix, qci: BlockMatrix): BlockMatrix = {
     val N: Int = data.length
-    val beta: Double = 1d / T
+    val beta: Double = 1d / temp
 
-    val QciUpdated = Sci.mapWithIndex((_, j, Sci) => {
-      val qc = Qc.value(0, j.toInt)
+    // 1 x Nc:
+    val qc = sc.broadcast(qci.colSums.toLocalMatrix)
+    // 1 x Nc:
+    val sCluster = sc.broadcast(qci.transpose.multiply(s).diagMultiply(qci).toLocalMatrix)
+    val sci = s.multiply(qci)
 
-      qc * exp(beta * (Sci * 2d / N / qc - Sc.value(0, j.toInt) / (N * N * qc * qc)))
+    val qciUpdated = sci.mapWithIndex((_, j, sciValue) => {
+      val qcValue = qc.value(0, j.toInt) / N
+
+      if (qcValue == 0.0) throw new IllegalArgumentException("Qc = zero...")
+      if (qcValue.isNaN) throw new IllegalArgumentException("Naan...")
+
+      val x = qcValue * exp(beta * (sciValue * 2d / N / qcValue - sCluster.value(0, j.toInt) / (N * N * qcValue * qcValue)))
+
+      println(f"$x%f  =  $qcValue%f * exp($beta x (2 / ($N%d x $qcValue%f) x $sciValue%f - 1 / ($N%d^2 x $qcValue%f^2) x ${sCluster.value(0, j.toInt)}%f))    (cluster $j%d)")
+
+      x
     })
 
-    QciUpdated.normalizeByRow
+    qciUpdated.normalizeByRow
   }
 
   def similarityMatrix: BlockMatrix = {
     val seriesPairs = Array.fill(data.length - 1)(1).scanLeft(0)(_ + _).flatMap(i => {
-      val pair = Array.fill(data.length - i - 1)(i+1).scanLeft(0)(_ + _)
+      val pair = Array.fill(data.length - i - 1)(i + 1).scanLeft(0)(_ + _)
       pair.map(j => Array(ArrayIndex(i), ArrayIndex(j)))
     }).zipWithIndex.map(x => SeriesIndexCombination(x._1, x._2))
 

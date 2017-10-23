@@ -10,6 +10,7 @@ import com.fbot.common.data.{IndexedSeries, MultiSeries, Series}
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.Tuple
+import com.fbot.common.linalg.RichDenseMatrix._
 import com.fbot.common.linalg.distributed.RichBlockMatrix._
 import grizzled.slf4j.Logging
 import org.apache.spark.mllib.linalg.distributed.BlockMatrix
@@ -86,56 +87,35 @@ object TestHelmholtz extends Logging {
 
     // low temp => each its own
     // high temp => 1 cluster
-    val T = 1d/500000d
-    val helmholtz = HelmholtzClustering(data, T, N, Nclusters)
+    val temp = 1d / 35d
+    val helmholtz = HelmholtzClustering(data, temp, N, Nclusters)
 
 
-    val S = helmholtz.similarityMatrix
-    info(s"S = \n${S.mkString }")
+    val s = helmholtz.similarityMatrix
+    info(s"S = \n${s.mkString }")
 
     @tailrec
-    def loopie(Qci: BlockMatrix, iteration: Int): (BlockMatrix, Int) = {
-      val QciUpdated = helmholtz.singlePass(S, Qci)
+    def loopie(qci: BlockMatrix, iteration: Int): (BlockMatrix, Int) = {
+      val qciUpdated = helmholtz.singlePass(s, qci)
 
-      info(s"Qci = \n${QciUpdated.mkString}")
+      info(s"${iteration } iterations")
+      info(s"Qci = \n${qciUpdated.mkString }")
 
-      val diff = QciUpdated.subtract(Qci)
+      val diff = qciUpdated.subtract(qci)
       if (diff.fold(abs(diff(0L, 0L)))((a, b) => max(abs(a), abs(b))) < 0.01) {
-        (QciUpdated, iteration)
+        (qciUpdated, iteration)
       } else {
-        loopie(QciUpdated, iteration + 1)
+        loopie(qciUpdated, iteration + 1)
       }
     }
 
     val QciInit: BlockMatrix = DenseMatrix.rand(N, Nclusters, new Random)
-    val result = loopie(QciInit, 0)
+    val result = loopie(QciInit.normalizeByRow, 0)
 
 
+    val printableMatrix = result._1.toLocalMatrix.toImmutableArray
 
-
-    val printableMatrix = {
-      val numRows = result._1.numRows.toInt
-      val numCols = result._1.numCols.toInt
-      val flatArray = result._1.toLocalMatrix.toArray
-
-      var i = 0
-      val matrix = new Array[ImmutableArray[Double]](numRows)
-      while (i < numRows) {
-
-        var j = 0
-        val row = new Array[Double](numCols)
-        while (j < numCols) {
-          row(j) = flatArray(j * numRows + i)
-          j += 1
-        }
-
-        matrix(i) = ImmutableArray(row)
-        i += 1
-      }
-      ImmutableArray(matrix)
-    }
-
-    info(s"${result._2} iterations")
+    info(s"${result._2 } iterations")
     printableMatrix.toList.foreach(row => {
       print("[")
       row.toList.foreach(value =>{
