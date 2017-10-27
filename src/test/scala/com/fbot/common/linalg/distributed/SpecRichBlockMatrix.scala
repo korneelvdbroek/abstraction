@@ -93,6 +93,27 @@ class SpecRichBlockMatrix extends FlatSpec with Matchers with BeforeAndAfter {
                                                                         0d/4, 0d/6, 8d/14, 9d/16))
   }
 
+  "normalizeByCol" should "return the col-normalized of A" in {
+    A.normalizeByCol.toLocalMatrix shouldBe new DenseMatrix(4, 4, Array(1d/14, 2d/14, 5d/14, 6d/14,
+                                                                        3d/22, 4d/22, 7d/22, 8d/22,
+                                                                        2d/18, 3d/18, 6d/18, 7d/18,
+                                                                        4d/26, 5d/26, 8d/26, 9d/26))
+  }
+
+  it should "return the col-normalized of a matrix with missing Blocks" in {
+    C.normalizeByCol.toLocalMatrix shouldBe new DenseMatrix(4, 4, Array(1d/3,  2d/3,  0d/3,  0d/3,
+                                                                        3d/7,  4d/7,  0d/7,  0d/7,
+                                                                        0d/13, 0d/13, 6d/13, 7d/13,
+                                                                        0d/17, 0d/17, 8d/17, 9d/17))
+  }
+
+  it should "return the col-normalized of a matrix with missing rows" in {
+    D.normalizeByCol.toLocalMatrix shouldBe new DenseMatrix(4, 4, Array(0d   , 0d   , 0d   , 0d   ,
+                                                                        0d   , 0d   , 0d   , 0d   ,
+                                                                        0d/13, 0d/13, 6d/13, 7d/13,
+                                                                        0d/17, 0d/17, 8d/17, 9d/17))
+  }
+
   "fold" should "return the maximum of all elements" in {
     val M = C
     M.fold(M(0L, 0L))(max(_, _)) shouldBe 9d
@@ -123,6 +144,13 @@ object SpecRichBlockMatrix {
     new BlockMatrix(rddA, 2, 2)
   }
 
+  /**
+    * B =
+    *   1 3 7 2
+    *   1 5 6 1
+    *   6 3 1 2
+    *   6 9 1 0
+    */
   def B(implicit sc: SparkContext): BlockMatrix = {
     val B00 = new DenseMatrix(2, 2, Array(1, 1, 3, 5))
     val B01 = new DenseMatrix(2, 2, Array(7, 6, 2, 1))
@@ -147,7 +175,7 @@ object SpecRichBlockMatrix {
   }
 
   /**
-    * C =
+    * D =
     *   0 0 0 0
     *   0 0 0 0
     *   0 0 6 8

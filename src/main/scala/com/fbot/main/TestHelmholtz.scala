@@ -30,6 +30,7 @@ object TestHelmholtz extends Logging {
   def main(args: Array[String]): Unit = {
     LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.WARN)
     LoggerFactory.getLogger("com.fbot.main.TestHelmholtz").asInstanceOf[Logger].setLevel(Level.INFO)
+    LoggerFactory.getLogger("org.apache.spark.scheduler.TaskSetManager").asInstanceOf[Logger].setLevel(Level.ERROR)
 
 
     val conf = new SparkConf().setAppName("Simple Application")
@@ -88,14 +89,15 @@ object TestHelmholtz extends Logging {
 
     // low temp => each its own
     // high temp => 1 cluster
-    val temp = 1d / 35d
-    val helmholtz = HelmholtzClustering(data, temp, N, Nclusters)
+    val temp = 1d / 100d
+    val blockSizeN = N / 8
+    val blockSizeNc = Nclusters
+    val helmholtz = HelmholtzClustering(data, temp, blockSizeN, blockSizeNc)
 
 
-
-//    val s = helmholtz.similarityMatrix
-//    info(s"S = \n${s.mkString }")
-//    s.save("data/")
+    //    val s = helmholtz.similarityMatrix
+    //    info(s"S = \n${s.mkString }")
+    //    s.save("data/")
 
     val s = RichBlockMatrix.load("data/")
 
@@ -103,8 +105,8 @@ object TestHelmholtz extends Logging {
     def loopie(qci: BlockMatrix, iteration: Int): (BlockMatrix, Int) = {
       val qciUpdated = helmholtz.singlePass(s, qci)
 
-      info(s"${iteration } iterations")
-      info(s"Qci = \n${qciUpdated.mkString }")
+      //      info(s"${iteration } iterations")
+      //      info(s"Qci = \n${qciUpdated.mkString }")
 
       val diff = qciUpdated.subtract(qci)
       if (diff.fold(abs(diff(0L, 0L)))((a, b) => max(abs(a), abs(b))) < 0.01) {
@@ -114,13 +116,26 @@ object TestHelmholtz extends Logging {
       }
     }
 
-    val QciInit: BlockMatrix = DenseMatrix.rand(N, Nclusters, new Random)
-    val result = loopie(QciInit.normalizeByRow, 0)
+    // in future, iterations should be parallelized (either one big matrix OR loop parallelized)
+    val (qci, _) = (0 until 1000).toArray.foldLeft((DenseMatrix.zeros(N, Nclusters): BlockMatrix, Double.MinValue))((oldQciAndF, i) => {
+      val QciInit: BlockMatrix = DenseMatrix.rand(N, Nclusters, new Random)
+      val (qci, iterations) = loopie(QciInit.normalizeByRow, 0)
 
+      val aveS = helmholtz.aveS(s, qci)
+      val mici = helmholtz.mici(qci)
+      val F = aveS - temp*mici
 
-    val printableMatrix = result._1.toLocalMatrix.toImmutableArray
+      println(f"$i%3d, $F%8f, $aveS%8f, $temp%8f, $mici%8f, $iterations iterations")
 
-    info(s"${result._2 } iterations")
+      // Maximize F
+      if (F > oldQciAndF._2) {
+        (qci, F)
+      } else {
+        oldQciAndF
+      }
+    })
+
+    val printableMatrix = qci.toLocalMatrix.toImmutableArray
     printableMatrix.toList.foreach(row => {
       print("[")
       row.toList.foreach(value =>{
@@ -128,6 +143,9 @@ object TestHelmholtz extends Logging {
       })
       print("]\n")
     })
+    println()
+    println(f"F = ${helmholtz.freeEnergy(s, qci)}%8f ")
+    println(f"  = <S> - T x MI(C;i) = ${helmholtz.aveS(s, qci)}%8f - $temp x ${helmholtz.mici(qci)}%8f ")
 
 
     // get rid of annoying ERROR messages when spark-submit shuts down

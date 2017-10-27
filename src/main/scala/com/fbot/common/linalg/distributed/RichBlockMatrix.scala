@@ -55,7 +55,7 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
   }
 
   /**
-    * If an entire row is zero, then this zero row is returned.
+    * If an entire row is zero, then a zero row is returned.
     *
     * @return
     */
@@ -88,6 +88,42 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
 
     new BlockMatrix(normalizedBlocks, matrix.rowsPerBlock, matrix.colsPerBlock)
   }
+
+  /**
+    * If an entire row is zero, then a zero row is returned.
+    *
+    * @return
+    */
+  def normalizeByCol: BlockMatrix = {
+    val resultPartitioner = GridPartitioner(matrix.numRowBlocks, matrix.numColBlocks, suggestedNumPartitions = blocks.partitions.length)
+
+    val blocksByBlockColIndex = blocks
+      .map(matrixBlock => (matrixBlock._1._2, matrixBlock))
+
+    val colSumsByBlockColIndex: RDD[(Int, Option[DenseMatrix])] = blocksByBlockColIndex
+      .aggregateByKey(Option.empty[DenseMatrix])((accRow, matrix) => {
+        val newColSums = matrix._2.colSums
+        accRow.map(_ + newColSums).orElse(Some(newColSums))
+      }, (col1, col2) => {
+        (col1 ++ col2).reduceOption(_ + _)
+      })
+
+    val normalizedBlocks = blocksByBlockColIndex
+      .join(colSumsByBlockColIndex, resultPartitioner).map(x => {
+      val originalMatrixBlock = x._2._1
+      val normalizationVector = x._2._2.get
+
+      val normalizedMatrix = originalMatrixBlock._2.mapWithIndex((_, j, value) => {
+        if (normalizationVector(0, j) == 0) throw new IllegalArgumentException("division by zero...")
+        value / normalizationVector(0, j)
+      })
+
+      (originalMatrixBlock._1, normalizedMatrix.toMatrix)
+    })
+
+    new BlockMatrix(normalizedBlocks, matrix.rowsPerBlock, matrix.colsPerBlock)
+  }
+
 
   def rowSums: BlockMatrix = {
     // use treeAggregate approach here?
@@ -123,6 +159,16 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
 
     new BlockMatrix(colBlocks, 1, matrix.colsPerBlock)
   }
+
+
+  def map(f: Double => Double): BlockMatrix = {
+    val mappedBlocks: RDD[MatrixBlock] = blocks.map(matrixBlock => {
+      (matrixBlock._1, matrixBlock._2.map(f))
+    })
+
+    new BlockMatrix(mappedBlocks, matrix.rowsPerBlock, matrix.colsPerBlock)
+  }
+
 
   def mapWithIndex(f: (Long, Long, Double) => Double): BlockMatrix = {
     val mappedBlocks: RDD[MatrixBlock] = blocks.map(matrixBlock => {

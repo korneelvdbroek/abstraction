@@ -1,6 +1,6 @@
 package com.fbot.algos.clustering
 
-import breeze.numerics.exp
+import breeze.numerics.{exp, log}
 import com.fbot.algos.mutualinformation.MutualInformation
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.data.MultiSeries.SeriesIndexCombination
@@ -12,36 +12,78 @@ import org.apache.spark.mllib.linalg.distributed.{BlockMatrix, CoordinateMatrix,
 /**
   *
   */
-case class HelmholtzClustering(data: MultiSeries, temp: Double, blockSizeN: Int, blockSizeNc: Int)(implicit sc: SparkContext) {
+case class HelmholtzClustering(data: MultiSeries, temp: Double, blockSizeN: Int, blockSizeNc: Int)(implicit sparkContext: SparkContext) {
 
 
   def singlePass(s: BlockMatrix, qci: BlockMatrix): BlockMatrix = {
-    val N: Int = data.length
+    val n: Int = data.length
     val beta: Double = 1d / temp
 
     // 1 x Nc:
-    val qc = sc.broadcast(qci.colSums.toLocalMatrix)
+    val nqc = sparkContext.broadcast(qci.colSums.toLocalMatrix)
+
+    // N x Nc: qic = qci ./ nqc
+    val qic = qci.normalizeByCol
+    // N x Nc:
+    val sic = s.multiply(qic)
     // 1 x Nc:
-    val sCluster = sc.broadcast(qci.transpose.multiply(s).diagMultiply(qci).toLocalMatrix)
-    val sci = s.multiply(qci)
+    val sc = sparkContext.broadcast(qic.transpose.diagMultiply(sic).toLocalMatrix)
 
-    val qciUpdated = sci.mapWithIndex((_, j, sciValue) => {
-      val qcValue = qc.value(0, j.toInt) / N
-
-      val x = if (qcValue == 0d) {
-        // means qci(i, j) = 0 forall i, so sCluster(0, j) = 0 and sci(i, j) = 0, so qciUpdated(i, j) = 0 forall i
-        0d
-      } else {
-        qcValue * exp(beta * (sciValue * 2d / N / qcValue - sCluster.value(0, j.toInt) / (N * N * qcValue * qcValue)))
-      }
-
+    val qciUpdated = sic.mapWithIndex((_, j, sciValue) => {
+      val x = nqc.value(0, j.toInt) / n * exp(beta * (sciValue * 2d - sc.value(0, j.toInt)))
 //      println(f"$x%f  =  $qcValue%f * exp($beta x (2 / ($N%d x $qcValue%f) x $sciValue%f - 1 / ($N%d^2 x $qcValue%f^2) x ${sCluster.value(0, j.toInt)}%f))    (cluster $j%d)")
-
       x
     })
 
     qciUpdated.normalizeByRow
   }
+
+
+  def freeEnergy(s: BlockMatrix, qci: BlockMatrix): Double = {
+    // 1 x Nc:
+    val nqc = qci.colSums
+
+    aveS(s, qci, nqc) - temp * mici(qci, nqc)
+  }
+
+
+  /**
+    * Similarity between points in cluster, averaged over all clusters
+    */
+  def aveS(s: BlockMatrix, qci: BlockMatrix): Double = {
+    aveS(s, qci, qci.colSums)
+  }
+
+  private def aveS(s: BlockMatrix, qci: BlockMatrix, nqc: BlockMatrix): Double = {
+    val n: Int = data.length
+
+    // N x Nc: qic = qci ./ nqc
+    val qic = qci.normalizeByCol
+    // N x Nc:
+    val sic = s.multiply(qic)
+    // 1 x Nc:
+    val sc = qic.transpose.diagMultiply(sic)
+
+    nqc.transpose.multiply(sc)(0L,0L) / n
+  }
+
+  /**
+    * Mutual information between belonging to a cluster and being a particular point.
+    */
+  def mici(qci: BlockMatrix): Double = {
+    mici(qci, qci.colSums)
+  }
+
+  private def mici(qci: BlockMatrix, nqc: BlockMatrix): Double = {
+    val n: Int = data.length
+
+    val clusterEntropy = - nqc.map(nqcValue => nqcValue * log(nqcValue / n)).fold(0d)(_ + _) / n
+
+    val clusterEntropyConditionalOnI = - qci.map(qciValue => qciValue * log(qciValue)).fold(0d)(_ + _) / n
+
+    clusterEntropy - clusterEntropyConditionalOnI
+  }
+
 
   def similarityMatrix: BlockMatrix = {
     val seriesPairs = Array.fill(data.length - 1)(1).scanLeft(0)(_ + _).flatMap(i => {

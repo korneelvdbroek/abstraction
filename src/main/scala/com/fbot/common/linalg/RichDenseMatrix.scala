@@ -154,6 +154,16 @@ class RichDenseMatrix(val matrix: DenseMatrix) extends AnyVal {
     new DenseMatrix(numRows, numCols, resultValues)
   }
 
+
+  def map(f: Double => Double): DenseMatrix = {
+    val resultValues = new Array[Double](numRows * numCols)
+    foreachActive { (i, j, value) =>
+      resultValues(i + numRows * j) = f(value)
+    }
+    new DenseMatrix(numRows, numCols, resultValues)
+  }
+
+
   def fold(zeroValue: Double)(f: (Double, Double) => Double): Double = {
     var acc = zeroValue
 
