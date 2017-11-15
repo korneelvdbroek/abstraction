@@ -12,32 +12,28 @@ import org.apache.spark.SparkContext
 
 /**
   * Data file can be found on
-  *   http://www2.nationalgrid.com/UK/Industry-information/Electricity-transmission-operational-data/Data-Explorer/
+  * http://www2.nationalgrid.com/UK/Industry-information/Electricity-transmission-operational-data/Data-Explorer/
   */
 case class InputDataUKPowerData(implicit sc: SparkContext) extends TestData {
 
   def data: MultiSeries = {
-    // timestamps
+
     val formatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss")
     val timeZone = ZoneId.of("Europe/London")
-    val timestamps = ImmutableArray.fromCsv("data/UK_grid_power/DemandData_2011-2016.csv")(row => {
+    val powerTimeSeries = TimeSeries.fromCsv("data/UK_grid_power/DemandData_2011-2016.csv")(row => {
       val date = ZonedDateTime.of(LocalDateTime.parse(row(ArrayIndex(0)) + " 00:00:00", formatter), timeZone)
       val minutes = (row(ArrayIndex(1)).toLong - 1L) * 30L
       val dateTime = date.plusMinutes(minutes)
-      dateTime.toInstant.getEpochSecond
+
+      val value = row(ArrayIndex(2)).toDouble
+      (dateTime, value)
     })
 
-    // power data
-    val powerSeries = ImmutableArray.fromCsv("data/UK_grid_power/DemandData_2011-2016.csv")(row => {
-      row(ArrayIndex(2)).toDouble
-    })
-
-    val powerTimeSeries = TimeSeries(timestamps, powerSeries)
 
     // make time series fragments
-    val fragments = powerSeries.toArray.toIterator.sliding(48, 48).withPartial(false).map(ImmutableArray(_).map(Tuple(_)))
+    val fragments: ImmutableArray[TimeSeries] = ???
 
-    MultiSeries(fragments)
+    MultiSeries(fragments.filter(_.length == 48).map(_.values.map(Tuple(_))))
   }
 
 }

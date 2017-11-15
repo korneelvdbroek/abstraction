@@ -69,6 +69,8 @@ trait FastTuple[T, Self <: FastTuple[T, Self]] extends Any {
 
   def toArray(implicit evidence: scala.reflect.ClassTag[T]): Array[T] = repr.toArray
 
+  def toWrappedArray: mutable.WrappedArray[T] = repr
+
   def toList: List[T] = repr.toList
 
   def toSet: Set[T] = repr.toSet
