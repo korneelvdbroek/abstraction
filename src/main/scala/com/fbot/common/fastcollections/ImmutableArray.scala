@@ -1,9 +1,14 @@
 package com.fbot.common.fastcollections
 
+import java.time.format.DateTimeFormatter
+import java.time.{LocalDateTime, ZoneId, ZonedDateTime}
+
 import com.fbot.common.fastcollections.index.ArrayIndex
 
 import scala.collection.mutable
+import scala.io.Source
 import scala.reflect.ClassTag
+import scala.util.Try
 
 /**
   *
@@ -31,6 +36,19 @@ object ImmutableArray {
   def indexRange(start: Int, end: Int): ImmutableArray[ArrayIndex] = range(start, end).map(i => ArrayIndex(i))
 
   implicit def builder[T: ClassTag](array: Array[T]): ImmutableArray[T] = ImmutableArray(array)
+
+
+  def fromCsv[T: ClassTag](fileName: String,
+                           separator: String = ",", skipHeaderLines: Int = 1)
+                          (valueFromRow: ImmutableArray[String] => T): ImmutableArray[T] = {
+    val bufferedSource = Source.fromFile(fileName)
+
+    val rows = ImmutableArray(bufferedSource.getLines.map(line => {
+      ImmutableArray(line.split(separator, -1))
+    }).drop(skipHeaderLines))
+
+    rows.map(valueFromRow)
+  }
 
 }
 

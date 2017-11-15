@@ -2,10 +2,10 @@ package com.fbot.main
 
 import java.util.Random
 
-import breeze.linalg.{max, DenseMatrix => BDM, DenseVector => BDV, Matrix => BM}
+import breeze.linalg.max
 import breeze.numerics.abs
 import ch.qos.logback.classic.{Level, Logger}
-import com.fbot.algos.clustering.HelmholtzClustering
+import com.fbot.algos.clustering.{HelmholtzClustering, MISimilarity}
 import com.fbot.common.data.{IndexedSeries, MultiSeries, Series}
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
@@ -52,36 +52,10 @@ object TestHelmholtz extends Logging {
 
 
     // Data source
-    val data: MultiSeries = if (false) {
-      val rho: Double = 0.0d
-      val Nsample: Int = 10000
-      // should be > 10^{2 seriesDim}
-      val seriesDim: Int = 2
-      val N = 4
-
-      val mu = BDV(Array.fill(N * seriesDim)(0d))
-      val sigma = {
-        val dim = 4
-
-        val sigmaX = BDM.eye[Double](dim) + BDM((0.0, 0.0, 0.4, 0.4), (0.0, 0.0, 0.4, 0.4), (0.4, 0.4, 0.0, 0.0), (0.4, 0.4, 0.0, 0.0))
-        val sigmaY = BDM.eye[Double](dim) + BDM((0.0, 0.0, 0.4, 0.4), (0.0, 0.0, 0.4, 0.4), (0.4, 0.4, 0.0, 0.0), (0.4, 0.4, 0.0, 0.0))
-        val sigmaXY = BDM.eye[Double](dim) * rho //+ BDM((0.4, 0.0, -0.3, 0.0), (0.0, 0.0, 0.0, 0.0), (0.5, 0.0, 0.4, 0.0), (0.1, 0.0, 0.2, 0.0))
-
-        val a = BDM.zeros[Double](2 * dim, 2 * dim)
-        a(0 until dim, 0 until dim) := sigmaX
-        a(dim until 2 * dim, dim until 2 * dim) := sigmaY
-        a(0 until dim, dim until 2 * dim) := sigmaXY
-        a(dim until 2 * dim, 0 until dim) := sigmaXY.t
-
-        a
-      }
-
-      info(s"sigma = \n$sigma")
-      info(s"parallelism = ${sc.defaultParallelism }")
-      GaussianData(N, Nsample, seriesDim, sigma, mu)
-        .data // GaussianData.data // RndDataXd(dim, N).data // FxDataXd(dim, N).data // GaussianData2d(N, rho).data
-    } else {
-      InputDataYeast().data
+    val data: MultiSeries = {
+      //InputDataGaussian().data
+      //InputDataYeast().data
+      InputDataUKPowerData().data
     }
 
     val N = data.length
@@ -92,18 +66,24 @@ object TestHelmholtz extends Logging {
     val temp = 1d / 100d
     val blockSizeN = N / 8
     val blockSizeNc = Nclusters
-    val helmholtz = HelmholtzClustering(data, temp, blockSizeN, blockSizeNc)
 
 
-    //    val s = helmholtz.similarityMatrix
-    //    info(s"S = \n${s.mkString }")
-    //    s.save("data/")
+    val s = if (true) {
+      val miSimilarity = MISimilarity(data, blockSizeN, blockSizeNc)
+      val s = miSimilarity.similarityMatrix
+      info(s"S = \n${s.mkString }")
+      s.save("data/", "UKPower")
+      s
+    } else {
+      RichBlockMatrix.load("data/UKPower")
+    }
 
-    val s = RichBlockMatrix.load("data/")
+
+    val helmholtz = HelmholtzClustering(s, temp, blockSizeN, blockSizeNc)
 
     @tailrec
     def loopie(qci: BlockMatrix, iteration: Int): (BlockMatrix, Int) = {
-      val qciUpdated = helmholtz.singlePass(s, qci)
+      val qciUpdated = helmholtz.singlePass(qci)
 
       //      info(s"${iteration } iterations")
       //      info(s"Qci = \n${qciUpdated.mkString }")
@@ -117,13 +97,14 @@ object TestHelmholtz extends Logging {
     }
 
     // in future, iterations should be parallelized (either one big matrix OR loop parallelized)
-    val (qci, _) = (0 until 1000).toArray.foldLeft((DenseMatrix.zeros(N, Nclusters): BlockMatrix, Double.MinValue))((oldQciAndF, i) => {
+    val (qci, _) = (0 until 10).toArray.foldLeft((DenseMatrix.zeros(N, Nclusters): BlockMatrix, Double.MinValue))((oldQciAndF, i) => {
+      // Symmetry breaking
       val QciInit: BlockMatrix = DenseMatrix.rand(N, Nclusters, new Random)
       val (qci, iterations) = loopie(QciInit.normalizeByRow, 0)
 
-      val aveS = helmholtz.aveS(s, qci)
+      val aveS = helmholtz.aveS(qci)
       val mici = helmholtz.mici(qci)
-      val F = aveS - temp*mici
+      val F = aveS - temp * mici
 
       println(f"$i%3d, $F%8f, $aveS%8f, $temp%8f, $mici%8f, $iterations iterations")
 
@@ -138,14 +119,14 @@ object TestHelmholtz extends Logging {
     val printableMatrix = qci.toLocalMatrix.toImmutableArray
     printableMatrix.toList.foreach(row => {
       print("[")
-      row.toList.foreach(value =>{
+      row.toList.foreach(value => {
         print(f"$value%5.3f, ")
       })
       print("]\n")
     })
     println()
-    println(f"F = ${helmholtz.freeEnergy(s, qci)}%8f ")
-    println(f"  = <S> - T x MI(C;i) = ${helmholtz.aveS(s, qci)}%8f - $temp x ${helmholtz.mici(qci)}%8f ")
+    println(f"F = ${helmholtz.freeEnergy(qci) }%8f ")
+    println(f"  = <S> - T x MI(C;i) = ${helmholtz.aveS(qci) }%8f - $temp x ${helmholtz.mici(qci) }%8f ")
 
 
     // get rid of annoying ERROR messages when spark-submit shuts down

@@ -26,7 +26,9 @@ trait FastTuple[T, Self <: FastTuple[T, Self]] extends Any {
 
   def apply(index: ArrayIndex): T = repr(index.toInt)
 
-  def last: T = repr(length - 1)
+  def head: T = repr.head
+
+  def last: T = repr.last
 
   def foldLeft[B](z: B)(op: (B, T) => B): B = repr.foldLeft(z)(op)
 

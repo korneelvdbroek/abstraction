@@ -285,14 +285,14 @@ class RichBlockMatrix(val matrix: BlockMatrix) extends AnyVal {
   }
 
 
-  def save(path: String): Unit = {
-    val writer = new PrintWriter(new File(s"$path/${ RichBlockMatrix.metaDataFileName }"))
+  def save(path: String, name: String = ""): Unit = {
+    val writer = new PrintWriter(new File(s"$path/$name-${ RichBlockMatrix.metaDataFileName }"))
     writer.write(s"${matrix.rowsPerBlock}\n")
     writer.write(s"${matrix.colsPerBlock}\n")
     writer.write(s"${matrix.numRows()}\n")
     writer.write(s"${matrix.numCols()}\n")
     writer.close()
-    matrix.blocks.saveAsObjectFile(s"$path/${ RichBlockMatrix.dataDirectory }")
+    matrix.blocks.saveAsObjectFile(s"$path/$name-${ RichBlockMatrix.dataDirectory }")
   }
 
 
