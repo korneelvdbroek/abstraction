@@ -3,8 +3,9 @@ package com.fbot.algos.mutualinformation
 import breeze.linalg.max
 import breeze.numerics.{digamma, pow, sqrt}
 import com.fbot.algos.nearestneighbors.NearestNeighbors
-import com.fbot.common.fastcollections.FastTuple2Zipped._
+import com.fbot.common.fastcollections.FastArray2Zipped._
 import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.ImmutableArray._
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.{HyperSpace, HyperSpaceUnit, Space, Tuple}
 import com.fbot.main.Utils
@@ -15,9 +16,9 @@ import scala.util.Random
 /**
   * References:
   * + Estimating Mutual Information
-  *   Alexander Kraskov, Harald Stogbauer, Peter Grassberger
+  * Alexander Kraskov, Harald Stogbauer, Peter Grassberger
   *   Phys. Rev. E 69, 066138
-  *  	arXiv:cond-mat/0305641
+  * arXiv:cond-mat/0305641
   */
 case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray[Tuple]) extends NearestNeighbors with Logging {
 
@@ -126,10 +127,12 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
 
       val MI = digamma(k) - 1d / k + digamma(length) - mean
 
-      if (countIndex.toInt % 100 == 0) info(f"${countIndex.toInt }%7d ($sampleIndex%12s):  ${Utils.prettyPrintTime(t1) } // ${
-        Utils
-          .prettyPrintTime(t2)
-      }: $MI%7.4f +/- $standardErrorOfMean%7.4f")
+      if (countIndex.toInt % 100 == 0) {
+        info(f"${countIndex.toInt }%7d ($sampleIndex%12s):  ${Utils.prettyPrintTime(t1) } // ${
+          Utils
+            .prettyPrintTime(t2)
+        }: $MI%7.4f +/- $standardErrorOfMean%7.4f")
+      }
 
       ((mean, sumOfSquares), standardErrorOfMean < absoluteTolerance)
     })
@@ -142,7 +145,7 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
 object MutualInformation {
 
   def MIMax(seriesLength: Int, k: Int = 10): Double = {
-    max(- digamma(k) - 1d / k + digamma(seriesLength), 0d)
+    max(-digamma(k) - 1d / k + digamma(seriesLength), 0d)
   }
 
 }

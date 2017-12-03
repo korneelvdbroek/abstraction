@@ -1,10 +1,12 @@
 package com.fbot.algos.nearestneighbors
 
 import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.ImmutableArray._
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace._
 
 import scala.annotation.tailrec
+import scala.reflect.ClassTag
 
 /**
   *
@@ -17,14 +19,12 @@ trait NearestNeighbors {
   def pointsBySpaceUnitPerSpace: Map[HyperSpace, (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[ArrayIndex]])]
 
 
-
   def kNearestBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[ArrayIndex])
                         (k: Int, currentTuple: Tuple): ImmutableArray[(ArrayIndex, Double)] = {
     pointSubsetIndices
       .map(index => (index, space.distance(points(index), currentTuple)))
       .partialSort(k, (el1, el2) => el1._2 < el2._2)
   }
-
 
 
   def kNearest(space: HyperSpace)(k: Int, centerTupleIndex: ArrayIndex): ImmutableArray[ArrayIndex] = {
@@ -37,13 +37,15 @@ trait NearestNeighbors {
     def kNearestInCube(kNearestCandidates: ImmutableArray[ArrayIndex],
                        cube: HyperCube, oldCube: HyperCube): ImmutableArray[(ArrayIndex, Double)] = {
 
-      val pointsInNewUnitCubes = pointsBySpaceUnitKeys.mapWithIndex((hyperSpaceUnit, index) => {
+      val pointsInNewUnitCubesUnflattened: ImmutableArray[ImmutableArray[ArrayIndex]] = pointsBySpaceUnitKeys.mapWithIndex((hyperSpaceUnit, index) => {
         if (cube.contains(hyperSpaceUnit) && !oldCube.contains(hyperSpaceUnit)) {
           pointsBySpaceUnitValues(index)
         } else {
           ImmutableArray.empty[ArrayIndex]
         }
-      }).flatten
+      })
+      val pointsInNewUnitCubes: ImmutableArray[ArrayIndex] = pointsInNewUnitCubesUnflattened
+        .flatten[ArrayIndex, ImmutableArray[ArrayIndex]]
 
       val newCandidatePoints = if (kNearestCandidates.isEmpty) {
         pointsInNewUnitCubes.filterNot(_ == centerTupleIndex)
@@ -94,13 +96,13 @@ trait NearestNeighbors {
     val cube = HyperCube.from(space.hyperSpaceUnitAround(centerTuple)).growCubeSidesToIncludeDistanceAround(space)(distance, centerTuple)
 
     val (pointsBySpaceUnitKeys, pointsBySpaceUnitValues) = pointsBySpaceUnitPerSpace(space)
-    val potentialCloseByPoints = pointsBySpaceUnitKeys.mapWithIndex((hyperSpaceUnit, index) => {
+    val potentialCloseByPoints: ImmutableArray[ArrayIndex] = pointsBySpaceUnitKeys.mapWithIndex((hyperSpaceUnit, index) => {
       if (cube.contains(hyperSpaceUnit)) {
         pointsBySpaceUnitValues(index)
       } else {
         ImmutableArray.empty[ArrayIndex]
       }
-    }).flatten
+    }).flatten[ArrayIndex, ImmutableArray[ArrayIndex]]
 
 
     numberOfCloseByPointsBruteForce(space, potentialCloseByPoints)(distance, centerTuple)

@@ -4,6 +4,7 @@ import breeze.linalg.{DenseMatrix, DenseVector}
 import breeze.stats.distributions.{Gaussian, MultivariateGaussian}
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.ImmutableArray._
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.Tuple
 import org.apache.spark.SparkContext
@@ -78,8 +79,8 @@ case class GaussianData2d(N: Int, rho: Double,
 case class GaussianData(numberOfDataSets: Int, samplesSize: Int, sampleDim: Int,
                         sigma: DenseMatrix[Double], mu: DenseVector[Double])(implicit sc: SparkContext) extends TestData {
 
-  require(numberOfDataSets*sampleDim == mu.size, s"Dimension of mu matrix provided does not match $numberOfDataSets*$sampleDim")
-  require(numberOfDataSets*sampleDim == sigma.rows, s"Dimension of sigma matrix provided does not match $numberOfDataSets*$sampleDim")
+  require(numberOfDataSets * sampleDim == mu.size, s"Dimension of mu matrix provided does not match $numberOfDataSets*$sampleDim")
+  require(numberOfDataSets * sampleDim == sigma.rows, s"Dimension of sigma matrix provided does not match $numberOfDataSets*$sampleDim")
 
   def data: MultiSeries = {
     val gaussian = MultivariateGaussian(mu, sigma)

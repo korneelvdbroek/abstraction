@@ -1,9 +1,10 @@
 package com.fbot.common.hyperspace
 
 import com.fbot.common.fastcollections.math.FastTupleLongMath
-import com.fbot.common.fastcollections.{FastTuple, ImmutableArray}
+import com.fbot.common.fastcollections.{BuilderFromArray, FastTuple, ImmutableArray}
 
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 
 /**
@@ -35,4 +36,9 @@ object HyperSpaceUnit {
 
   implicit def fromImmutableArray(array: ImmutableArray[Long]): HyperSpaceUnit = HyperSpaceUnit(array.repr)
 
+  implicit def builderFromArray[T](implicit m: ClassTag[T]): BuilderFromArray[Long, HyperSpaceUnit] = {
+    new BuilderFromArray[Long, HyperSpaceUnit] {
+      def result(array: Array[Long]): HyperSpaceUnit = HyperSpaceUnit(array)
+    }
+  }
 }

@@ -2,30 +2,25 @@ package com.fbot.common.fastcollections
 
 import com.fbot.common.fastcollections.index.ArrayIndex
 
-import scala.collection.{GenTraversableOnce, mutable}
+import scala.collection.mutable
 import scala.math.Ordering
 import scala.reflect.ClassTag
+import scala.runtime.ScalaRunTime.arrayElementClass
 
 /**
   * All methods which either change either
   * - the dimension of the result, or
   * - the type
   *
-  * @tparam T
+  * @tparam A    the collection element type.
+  * @tparam Repr the actual type of the element container.
+  *
   */
-trait FastArray[T, Self[T] <: FastArray[T, Self]] extends Any with FastTuple[T, Self[T]] {
+trait FastArray[A, Repr] extends Any with FastTuple[A, Repr] {
 
-  def makeTransformed[B](x: mutable.WrappedArray[B]): Self[B]
+  def map[B: ClassTag, To](f: (A) ⇒ B)(implicit builder: BuilderFromArray[B, To]): To = builder.result(repr.map(f).toArray)
 
-  def make(x: mutable.WrappedArray[T]): Self[T] = makeTransformed(x)
-
-//  private def make(x: Array[T]): Self[T] = make(mutable.WrappedArray.make[T](x))
-
-
-
-  def map[B: ClassTag](f: (T) ⇒ B): Self[B] = makeTransformed(repr.map(f))
-
-  def mapWithIndex[B: ClassTag](f: (T, ArrayIndex) ⇒ B): Self[B] = {
+  def mapWithIndex[B: ClassTag, To](f: (A, ArrayIndex) ⇒ B)(implicit builder: BuilderFromArray[B, To]): To = {
     val len = length
     val mapped = new Array[B](len)
 
@@ -35,35 +30,36 @@ trait FastArray[T, Self[T] <: FastArray[T, Self]] extends Any with FastTuple[T, 
       i += 1
     }
 
-    makeTransformed(mapped)
+    builder.result(mapped)
   }
 
-  def flatMap[B: ClassTag](f: T => GenTraversableOnce[B]): Self[B] = makeTransformed(repr.flatMap(f))
+  def flatMap[B: ClassTag, To](f: A => FastArray[B, To])(implicit builder: BuilderFromArray[B, To]): To = {
+    builder.result(repr.flatMap(element => f(element).repr).toArray)
+  }
 
-  def flatten[U: ClassTag](implicit asArray: (T) ⇒ Self[U]): Self[U] = {
+  def flatten[B: ClassTag, To](implicit builder: BuilderFromArray[B, To], asArray: (A) ⇒ FastArray[B, To]): To = {
     val n = repr.map(elem => asArray(elem).length).sum
-    val x = new Array[U](n)
+    val x = new Array[B](n)
 
     var i = 0
     repr foreach { elem =>
       val array = asArray(elem)
-      System.arraycopy(array.repr.toArray[U], 0, x, i, array.length)
+      System.arraycopy(array.repr.toArray, 0, x, i, array.length)
       i += array.length
     }
 
-    makeTransformed(x)
+    builder.result(x)
   }
 
 
+  def sortWith(lt: (A, A) ⇒ Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = builder.result(repr.sortWith(lt).toArray)
 
-  def sortWith(lt: (T, T) ⇒ Boolean): Self[T] = make(repr.sortWith(lt))
+  def sortBy[B](f: (A) ⇒ B)(implicit evidence: scala.reflect.ClassTag[A], ord: Ordering[B], builder: BuilderFromArray[A, Repr]): Repr = builder.result(repr.sortBy(f).toArray)
 
-  def sortBy[B](f: (T) ⇒ B)(implicit ord: Ordering[B]): Self[T] = make(repr.sortBy(f))
-
-  def partialSort(k: Int, lt: (T, T) => Boolean)(implicit evidence: scala.reflect.ClassTag[T]): Self[T] = {
+  def partialSort(k: Int, lt: (A, A) => Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = {
     val array = repr.toArray
-    val ordering: Ordering[T] = Ordering fromLessThan lt
-    val pq: mutable.PriorityQueue[T] = new mutable.PriorityQueue[T]()(ordering)
+    val ordering: Ordering[A] = Ordering fromLessThan lt
+    val pq: mutable.PriorityQueue[A] = new mutable.PriorityQueue[A]()(ordering)
 
     // load up the PQ
     var i: Int = 0
@@ -82,33 +78,45 @@ trait FastArray[T, Self[T] <: FastArray[T, Self]] extends Any with FastTuple[T, 
       i += 1
     }
 
-    makeFromArray(pq.dequeueAll.reverse.toArray)
+    builder.result(pq.dequeueAll.reverse.toArray)
   }
 
-  def take(k: Int)(implicit evidence: scala.reflect.ClassTag[T]): Self[T] = {
-    val x = new Array[T](k)
-    System.arraycopy(this.repr.toArray[T], 0, x, 0, k)
-    make(x)
+  def take(k: Int)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = {
+    val x = new Array[A](k)
+    System.arraycopy(this.repr.toArray[A], 0, x, 0, k)
+    builder.result(x)
   }
 
-  def slice(from: Int, until: Int): Self[T] = make(repr.slice(from, until))
+  def slice(from: Int, until: Int)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = builder.result(repr.slice(from, until).toArray)
 
-  def filter(p: (T) ⇒ Boolean): Self[T] = make(repr.filter(p))
+  def filter(p: (A) ⇒ Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = builder.result(repr.filter(p).toArray)
 
-  def filterNot(p: (T) ⇒ Boolean): Self[T] = make(repr.filterNot(p))
+  def filterByIndex(p: ArrayIndex => Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = {
+    val len = length
+    val filtered = new mutable.WrappedArrayBuilder[A](ClassTag[A](arrayElementClass(repr.getClass)))
 
-  def groupBy[K: ClassTag](f: (T) ⇒ K): Map[K, Self[T]] = {
-    repr.groupBy(f).mapValues(make)
+    var i = 0
+    while (i < len) {
+      if (p(ArrayIndex(i))) filtered += repr(i)
+      i += 1
+    }
+
+    builder.result(filtered.result.toArray)
   }
 
-  def indexRange: Self[ArrayIndex] = makeTransformed(Array.range(0, repr.length).map(ArrayIndex(_)))
 
-  def sum[B >: T](implicit num: Numeric[B]): B = repr.sum(num)
+  def filterNot(p: (A) ⇒ Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = builder.result(repr.filterNot(p).toArray)
 
-  def max[B >: T](implicit cmp: Ordering[B]): T = repr.max(cmp)
+  def groupBy[Key: ClassTag](f: (A) ⇒ Key)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Map[Key, Repr] = {
+    repr.groupBy(f).mapValues(array => builder.result(array.toArray))
+  }
+
+  def indexRange[To](implicit builder: BuilderFromArray[ArrayIndex, To]): To = builder.result(Array.range(0, repr.length).map(ArrayIndex(_)))
+
+  def sum[B >: A](implicit num: Numeric[B]): B = repr.sum(num)
+
+  def max[B >: A](implicit cmp: Ordering[B]): A = repr.max(cmp)
 
 }
-
-
 
 

@@ -1,21 +1,15 @@
 package com.fbot.common.fastcollections
 
-import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime, ZoneId, ZonedDateTime}
-
 import com.fbot.common.fastcollections.index.ArrayIndex
 
 import scala.collection.mutable
 import scala.io.Source
 import scala.reflect.ClassTag
-import scala.util.Try
 
 /**
   *
   */
-case class ImmutableArray[T](repr: mutable.WrappedArray[T]) extends AnyVal with FastArray[T, ImmutableArray] {
-
-  def makeTransformed[B](x: mutable.WrappedArray[B]): ImmutableArray[B] = ImmutableArray(x)
+case class ImmutableArray[T](repr: mutable.WrappedArray[T]) extends AnyVal with FastArray[T, ImmutableArray[T]] {
 
 }
 
@@ -36,6 +30,14 @@ object ImmutableArray {
   def indexRange(start: Int, end: Int): ImmutableArray[ArrayIndex] = range(start, end).map(i => ArrayIndex(i))
 
   implicit def builder[T: ClassTag](array: Array[T]): ImmutableArray[T] = ImmutableArray(array)
+
+  implicit def asArray[T: ClassTag](immutableArray: ImmutableArray[T]): Array[T] = immutableArray.toArray
+
+  implicit def builderFromArray[T](implicit m: ClassTag[T]): BuilderFromArray[T, ImmutableArray[T]] = {
+    new BuilderFromArray[T, ImmutableArray[T]] {
+      def result(array: Array[T]): ImmutableArray[T] = ImmutableArray(array)
+    }
+  }
 
 
   def fromCsv[T: ClassTag](fileName: String,

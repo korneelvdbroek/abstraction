@@ -1,6 +1,7 @@
 package com.fbot.common.hyperspace
 
 import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.ImmutableArray._
 
 /**
   *
@@ -22,7 +23,7 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
       val (l, r) = (vectorToLeft(axis), vectorToRight(axis))
 
       (if (l < epsilon) -((epsilon - l) / unitLength).floor.toLong - 1L else 0L,
-       if (r <= epsilon) ((epsilon - r) / unitLength).floor.toLong + 1L else 0L)
+        if (r <= epsilon) ((epsilon - r) / unitLength).floor.toLong + 1L else 0L)
     })
     grow(unitsToGrow.map(_._1), unitsToGrow.map(_._2))
   }

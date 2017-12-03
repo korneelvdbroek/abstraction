@@ -4,6 +4,8 @@ import breeze.numerics.{exp, log}
 import com.fbot.algos.mutualinformation.MutualInformation
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.data.MultiSeries.SeriesIndexCombination
+import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.ImmutableArray._
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.linalg.distributed.RichBlockMatrix._
 import org.apache.spark.SparkContext
@@ -15,10 +17,10 @@ import org.apache.spark.mllib.linalg.distributed.{BlockMatrix, CoordinateMatrix,
 case class MISimilarity(data: MultiSeries, blockSizeN: Int, blockSizeNc: Int)(implicit sparkContext: SparkContext) {
 
   def similarityMatrix: BlockMatrix = {
-    val seriesPairs = Array.fill(data.length - 1)(1).scanLeft(0)(_ + _).flatMap(i => {
-      val pair = Array.fill(data.length - i - 1)(i + 1).scanLeft(0)(_ + _)
+    val seriesPairs = ImmutableArray.range(0, data.length - 1).flatMap(i => {
+      val pair = ImmutableArray.range(i + 1, data.length)
       pair.map(j => Array(ArrayIndex(i), ArrayIndex(j)))
-    }).zipWithIndex.map(x => SeriesIndexCombination(x._1, x._2))
+    }).mapWithIndex((pair, index) => SeriesIndexCombination(pair, index.toInt))
 
     // this is the slow step
     val offDiagonalEntries = data.makeSeriesPairs(seriesPairs).flatMap(dataPair => {

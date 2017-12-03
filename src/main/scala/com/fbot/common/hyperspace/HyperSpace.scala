@@ -2,6 +2,7 @@ package com.fbot.common.hyperspace
 
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.index.ArrayIndex
+import ImmutableArray._
 
 /**
   *  HyperSpace is defined by

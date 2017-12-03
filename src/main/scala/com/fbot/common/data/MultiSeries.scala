@@ -2,10 +2,11 @@ package com.fbot.common.data
 
 import com.fbot.common.data.MultiSeries.{SeriesCombination, SeriesIndexCombination}
 import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.ImmutableArray._
 import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.Tuple
-import org.apache.spark.{HashPartitioner, SparkContext}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{HashPartitioner, SparkContext}
 
 import scala.reflect.ClassTag
 
@@ -17,9 +18,15 @@ case class Series(data: ImmutableArray[Tuple]) {
 
   def toImmutableArray: ImmutableArray[Tuple] = data
 
+  def length: Int = data.length
+
 }
 
-case class IndexedSeries(index: ArrayIndex, series: Series)
+case class IndexedSeries(index: ArrayIndex, series: Series) {
+
+  def length: Int = series.length
+
+}
 
 object IndexedSeries {
 
@@ -44,7 +51,7 @@ case class MultiSeries(series: RDD[(ArrayIndex, ImmutableArray[Tuple])], length:
     series.flatMap(x => f(IndexedSeries(x)))
   }
 
-  def makeSeriesPairs(pairings: Array[SeriesIndexCombination])(implicit sc: SparkContext): RDD[SeriesCombination] = {
+  def makeSeriesPairs(pairings: ImmutableArray[SeriesIndexCombination])(implicit sc: SparkContext): RDD[SeriesCombination] = {
     def joinOnSeries(acc: RDD[(Vector[IndexedSeries], SeriesIndexCombination)], pairIndex: Int): RDD[(Vector[IndexedSeries], SeriesIndexCombination)] = {
       acc
         .map(x => (x._2(pairIndex), x))
@@ -60,12 +67,11 @@ case class MultiSeries(series: RDD[(ArrayIndex, ImmutableArray[Tuple])], length:
     }
 
     val pairingLength = pairings.headOption.map(_.combination.length)
-    val z = flatMap(row => pairings.filter(_.combination.headOption.exists(_ == row.index)).map(pairIndex => (Vector(row), pairIndex)))
+    val z = flatMap(row => pairings.filter(_.combination.headOption.exists(_ == row.index)).map(pairIndex => (Vector(row), pairIndex)).toWrappedArray)
     val joined = (1 until pairingLength.getOrElse(1)).foldLeft(z)(joinOnSeries)
 
     partitionByIndex(joined)
   }
-
 
 
 }
@@ -90,7 +96,8 @@ object MultiSeries {
     new MultiSeries(rdd, series.length)
   }
 
-  case class SeriesIndexCombination(combination: Array[ArrayIndex], partitionIndex: Int) {
+  case class SeriesIndexCombination(combination: ImmutableArray[ArrayIndex], partitionIndex: Int) {
+
     def apply(pairIndex: Int): ArrayIndex = combination(pairIndex)
   }
 

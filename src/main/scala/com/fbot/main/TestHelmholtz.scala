@@ -1,5 +1,7 @@
 package com.fbot.main
 
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Random
 
 import breeze.linalg.max
@@ -29,7 +31,7 @@ object TestHelmholtz extends Logging {
 
   def main(args: Array[String]): Unit = {
     LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.WARN)
-    LoggerFactory.getLogger("com.fbot.main.TestHelmholtz").asInstanceOf[Logger].setLevel(Level.INFO)
+    LoggerFactory.getLogger("com.fbot.main").asInstanceOf[Logger].setLevel(Level.INFO)
     LoggerFactory.getLogger("org.apache.spark.scheduler.TaskSetManager").asInstanceOf[Logger].setLevel(Level.ERROR)
 
 
@@ -59,24 +61,24 @@ object TestHelmholtz extends Logging {
     }
 
     val N = data.length
-    val Nclusters = 20
+    val Nclusters = 10
 
     // low temp => each its own
     // high temp => 1 cluster
-    val temp = 1d / 100d
-    val blockSizeN = N / 8
+    val temp = 0.1
+    val blockSizeN = N
     val blockSizeNc = Nclusters
 
 
-    val s = if (true) {
+    val s = if (false) {
       val miSimilarity = MISimilarity(data, blockSizeN, blockSizeNc)
       val s = miSimilarity.similarityMatrix
-      info(s"S = \n${s.mkString }")
-      s.save("data/", "UKPower")
+      s.save("temp_data/", s"UKPower${ZonedDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss"))}")
       s
     } else {
-      RichBlockMatrix.load("data/UKPower")
+      RichBlockMatrix.load("temp_data/", "UKPower20171202T002114")
     }
+    info(s"S = \n${Utils.printImmutableMatrix(s.toLocalMatrix.toImmutableArray)}")
 
 
     val helmholtz = HelmholtzClustering(s, temp, blockSizeN, blockSizeNc)
@@ -85,18 +87,30 @@ object TestHelmholtz extends Logging {
     def loopie(qci: BlockMatrix, iteration: Int): (BlockMatrix, Int) = {
       val qciUpdated = helmholtz.singlePass(qci)
 
-      //      info(s"${iteration } iterations")
-      //      info(s"Qci = \n${qciUpdated.mkString }")
+      val deltaQci = qciUpdated.subtract(qci)
+      val biggestDelta = deltaQci.fold(abs(deltaQci(0L, 0L)))((a, b) => max(abs(a), abs(b)))
 
-      val diff = qciUpdated.subtract(qci)
-      if (diff.fold(abs(diff(0L, 0L)))((a, b) => max(abs(a), abs(b))) < 0.01) {
+//      {
+//        val flatArrayWithIndex = ImmutableArray(deltaQci.toLocalMatrix().toArray).mapWithIndex((x, i) => (x, i.toInt))
+//        val maxDeltas = flatArrayWithIndex.sortBy(_._1).take(10).map(xAndIndex => {
+//          val (x, index) = xAndIndex
+//          val row = index % deltaQci.numRows()
+//          val col = index / deltaQci.numRows()
+//          (x, qciUpdated(row, col), qci(row, col), (row, col))
+//        })
+//
+//        info(f"$iteration%3d: biggest delta = $biggestDelta%4.3f")
+//        info(f"  $maxDeltas")
+//      }
+
+      if (biggestDelta < 0.01) {
         (qciUpdated, iteration)
       } else {
         loopie(qciUpdated, iteration + 1)
       }
     }
 
-    // in future, iterations should be parallelized (either one big matrix OR loop parallelized)
+    //TODO: iterations should be parallelized (either one big matrix OR loop parallelized)
     val (qci, _) = (0 until 10).toArray.foldLeft((DenseMatrix.zeros(N, Nclusters): BlockMatrix, Double.MinValue))((oldQciAndF, i) => {
       // Symmetry breaking
       val QciInit: BlockMatrix = DenseMatrix.rand(N, Nclusters, new Random)
@@ -106,7 +120,7 @@ object TestHelmholtz extends Logging {
       val mici = helmholtz.mici(qci)
       val F = aveS - temp * mici
 
-      println(f"$i%3d, $F%8f, $aveS%8f, $temp%8f, $mici%8f, $iterations iterations")
+      println(f"$i%3d, $F%8f = $aveS%8f - $temp%8f * $mici%8f, $iterations iterations")
 
       // Maximize F
       if (F > oldQciAndF._2) {
@@ -116,14 +130,7 @@ object TestHelmholtz extends Logging {
       }
     })
 
-    val printableMatrix = qci.toLocalMatrix.toImmutableArray
-    printableMatrix.toList.foreach(row => {
-      print("[")
-      row.toList.foreach(value => {
-        print(f"$value%5.3f, ")
-      })
-      print("]\n")
-    })
+    println(Utils.printImmutableMatrix(qci.toLocalMatrix.toImmutableArray))
     println()
     println(f"F = ${helmholtz.freeEnergy(qci) }%8f ")
     println(f"  = <S> - T x MI(C;i) = ${helmholtz.aveS(qci) }%8f - $temp x ${helmholtz.mici(qci) }%8f ")
