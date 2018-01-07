@@ -8,7 +8,7 @@ import scala.reflect.ClassTag
 /**
   *
   */
-trait FastTupleDoubleMath[Self <: FastTuple[Double, Self]] extends Any with ElementWiseFastArrayOps[Double] with FastTuple[Double, Self] {
+trait FastTupleDoubleMath[Self <: FastTuple[Double, Self]] extends ElementWiseFastArrayOps[Double] with FastTuple[Double, Self] {
 
   def make(x: mutable.WrappedArray[Double]): Self
 

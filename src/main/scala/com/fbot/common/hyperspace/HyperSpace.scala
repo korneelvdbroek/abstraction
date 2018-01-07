@@ -1,11 +1,10 @@
 package com.fbot.common.hyperspace
 
 import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.index.ArrayIndex
-import ImmutableArray._
+import com.fbot.common.fastcollections.ImmutableArray._
 
 /**
-  *  HyperSpace is defined by
+  * HyperSpace is defined by
   *  1. a distance definition
   *  2. an (axes-)embedding in the parent Tuple-space (R**d)
   *  3. a grid of HyperSpaceUnits
@@ -16,7 +15,7 @@ trait HyperSpace {
 
   val unitCubeSizes: Tuple
 
-  val embeddingAxes: ImmutableArray[ArrayIndex]
+  val embeddingAxes: ImmutableArray[Int]
 
   lazy val dim: Int = unitCubeSizes.length
 
@@ -26,11 +25,7 @@ trait HyperSpace {
   }
 
   def embed(point: Tuple): Tuple = {
-    embeddingAxes.map(point(_))
-  }
-
-  def embed(spaceUnit: => HyperSpaceUnit): HyperSpaceUnit = {
-    embeddingAxes.map(spaceUnit(_))
+    embeddingAxes.map(point.apply)
   }
 
   def toCoordinate(spaceUnit: HyperSpaceUnit): Tuple = {
@@ -47,5 +42,5 @@ trait HyperSpace {
 
 }
 
-case class Space(embeddingAxes: ImmutableArray[ArrayIndex], origin: Tuple, unitCubeSizes: Tuple) extends HyperSpace
+case class Space(embeddingAxes: ImmutableArray[Int], origin: Tuple, unitCubeSizes: Tuple) extends HyperSpace
 

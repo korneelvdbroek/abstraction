@@ -1,7 +1,6 @@
 package com.fbot.common.fastcollections
 
 import com.fbot.common.fastcollections.ImmutableArray._
-import com.fbot.common.fastcollections.index.ArrayIndex
 
 import scala.collection.mutable
 import scala.reflect.ClassTag
@@ -14,7 +13,7 @@ class FastArray2Zipped[El1, Self1[El1] <: FastArray[El1, Self1[El1]], El2, Self2
 
   def length: Int = zipArray._1.length
 
-  def apply(index: ArrayIndex): (El1, El2) = {
+  def apply(index: Int): (El1, El2) = {
     (zipArray._1(index), zipArray._2(index))
   }
 
@@ -23,17 +22,17 @@ class FastArray2Zipped[El1, Self1[El1] <: FastArray[El1, Self1[El1]], El2, Self2
 
     var i: Int = 0
     while (i < len) {
-      f(zipArray._1(ArrayIndex(i)), zipArray._2(ArrayIndex(i)))
+      f(zipArray._1(i), zipArray._2(i))
       i += 1
     }
   }
 
-  def foreachWithIndex[U](f: (El1, El2, ArrayIndex) ⇒ U): Unit = {
+  def foreachWithIndex[U](f: (El1, El2, Int) ⇒ U): Unit = {
     val len = length
 
     var i: Int = 0
     while (i < len) {
-      f(zipArray._1(ArrayIndex(i)), zipArray._2(ArrayIndex(i)), ArrayIndex(i))
+      f(zipArray._1(i), zipArray._2(i), i)
       i += 1
     }
   }
@@ -60,7 +59,7 @@ class FastArray2Zipped[El1, Self1[El1] <: FastArray[El1, Self1[El1]], El2, Self2
   def groupBy[Key: ClassTag](f: (El1, El2) => Key)
                             (implicit evidence1: ClassTag[El1], evidence2: ClassTag[El2],
                              builder1: Array[El1] => Self1[El1], builder2: Array[El2] => Self2[El2]): Map[Key, (Self1[El1], Self2[El2])] = {
-    ImmutableArray.indexRange(0, zipArray._1.length)
+    ImmutableArray.range(0, zipArray._1.length)
       .groupBy(index => f(zipArray._1(index), zipArray._2(index)))
       .mapValues(groupedIndices => (groupedIndices.map(index => zipArray._1(index)).toArray, groupedIndices.map(index => zipArray._2(index)).toArray))
   }
@@ -70,7 +69,7 @@ class FastArray2Zipped[El1, Self1[El1] <: FastArray[El1, Self1[El1]], El2, Self2
                                       builder2: BuilderFromArray[El2, Self2[El2]]): FastArray2Zipped[El1, Self1, El2, Self2] = {
     val arrayBuilder1 = Array.newBuilder[El1](evidence1)
     val arrayBuilder2 = Array.newBuilder[El2](evidence2)
-    foreach ((elem1, elem2) => {
+    foreach((elem1, elem2) => {
       if (f(elem1, elem2)) {
         arrayBuilder1 += elem1
         arrayBuilder2 += elem2
@@ -80,24 +79,24 @@ class FastArray2Zipped[El1, Self1[El1] <: FastArray[El1, Self1[El1]], El2, Self2
     new FastArray2Zipped(builder1.result(arrayBuilder1.result), builder2.result(arrayBuilder2.result))
   }
 
-  def sliceWhile(p: (El1, El2) => Boolean, from: ArrayIndex)(implicit evidence1: scala.reflect.ClassTag[El1], builder1: BuilderFromArray[El1, Self1[El1]],
+  def sliceWhile(p: (El1, El2) => Boolean, from: Int)(implicit evidence1: scala.reflect.ClassTag[El1], builder1: BuilderFromArray[El1, Self1[El1]],
                                                              evidence2: scala.reflect.ClassTag[El2],
                                                              builder2: BuilderFromArray[El2, Self2[El2]]): FastArray2Zipped[El1, Self1, El2, Self2] = {
     val arrayBuilder1 = Array.newBuilder[El1](evidence1)
     val arrayBuilder2 = Array.newBuilder[El2](evidence2)
 
     var index = from
-    while (index.toInt < length && p(zipArray._1.apply(index), zipArray._2(index))) {
+    while (index < length && p(zipArray._1.apply(index), zipArray._2(index))) {
       arrayBuilder1 += zipArray._1(index)
       arrayBuilder2 += zipArray._2(index)
-      index = index.next
+      index = index + 1
     }
 
     new FastArray2Zipped(builder1.result(arrayBuilder1.result), builder2.result(arrayBuilder2.result))
   }
 
-  def indicesWhere(p: (El1, El2) ⇒ Boolean): ImmutableArray[ArrayIndex] = {
-    val builder = new mutable.WrappedArrayBuilder[ArrayIndex](ClassTag(classOf[ArrayIndex]))
+  def indicesWhere(p: (El1, El2) ⇒ Boolean): ImmutableArray[Int] = {
+    val builder = new mutable.WrappedArrayBuilder[Int](ClassTag(classOf[Int]))
     foreachWithIndex((elem1, elem2, index) => {
       if (p(elem1, elem2)) builder += index
     })

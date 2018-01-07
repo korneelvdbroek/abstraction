@@ -1,7 +1,5 @@
 package com.fbot.common.fastcollections
 
-import com.fbot.common.fastcollections.index.ArrayIndex
-
 import scala.collection.mutable
 import scala.math.Ordering
 import scala.reflect.ClassTag
@@ -16,17 +14,17 @@ import scala.runtime.ScalaRunTime.arrayElementClass
   * @tparam Repr the actual type of the element container.
   *
   */
-trait FastArray[A, Repr] extends Any with FastTuple[A, Repr] {
+trait FastArray[A, Repr] extends FastTuple[A, Repr] {
 
   def map[B: ClassTag, To](f: (A) ⇒ B)(implicit builder: BuilderFromArray[B, To]): To = builder.result(repr.map(f).toArray)
 
-  def mapWithIndex[B: ClassTag, To](f: (A, ArrayIndex) ⇒ B)(implicit builder: BuilderFromArray[B, To]): To = {
+  def mapWithIndex[B: ClassTag, To](f: (A, Int) ⇒ B)(implicit builder: BuilderFromArray[B, To]): To = {
     val len = length
     val mapped = new Array[B](len)
 
     var i = 0
     while (i < len) {
-      mapped(i) = f(repr(i), ArrayIndex(i))
+      mapped(i) = f(repr(i), i)
       i += 1
     }
 
@@ -52,9 +50,11 @@ trait FastArray[A, Repr] extends Any with FastTuple[A, Repr] {
   }
 
 
-  def sortWith(lt: (A, A) ⇒ Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = builder.result(repr.sortWith(lt).toArray)
+  def sortWith(lt: (A, A) ⇒ Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = builder
+    .result(repr.sortWith(lt).toArray)
 
-  def sortBy[B](f: (A) ⇒ B)(implicit evidence: scala.reflect.ClassTag[A], ord: Ordering[B], builder: BuilderFromArray[A, Repr]): Repr = builder.result(repr.sortBy(f).toArray)
+  def sortBy[B](f: (A) ⇒ B)(implicit evidence: scala.reflect.ClassTag[A], ord: Ordering[B], builder: BuilderFromArray[A, Repr]): Repr = builder
+    .result(repr.sortBy(f).toArray)
 
   def partialSort(k: Int, lt: (A, A) => Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = {
     val array = repr.toArray
@@ -87,17 +87,18 @@ trait FastArray[A, Repr] extends Any with FastTuple[A, Repr] {
     builder.result(x)
   }
 
-  def slice(from: Int, until: Int)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = builder.result(repr.slice(from, until).toArray)
+  def slice(from: Int, until: Int)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = builder
+    .result(repr.slice(from, until).toArray)
 
   def filter(p: (A) ⇒ Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = builder.result(repr.filter(p).toArray)
 
-  def filterByIndex(p: ArrayIndex => Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = {
+  def filterByIndex(p: Int => Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = {
     val len = length
     val filtered = new mutable.WrappedArrayBuilder[A](ClassTag[A](arrayElementClass(repr.getClass)))
 
     var i = 0
     while (i < len) {
-      if (p(ArrayIndex(i))) filtered += repr(i)
+      if (p(i)) filtered += repr(i)
       i += 1
     }
 
@@ -105,13 +106,14 @@ trait FastArray[A, Repr] extends Any with FastTuple[A, Repr] {
   }
 
 
-  def filterNot(p: (A) ⇒ Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = builder.result(repr.filterNot(p).toArray)
+  def filterNot(p: (A) ⇒ Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = builder
+    .result(repr.filterNot(p).toArray)
 
   def groupBy[Key: ClassTag](f: (A) ⇒ Key)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Map[Key, Repr] = {
     repr.groupBy(f).mapValues(array => builder.result(array.toArray))
   }
 
-  def indexRange[To](implicit builder: BuilderFromArray[ArrayIndex, To]): To = builder.result(Array.range(0, repr.length).map(ArrayIndex(_)))
+  def indexRange[To](implicit builder: BuilderFromArray[Int, To]): To = builder.result(Array.range(0, repr.length))
 
   def sum[B >: A](implicit num: Numeric[B]): B = repr.sum(num)
 

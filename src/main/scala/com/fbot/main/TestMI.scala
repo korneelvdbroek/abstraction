@@ -5,7 +5,6 @@ import breeze.numerics.log
 import com.fbot.algos.mutualinformation.MutualInformation
 import com.fbot.common.data.MultiSeries.SeriesIndexCombination
 import com.fbot.common.data.{IndexedSeries, MultiSeries}
-import com.fbot.common.fastcollections.index.ArrayIndex
 import grizzled.slf4j.Logging
 import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry}
 import org.apache.spark.rdd.RDD
@@ -35,7 +34,8 @@ object TestMI extends Logging {
     // higher k is lower statistical error, but higher systematic error
 
     val rho: Double = 0.0d
-    val N: Int = 1000000  // should be > 10^{2d}
+    val N: Int = 1000000
+    // should be > 10^{2d}
     val dim: Int = 3
 
 
@@ -59,13 +59,13 @@ object TestMI extends Logging {
 
     info(sc.defaultParallelism)
 
-    val seriesPairs = (0 until data.length).map(ArrayIndex(_)).combinations(2).toArray.map(_.toArray)
-      .zipWithIndex.map(x => SeriesIndexCombination(x._1, x._2))
+    val seriesPairs = (0 until data.length).combinations(2).toArray.map(_.toArray)
+      .zipWithIndex.map(x => SeriesIndexCombination(x._1.map(_.toLong), x._2))
 
 
     // For every action performed on a dataframe, all transformations (=lazy) will be recomputed.
     // Some transformations (zipWithIndex) trigger a job!
-    val parallelSeriesPairs = data.makeSeriesPairs(seriesPairs).cache()
+    val parallelSeriesPairs = data.cartesian(data).cache()
 
 
     //    printPartition(parallelSeriesPairs)
@@ -73,7 +73,7 @@ object TestMI extends Logging {
     val similarityMatrix = new CoordinateMatrix(parallelSeriesPairs.map(dataPair => {
 
       // Sample data
-      val sampleData = MutualInformation(dataPair(0).series.toImmutableArray, dataPair(1).series.toImmutableArray)
+      val sampleData = MutualInformation(dataPair._1.series.toImmutableArray, dataPair._2.series.toImmutableArray)
 
 
       val MIGaussian1 = -1d / 2d * log(det(sigma))
@@ -82,14 +82,14 @@ object TestMI extends Logging {
 
       info(s"Sample size (N) = ${sampleData.length }")
       info(f"Gaussian MI = ${MIGaussian1 + MIGaussian2 + MIGaussian3 }%7.4f = $MIGaussian1%7.4f + $MIGaussian2%7.4f + $MIGaussian3%7.4f")
-      info(f"Max      MI = ${MutualInformation.MIMax(sampleData.length, k)}%7.4f")
+      info(f"Max      MI = ${MutualInformation.MIMax(sampleData.length, k) }%7.4f")
       val MI = sampleData.MI(k)
 
       info(f"$MI%7.4f " +
            f"vs ${MIGaussian1 + MIGaussian2 + MIGaussian3 }%7.4f " +
            f"(${100.0 * (MI - (MIGaussian1 + MIGaussian2 + MIGaussian3)) / (MIGaussian1 + MIGaussian2 + MIGaussian3) }%7.2f%%) ")
 
-      MatrixEntry(dataPair(0).index.toLong, dataPair(1).index.toLong, MI)
+      MatrixEntry(dataPair._1.index.toLong, dataPair._2.index.toLong, MI)
     }).cache(), data.length, data.length)
 
     info(similarityMatrix.toBlockMatrix.toLocalMatrix)

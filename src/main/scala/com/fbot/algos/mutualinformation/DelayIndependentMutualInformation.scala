@@ -1,7 +1,6 @@
 package com.fbot.algos.mutualinformation
 
 import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.Tuple
 
 /**

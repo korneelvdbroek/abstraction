@@ -7,7 +7,7 @@ import scala.collection.mutable
 /**
   *
   */
-trait FastTupleBooleanMath[Self <: FastTuple[Boolean, Self]] extends Any with ElementWiseFastArrayOps[Boolean] with FastTuple[Boolean, Self] {
+trait FastTupleBooleanMath[Self <: FastTuple[Boolean, Self]] extends ElementWiseFastArrayOps[Boolean] with FastTuple[Boolean, Self] {
 
   def make(x: mutable.WrappedArray[Boolean]): Self
 

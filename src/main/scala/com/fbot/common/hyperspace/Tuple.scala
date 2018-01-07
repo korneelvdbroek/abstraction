@@ -9,7 +9,7 @@ import scala.reflect.ClassTag
 /**
   *
   */
-case class Tuple(repr: mutable.WrappedArray[Double]) extends AnyVal with FastTuple[Double, Tuple] with FastTupleDoubleMath[Tuple] {
+case class Tuple(repr: mutable.WrappedArray[Double]) extends FastTuple[Double, Tuple] with FastTupleDoubleMath[Tuple] {
 
   def make(x: mutable.WrappedArray[Double]): Tuple = Tuple(x)
 

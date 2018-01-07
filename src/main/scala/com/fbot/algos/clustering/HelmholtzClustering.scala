@@ -3,10 +3,6 @@ package com.fbot.algos.clustering
 import breeze.numerics.{exp, log}
 import com.fbot.algos.mutualinformation.MutualInformation
 import com.fbot.common.data.MultiSeries
-import com.fbot.common.data.MultiSeries.SeriesIndexCombination
-import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.ImmutableArray._
-import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.linalg.distributed.RichBlockMatrix._
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.distributed.{BlockMatrix, CoordinateMatrix, MatrixEntry}
@@ -17,26 +13,30 @@ import org.apache.spark.mllib.linalg.distributed.{BlockMatrix, CoordinateMatrix,
 case class MISimilarity(data: MultiSeries, blockSizeN: Int, blockSizeNc: Int)(implicit sparkContext: SparkContext) {
 
   def similarityMatrix: BlockMatrix = {
-    val seriesPairs = ImmutableArray.range(0, data.length - 1).flatMap(i => {
-      val pair = ImmutableArray.range(i + 1, data.length)
-      pair.map(j => Array(ArrayIndex(i), ArrayIndex(j)))
-    }).mapWithIndex((pair, index) => SeriesIndexCombination(pair, index.toInt))
 
-    // this is the slow step
-    val offDiagonalEntries = data.makeSeriesPairs(seriesPairs).flatMap(dataPair => {
-      val MI = MutualInformation(dataPair(0).series.toImmutableArray, dataPair(1).series.toImmutableArray).MI(absoluteTolerance = 0.0005)
-      Seq(MatrixEntry(dataPair(0).index.toLong, dataPair(1).index.toLong, MI),
-          MatrixEntry(dataPair(1).index.toLong, dataPair(0).index.toLong, MI))
+    val upperDiagonalElements = data.cartesian(data).flatMap(seriesPair => {
+      val (series1, series2) = seriesPair
+
+      if (series1.index < series2.index) {
+        val MIMax = MutualInformation.MIMax(series1.length)
+        // this is the slow step
+        val MI = MutualInformation(series1.data, series2.data).MI(k = 200, absoluteTolerance = MIMax * 0.05)
+
+        Seq(MatrixEntry(series1.index.toLong, series2.index.toLong, MI),
+            MatrixEntry(series2.index.toLong, series1.index.toLong, MI))
+      } else if (series1.index == series2.index) {
+        val MIMax = MutualInformation.MIMax(series1.length)
+
+        Seq(MatrixEntry(series1.index.toLong, series1.index.toLong, MIMax))
+      } else {
+
+        Seq.empty[MatrixEntry]
+      }
     })
 
-    val diagonalEntries = data.map(indexedSeries => {
-      val length = indexedSeries.series.toImmutableArray.length
-      val MI = MutualInformation.MIMax(length)
-      MatrixEntry(indexedSeries.index.toLong, indexedSeries.index.toLong, MI)
-    })
-
-    new CoordinateMatrix(offDiagonalEntries ++ diagonalEntries, data.length, data.length).toBlockMatrix(blockSizeN, blockSizeN).cache()
+    new CoordinateMatrix(upperDiagonalElements, data.length, data.length).toBlockMatrix(blockSizeN, blockSizeN).cache()
   }
+
 }
 
 case class HelmholtzClustering(s: BlockMatrix, temp: Double, blockSizeN: Int, blockSizeNc: Int)(implicit sparkContext: SparkContext) {

@@ -7,7 +7,7 @@ import scala.collection.mutable
 /**
   *
   */
-trait FastTupleLongMath[Self <: FastTuple[Long, Self]] extends Any with ElementWiseFastArrayOps[Long] with FastTuple[Long, Self] {
+trait FastTupleLongMath[Self <: FastTuple[Long, Self]] extends ElementWiseFastArrayOps[Long] with FastTuple[Long, Self] {
 
   def make(x: mutable.WrappedArray[Long]): Self
 

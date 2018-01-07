@@ -6,7 +6,6 @@ import com.fbot.algos.nearestneighbors.NearestNeighbors
 import com.fbot.common.fastcollections.FastArray2Zipped._
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.ImmutableArray._
-import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.{HyperSpace, HyperSpaceUnit, Space, Tuple}
 import com.fbot.main.Utils
 import grizzled.slf4j.Logging
@@ -26,14 +25,14 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
 
   val length: Int = points.length
 
-  val dim: Int = dataX(ArrayIndex(0)).dim
+  val dim: Int = dataX(0).dim
 
   // determine where the mass of the distribution is located
   val margin: Double = 0.0001d
-  val massCubeVectors: ImmutableArray[(Double, Double)] = ImmutableArray.indexRange(0, 2 * dim).map(d => {
+  val massCubeVectors: ImmutableArray[(Double, Double)] = ImmutableArray.range(0, 2 * dim).map(d => {
     val sortedCoordinate = points.map(tuple => tuple(d)).sortBy(x => x)
-    val xLow = sortedCoordinate(ArrayIndex(0))
-    val xHigh = sortedCoordinate(ArrayIndex(length - 1))
+    val xLow = sortedCoordinate(0)
+    val xHigh = sortedCoordinate(length - 1)
 
     val edgeLength = if (xHigh - xLow == 0) 1d else xHigh - xLow
 
@@ -80,12 +79,12 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
   val unitSizesX: Tuple = getUnitSizes(massCubeVectors.map(_._2).slice(0, dim), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
   val unitSizesY: Tuple = getUnitSizes(massCubeVectors.map(_._2).slice(dim, 2 * dim), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
 
-  val space: HyperSpace = Space(ImmutableArray.indexRange(0, 2 * dim), massCubeVectors.map(_._1), unitSizes)
-  val spaceX: HyperSpace = Space(ImmutableArray.indexRange(0, dim), massCubeVectors.map(_._1).slice(0, dim), unitSizesX)
-  val spaceY: HyperSpace = Space(ImmutableArray.indexRange(dim, 2 * dim), massCubeVectors.map(_._1).slice(dim, 2 * dim), unitSizesY)
+  val space: HyperSpace = Space(ImmutableArray.range(0, 2 * dim), massCubeVectors.map(_._1), unitSizes)
+  val spaceX: HyperSpace = Space(ImmutableArray.range(0, dim), massCubeVectors.map(_._1).slice(0, dim), unitSizesX)
+  val spaceY: HyperSpace = Space(ImmutableArray.range(dim, 2 * dim), massCubeVectors.map(_._1).slice(dim, 2 * dim), unitSizesY)
 
   def groupPointsBySpaceUnits(space: HyperSpace,
-                              points: ImmutableArray[Tuple]): (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[ArrayIndex]]) = {
+                              points: ImmutableArray[Tuple]): (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[Int]]) = {
     // Slow initial computation
     val (pointsBySpaceUnitKeys, pointsBySpaceUnitValues) =
       points.indexRange.groupBy(index => space.hyperSpaceUnitAround(points(index))).unzip
@@ -95,14 +94,17 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
     (ImmutableArray(pointsBySpaceUnitKeys), ImmutableArray(pointsBySpaceUnitValues))
   }
 
-  lazy val pointsBySpaceUnitPerSpace: Map[HyperSpace, (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[ArrayIndex]])] = {
+  lazy val pointsBySpaceUnitPerSpace: Map[HyperSpace, (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[Int]])] = {
     Map(space -> groupPointsBySpaceUnits(space, points),
         spaceX -> groupPointsBySpaceUnits(spaceX, points),
         spaceY -> groupPointsBySpaceUnits(spaceY, points))
   }
 
   def MI(k: Int = 10, absoluteTolerance: Double = 0.01): Double = {
-    val sampleIndices = ImmutableArray.indexRange(0, length).map(i => (i, Random.nextDouble())).sortBy(_._2).mapWithIndex((x, index) => (x._1, index))
+    val sampleIndices = ImmutableArray.range(0, length)
+      .map(i => (i, Random.nextDouble()))
+      .sortBy(_._2)
+      .mapWithIndex((x, index) => (x._1, index))
 
     val (mean, _): (Double, Double) = sampleIndices.foldLeftOrBreak((0d, 0d))((acc, doubleIndex) => {
       val (sampleIndex, countIndex) = doubleIndex
@@ -127,14 +129,15 @@ case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray
 
       val MI = digamma(k) - 1d / k + digamma(length) - mean
 
-      if (countIndex.toInt % 100 == 0) {
+      val breakCondition = standardErrorOfMean < absoluteTolerance && countIndex.toInt > 4 * k
+
+      if (breakCondition) {
         info(f"${countIndex.toInt }%7d ($sampleIndex%12s):  ${Utils.prettyPrintTime(t1) } // ${
-          Utils
-            .prettyPrintTime(t2)
+          Utils.prettyPrintTime(t2)
         }: $MI%7.4f +/- $standardErrorOfMean%7.4f")
       }
 
-      ((mean, sumOfSquares), standardErrorOfMean < absoluteTolerance)
+      ((mean, sumOfSquares), breakCondition)
     })
 
     max(digamma(k) - 1d / k - mean + digamma(length), 0d)

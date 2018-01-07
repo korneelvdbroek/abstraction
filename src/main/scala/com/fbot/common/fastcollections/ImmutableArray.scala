@@ -1,7 +1,5 @@
 package com.fbot.common.fastcollections
 
-import com.fbot.common.fastcollections.index.ArrayIndex
-
 import scala.collection.mutable
 import scala.io.Source
 import scala.reflect.ClassTag
@@ -9,7 +7,7 @@ import scala.reflect.ClassTag
 /**
   *
   */
-case class ImmutableArray[T](repr: mutable.WrappedArray[T]) extends AnyVal with FastArray[T, ImmutableArray[T]] {
+case class ImmutableArray[@specialized(Double, Int, Long) T](repr: mutable.WrappedArray[T]) extends FastArray[T, ImmutableArray[T]] {
 
 }
 
@@ -26,8 +24,6 @@ object ImmutableArray {
   def empty[T: ClassTag]: ImmutableArray[T] = ImmutableArray(Array.empty[T])
 
   def range(start: Int, end: Int): ImmutableArray[Int] = ImmutableArray(Array.range(start, end))
-
-  def indexRange(start: Int, end: Int): ImmutableArray[ArrayIndex] = range(start, end).map(i => ArrayIndex(i))
 
   implicit def builder[T: ClassTag](array: Array[T]): ImmutableArray[T] = ImmutableArray(array)
 

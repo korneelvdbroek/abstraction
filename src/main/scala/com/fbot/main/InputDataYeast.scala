@@ -3,7 +3,6 @@ package com.fbot.main
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.ImmutableArray._
-import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.Tuple
 import org.apache.spark.SparkContext
 
@@ -28,12 +27,12 @@ case class InputDataYeast(implicit sc: SparkContext) extends TestData {
     val dataSeriesNoHeader = dataSeries.slice(1, dataSeries.length)
     bufferedSource.close
 
-    println(dataSeriesNoHeader(ArrayIndex(0)))
-    println(dataSeriesNoHeader(ArrayIndex(1)))
-    println(dataSeriesNoHeader(ArrayIndex(2)))
+    println(dataSeriesNoHeader(0))
+    println(dataSeriesNoHeader(1))
+    println(dataSeriesNoHeader(2))
 
     // validation on length of series
-    val expectedLength = dataSeriesNoHeader(ArrayIndex(0)).length
+    val expectedLength = dataSeriesNoHeader(0).length
     dataSeriesNoHeader.map(_.length).toList.zipWithIndex.foreach(x => {
       val (len, line) = x
       if (len != expectedLength) {

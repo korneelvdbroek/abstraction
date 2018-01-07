@@ -10,7 +10,7 @@ import scala.reflect.ClassTag
 /**
   *
   */
-case class HyperSpaceUnit(repr: mutable.WrappedArray[Long]) extends AnyVal with FastTuple[Long, HyperSpaceUnit] with FastTupleLongMath[HyperSpaceUnit] {
+case class HyperSpaceUnit(repr: mutable.WrappedArray[Long]) extends FastTuple[Long, HyperSpaceUnit] with FastTupleLongMath[HyperSpaceUnit] {
 
   def make(x: mutable.WrappedArray[Long]): HyperSpaceUnit = HyperSpaceUnit(x)
 

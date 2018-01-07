@@ -10,7 +10,6 @@ import ch.qos.logback.classic.{Level, Logger}
 import com.fbot.algos.clustering.{HelmholtzClustering, MISimilarity}
 import com.fbot.common.data.{IndexedSeries, MultiSeries, Series}
 import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.Tuple
 import com.fbot.common.linalg.RichDenseMatrix._
 import com.fbot.common.linalg.distributed.RichBlockMatrix
@@ -23,6 +22,7 @@ import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 /**
   *
@@ -32,6 +32,8 @@ object TestHelmholtz extends Logging {
   def main(args: Array[String]): Unit = {
     LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger].setLevel(Level.WARN)
     LoggerFactory.getLogger("com.fbot.main").asInstanceOf[Logger].setLevel(Level.INFO)
+    LoggerFactory.getLogger("com.fbot.algos").asInstanceOf[Logger].setLevel(Level.INFO)
+    LoggerFactory.getLogger("com.fbot.common").asInstanceOf[Logger].setLevel(Level.INFO)
     LoggerFactory.getLogger("org.apache.spark.scheduler.TaskSetManager").asInstanceOf[Logger].setLevel(Level.ERROR)
 
 
@@ -40,7 +42,6 @@ object TestHelmholtz extends Logging {
                                    classOf[mutable.WrappedArray.ofDouble],
                                    classOf[DenseMatrix],
                                    classOf[Array[Matrix]],
-                                   classOf[ArrayIndex],
                                    classOf[ImmutableArray[Double]],
                                    classOf[Array[Tuple]],
                                    classOf[Tuple],
@@ -49,7 +50,8 @@ object TestHelmholtz extends Logging {
                                    classOf[MultiSeries.SeriesIndexCombination],
                                    classOf[SparseMatrix],
                                    classOf[breeze.linalg.DenseMatrix$mcD$sp],
-                                   classOf[Array[ArrayIndex]]))
+                                   classOf[Array[Int]],
+                                   ClassTag(Class.forName("org.apache.spark.util.collection.CompactBuffer")).wrap.runtimeClass))
     implicit val sc = new SparkContext(conf)
 
 
@@ -57,28 +59,29 @@ object TestHelmholtz extends Logging {
     val data: MultiSeries = {
       //InputDataGaussian().data
       //InputDataYeast().data
-      InputDataUKPowerData().data
+      //InputDataUKPowerData().data
+      InputDataIcebergs().data
     }
 
     val N = data.length
-    val Nclusters = 10
+    val Nclusters = 4
 
     // low temp => each its own
     // high temp => 1 cluster
-    val temp = 0.1
+    val temp = 0.5
     val blockSizeN = N
     val blockSizeNc = Nclusters
 
 
-    val s = if (false) {
+    val s = if (true) {
       val miSimilarity = MISimilarity(data, blockSizeN, blockSizeNc)
       val s = miSimilarity.similarityMatrix
-      s.save("temp_data/", s"UKPower${ZonedDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss"))}")
+      s.save("temp_data/", s"UKPower${ZonedDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss")) }")
       s
     } else {
-      RichBlockMatrix.load("temp_data/", "UKPower20171202T002114")
+      RichBlockMatrix.load("temp_data/", "UKPower20180103T212017")
     }
-    info(s"S = \n${Utils.printImmutableMatrix(s.toLocalMatrix.toImmutableArray)}")
+    info(s"S = \n${Utils.printImmutableMatrix(s.toLocalMatrix.toImmutableArray) }")
 
 
     val helmholtz = HelmholtzClustering(s, temp, blockSizeN, blockSizeNc)
@@ -90,18 +93,18 @@ object TestHelmholtz extends Logging {
       val deltaQci = qciUpdated.subtract(qci)
       val biggestDelta = deltaQci.fold(abs(deltaQci(0L, 0L)))((a, b) => max(abs(a), abs(b)))
 
-//      {
-//        val flatArrayWithIndex = ImmutableArray(deltaQci.toLocalMatrix().toArray).mapWithIndex((x, i) => (x, i.toInt))
-//        val maxDeltas = flatArrayWithIndex.sortBy(_._1).take(10).map(xAndIndex => {
-//          val (x, index) = xAndIndex
-//          val row = index % deltaQci.numRows()
-//          val col = index / deltaQci.numRows()
-//          (x, qciUpdated(row, col), qci(row, col), (row, col))
-//        })
-//
-//        info(f"$iteration%3d: biggest delta = $biggestDelta%4.3f")
-//        info(f"  $maxDeltas")
-//      }
+      //      {
+      //        val flatArrayWithIndex = ImmutableArray(deltaQci.toLocalMatrix().toArray).mapWithIndex((x, i) => (x, i.toInt))
+      //        val maxDeltas = flatArrayWithIndex.sortBy(_._1).take(10).map(xAndIndex => {
+      //          val (x, index) = xAndIndex
+      //          val row = index % deltaQci.numRows()
+      //          val col = index / deltaQci.numRows()
+      //          (x, qciUpdated(row, col), qci(row, col), (row, col))
+      //        })
+      //
+      //        info(f"$iteration%3d: biggest delta = $biggestDelta%4.3f")
+      //        info(f"  $maxDeltas")
+      //      }
 
       if (biggestDelta < 0.01) {
         (qciUpdated, iteration)

@@ -1,23 +1,14 @@
 package com.fbot.common.fastcollections
 
-import com.fbot.common.fastcollections.index.ArrayIndex
-
 import scala.annotation.tailrec
 import scala.collection.mutable
-import scala.reflect.ClassTag
 
 /**
-  * Notes:
-  * 0. this trait is written to extend a value class (hence it extends from Any)
-  * 1. value class avoids time consuming boxing of the Array and also gives us a good equals() and hashcode() from WrappedArray
-  * 2. since 1 already forces us to make repr public, might as well make it a case class (and get additional methods for free)
-  *
-  *
-  *  @tparam A    the collection element type.
-  *  @tparam Repr the actual type of the element container.
+  * @tparam A    the collection element type.
+  * @tparam Repr the actual type of the element container.
   *
   */
-trait FastTuple[A, Repr] extends Any {
+trait FastTuple[A, Repr] {
 
   def repr: mutable.WrappedArray[A]
 
@@ -26,7 +17,7 @@ trait FastTuple[A, Repr] extends Any {
 
   def isEmpty: Boolean = repr.isEmpty
 
-  def apply(index: ArrayIndex): A = repr(index.toInt)
+  def apply(index: Int): A = repr(index)
 
   def head: A = repr.head
 
@@ -36,24 +27,24 @@ trait FastTuple[A, Repr] extends Any {
 
   def foldLeft[B](z: B)(op: (B, A) => B): B = repr.foldLeft(z)(op)
 
-  def foldLeftOrBreak[B](z: B)(op: (B, A) => (B, Boolean)): B = foldl(ArrayIndex(0), ArrayIndex(length), (z, false), op)
+  def foldLeftOrBreak[B](z: B)(op: (B, A) => (B, Boolean)): B = foldl(0, length, (z, false), op)
 
   @tailrec
-  private def foldl[B](start: ArrayIndex, end: ArrayIndex, z: (B, Boolean), op: (B, A) => (B, Boolean)): B = {
+  private def foldl[B](start: Int, end: Int, z: (B, Boolean), op: (B, A) => (B, Boolean)): B = {
     if (start == end || z._2) {
       z._1
     } else {
-      foldl(start.next, end, op(z._1, this (start)), op)
+      foldl(start + 1, end, op(z._1, this (start)), op)
     }
   }
 
   def forall(p: (A) => Boolean): Boolean = repr.forall(p)
 
-  def forallWithIndex(p: (A, ArrayIndex) => Boolean): Boolean = {
+  def forallWithIndex(p: (A, Int) => Boolean): Boolean = {
     val len = length
 
     var i = 0
-    while (i < len && p(repr(i), ArrayIndex(i))) {
+    while (i < len && p(repr(i), i)) {
       i += 1
     }
     i == len

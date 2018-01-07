@@ -7,7 +7,6 @@ import java.time.{Instant, LocalDateTime, ZoneId, ZonedDateTime}
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.ImmutableArray._
-import com.fbot.common.fastcollections.index.ArrayIndex
 import com.fbot.common.hyperspace.Tuple
 import com.fbot.common.timeseries.TimeSeries
 import grizzled.slf4j.Logging
@@ -25,18 +24,18 @@ case class InputDataUKPowerData(implicit sc: SparkContext) extends TestData with
     val csvFormatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss")
 
     val powerTimeSeries = TimeSeries.fromCsv("data/UK_grid_power/DemandData_2011-2016.csv")(row => {
-      val date = ZonedDateTime.of(LocalDateTime.parse(row(ArrayIndex(0)) + " 00:00:00", csvFormatter), timeZone)
-      val minutes = (row(ArrayIndex(1)).toLong - 1L) * 30L
+      val date = ZonedDateTime.of(LocalDateTime.parse(row(0) + " 00:00:00", csvFormatter), timeZone)
+      val minutes = (row(1).toLong - 1L) * 30L
       val dateTime = date.plusMinutes(minutes)
 
-      val value = row(ArrayIndex(2)).toDouble
+      val value = row(2).toDouble
       (dateTime, value)
     })
 
     // make time series fragments
-//    val fragments: ImmutableArray[TimeSeries] = powerTimeSeries.groupBy((t, _) => {
-//      ZonedDateTime.ofInstant(t, timeZone).toLocalDate //.`with`(ChronoField.DAY_OF_WEEK, 1L)
-//    })
+    //    val fragments: ImmutableArray[TimeSeries] = powerTimeSeries.groupBy((t, _) => {
+    //      ZonedDateTime.ofInstant(t, timeZone).toLocalDate //.`with`(ChronoField.DAY_OF_WEEK, 1L)
+    //    })
     val fragments: ImmutableArray[TimeSeries] = powerTimeSeries.fragmentBy((t, _) => {
       ZonedDateTime.ofInstant(t, timeZone).toLocalDateTime.get(ChronoField.MINUTE_OF_DAY) < 1
     }, (start, end) => ZonedDateTime.ofInstant(start._1, timeZone).toLocalDate.plusDays(3).isAfter(ZonedDateTime.ofInstant(end._1, timeZone).toLocalDate))

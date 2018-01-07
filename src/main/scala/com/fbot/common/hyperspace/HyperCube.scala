@@ -18,7 +18,7 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
     val embeddedPoint = space.embed(point)
     val (vectorToLeft, vectorToRight) = (embeddedPoint - space.toCoordinate(left), space.toCoordinate(right) - embeddedPoint)
 
-    val unitsToGrow = ImmutableArray.indexRange(0, dim).map(axis => {
+    val unitsToGrow = ImmutableArray.range(0, dim).map(axis => {
       val unitLength = space.unitCubeSizes(axis)
       val (l, r) = (vectorToLeft(axis), vectorToRight(axis))
 
