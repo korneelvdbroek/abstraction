@@ -2,7 +2,7 @@ package com.fbot.common.data
 
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.ImmutableArray._
-import com.fbot.common.hyperspace.TupleX$
+import com.fbot.common.fastcollections.Tuple
 import grizzled.slf4j.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{HashPartitioner, SparkContext}
@@ -27,9 +27,9 @@ import scala.reflect.ClassTag
   *
   */
 // TODO: convert this to a RDD[Tuple] or, even better, an RDD[ImmutableArray[Tuple]]
-case class Series(data: ImmutableArray[TupleX]) {
+case class Series(data: ImmutableArray[Tuple]) {
 
-  def toImmutableArray: ImmutableArray[TupleX] = data
+  def toImmutableArray: ImmutableArray[Tuple] = data
 
   def length: Int = data.length
 
@@ -39,22 +39,22 @@ case class IndexedSeries(index: Long, series: Series) {
 
   def length: Int = series.length
 
-  def data: ImmutableArray[TupleX] = series.toImmutableArray
+  def data: ImmutableArray[Tuple] = series.toImmutableArray
 
 }
 
 object IndexedSeries {
 
-  def apply(seriesIndexAndSeries: (Long, ImmutableArray[TupleX])): IndexedSeries = IndexedSeries(seriesIndexAndSeries._1, Series(seriesIndexAndSeries._2))
+  def apply(seriesIndexAndSeries: (Long, ImmutableArray[Tuple])): IndexedSeries = IndexedSeries(seriesIndexAndSeries._1, Series(seriesIndexAndSeries._2))
 
-  def apply(seriesIndex: Long, series: ImmutableArray[TupleX]): IndexedSeries = IndexedSeries(seriesIndex, Series(series))
+  def apply(seriesIndex: Long, series: ImmutableArray[Tuple]): IndexedSeries = IndexedSeries(seriesIndex, Series(series))
 
 }
 
 
-case class MultiSeries(series: RDD[(Long, ImmutableArray[TupleX])], length: Int) extends Logging {
+case class MultiSeries(series: RDD[(Long, ImmutableArray[Tuple])], length: Int) extends Logging {
 
-  def apply(i: Long): ImmutableArray[TupleX] = series.lookup(i).head
+  def apply(i: Long): ImmutableArray[Tuple] = series.lookup(i).head
 
   def map[U](f: (IndexedSeries) ⇒ U)(implicit arg0: ClassTag[U]): RDD[U] = {
     series.map(x => f(IndexedSeries(x)))
@@ -72,15 +72,15 @@ case class MultiSeries(series: RDD[(Long, ImmutableArray[TupleX])], length: Int)
 
 object MultiSeries {
 
-  def apply(series: ImmutableArray[TupleX]*)(implicit sc: SparkContext): MultiSeries = {
+  def apply(series: ImmutableArray[Tuple]*)(implicit sc: SparkContext): MultiSeries = {
     MultiSeries(series.toList)
   }
 
-  def apply(series: TraversableOnce[ImmutableArray[TupleX]])(implicit sc: SparkContext): MultiSeries = {
+  def apply(series: TraversableOnce[ImmutableArray[Tuple]])(implicit sc: SparkContext): MultiSeries = {
     MultiSeries(ImmutableArray(series))
   }
 
-  def apply(series: ImmutableArray[ImmutableArray[TupleX]])(implicit sc: SparkContext): MultiSeries = {
+  def apply(series: ImmutableArray[ImmutableArray[Tuple]])(implicit sc: SparkContext): MultiSeries = {
     val matrix = series.mapWithIndex((row, index) => (index.toLong, row)).toArray
 
     // https://stackoverflow.com/questions/40636554/spark-ui-dag-stage-disconnected

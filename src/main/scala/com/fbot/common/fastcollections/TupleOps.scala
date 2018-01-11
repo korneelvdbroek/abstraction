@@ -23,6 +23,8 @@ case class TupleOps(repr: Array[Double]) {
 
   def length: Int = repr.length
 
+  def dim: Int = length
+
   def isEmpty: Boolean = length == 0
 
   def nonEmpty: Boolean = !isEmpty
@@ -35,7 +37,7 @@ case class TupleOps(repr: Array[Double]) {
 
   def headOption: Option[Double] = if (nonEmpty) Some(head) else None
 
-  def last: Double = repr(length-1)
+  def last: Double = repr(length - 1)
 
   def lastOption: Option[Double] = if (nonEmpty) Some(last) else None
 
@@ -51,7 +53,7 @@ case class TupleOps(repr: Array[Double]) {
     }
   }
 
-  def foldLeftOrBreak[B](z: B)(op: (B, Double) => (B, Boolean)): B = foldl(0, length, z, break=false, op)
+  def foldLeftOrBreak[B](z: B)(op: (B, Double) => (B, Boolean)): B = foldl(0, length, z, break = false, op)
 
   @tailrec
   private def foldl[B](start: Int, end: Int, acc: B, break: Boolean, op: (B, Double) => (B, Boolean)): B = {
@@ -67,7 +69,7 @@ case class TupleOps(repr: Array[Double]) {
     val len = length
 
     var i = 0
-    while (i < len && p(repr(i))) {
+    while (i < len && p(apply(i))) {
       i += 1
     }
     i == len
@@ -77,49 +79,87 @@ case class TupleOps(repr: Array[Double]) {
     val len = length
 
     var i = 0
-    while (i < len && p(repr(i), i)) {
+    while (i < len && p(apply(i), i)) {
       i += 1
     }
     i == len
   }
 
-  def count(p: (Double) => Boolean): Int = repr.count(p)
+  def count(p: (Double) => Boolean): Int = {
+    val len = length
 
-  def ++ (that: FastTuple[Double, Repr])(implicit evidence: scala.reflect.ClassTag[Double], builder: BuilderFromArray[Double, Repr]): Repr = {
-    val thisLen = repr.toArray.length
-    val thatLen = that.repr.length
-
-    val x = new Array[Double](thisLen + thatLen)
-    System.arraycopy(repr.toArray, 0, x, 0, thisLen)
-    System.arraycopy(that.repr.toArray, 0, x, thisLen, thatLen)
-    builder.result(x)
-  }
-
-  def toArray(implicit evidence: scala.reflect.ClassTag[Double]): Array[Double] = repr.toArray
-
-  def toWrappedArray: mutable.WrappedArray[Double] = repr
-
-  def toList: List[Double] = repr.toList
-
-  def toSet: Set[Double] = repr.toSet
-
-  override def toString: String = mkString("[", ", ", "]")
-
-  def mkString(start: String, sep: String, end: String): String = {
-    repr.mkString(start, sep, end)
-  }
-
-
-  def add(other: Tuple): Tuple = {
-    val len = arr.length
-    val res: Array[Double] = new Array[Double](len)
-
-    var i: Int = 0
+    var count = 0
+    var i = 0
     while (i < len) {
-      res(i) = arr(i) + other.arr(i)
+      if (p(apply(i))) count += 1
       i += 1
     }
 
+    count
+  }
+
+  def ++ (that: Tuple): Tuple = {
+    val thisLen = repr.length
+    val thatLen = that.repr.length
+
+    val concat = new Array[Double](thisLen + thatLen)
+    System.arraycopy(repr, 0, concat, 0, thisLen)
+    System.arraycopy(that.repr, 0, concat, thisLen, thatLen)
+    Tuple(concat)
+  }
+
+  def toList: List[Double] = doubleArrayOps(repr).toList
+
+  def toSet: Set[Double] = doubleArrayOps(repr).toSet
+
+  override def toString: String = mkString("(", ", ", ")")
+
+  def mkString(start: String, sep: String, end: String): String = {
+    doubleArrayOps(repr).mkString(start, sep, end)
+  }
+
+
+  def + (rhs: Tuple): Tuple = {
+    elementWise(_ + _)(rhs)
+  }
+
+  def - (rhs: Tuple): Tuple = {
+    elementWise(_ - _)(rhs)
+  }
+
+  def * (rhs: Tuple): Tuple = {
+    elementWise(_ * _)(rhs)
+  }
+
+  def / (rhs: Tuple): Tuple = {
+    elementWise(_ / _)(rhs)
+  }
+
+  private def elementWise(f: (Double, Double) => Double)(rhs: Tuple): Tuple = {
+    val len = length
+    val res: Array[Double] = new Array[Double](length)
+
+    var i = 0
+    while (i < len) {
+      res(i) = f(apply(i), rhs.repr.apply(i))
+      i += 1
+    }
+    Tuple(res)
+  }
+
+  def unary_-(): Tuple = {
+    map(-_)
+  }
+
+  private def map(f: Double => Double): Tuple = {
+    val len = length
+    val res: Array[Double] = new Array[Double](length)
+
+    var i = 0
+    while (i < len) {
+      res(i) = f(apply(i))
+      i += 1
+    }
     Tuple(res)
   }
 

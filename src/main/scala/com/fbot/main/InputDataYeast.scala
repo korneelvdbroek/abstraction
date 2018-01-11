@@ -3,7 +3,7 @@ package com.fbot.main
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.ImmutableArray._
-import com.fbot.common.hyperspace.TupleX$
+import com.fbot.common.fastcollections.Tuple
 import org.apache.spark.SparkContext
 
 import scala.io.Source
@@ -35,7 +35,7 @@ case class InputDataYeast(implicit sc: SparkContext) extends TestData {
       val cells = line.split("\t", -1).toList
       val dataCells = cells.slice(7, cells.length)
       ImmutableArray(dataCells.map(dataCell => {
-        TupleX(Try(dataCell.toDouble).getOrElse(0.0))
+        Tuple(Try(dataCell.toDouble).getOrElse(0.0))
       }))
     }))
     val dataSeriesNoHeader = dataSeries.slice(1, dataSeries.length)

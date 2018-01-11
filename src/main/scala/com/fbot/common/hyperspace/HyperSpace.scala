@@ -1,6 +1,6 @@
 package com.fbot.common.hyperspace
 
-import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.{ImmutableArray, Tuple}
 import com.fbot.common.fastcollections.ImmutableArray._
 
 /**
@@ -27,29 +27,29 @@ import com.fbot.common.fastcollections.ImmutableArray._
   */
 trait HyperSpace {
 
-  val origin: TupleX
+  val origin: Tuple
 
-  val unitCubeSizes: TupleX
+  val unitCubeSizes: Tuple
 
   val embeddingAxes: ImmutableArray[Int]
 
   lazy val dim: Int = unitCubeSizes.length
 
-  def hyperSpaceUnitAround(point: TupleX): HyperSpaceUnit = {
+  def hyperSpaceUnitAround(point: Tuple): HyperSpaceUnit = {
     val location = (embed(point) - origin) / unitCubeSizes
     HyperSpaceUnit(location.repr.map(_.floor.toLong))
   }
 
-  def embed(point: TupleX): TupleX = {
+  def embed(point: Tuple): Tuple = {
     embeddingAxes.map(point.apply)
   }
 
-  def toCoordinate(spaceUnit: HyperSpaceUnit): TupleX = {
+  def toCoordinate(spaceUnit: HyperSpaceUnit): Tuple = {
     unitCubeSizes * spaceUnit + origin
   }
 
 
-  def distance(point1: TupleX, point2: TupleX): Double = {
+  def distance(point1: Tuple, point2: Tuple): Double = {
     embeddingAxes.foldLeft(0d)((distance, embeddingAxis) => {
       val d = math.abs(point1(embeddingAxis) - point2(embeddingAxis))
       if (d > distance) d else distance
@@ -58,5 +58,5 @@ trait HyperSpace {
 
 }
 
-case class Space(embeddingAxes: ImmutableArray[Int], origin: TupleX, unitCubeSizes: TupleX) extends HyperSpace
+case class Space(embeddingAxes: ImmutableArray[Int], origin: Tuple, unitCubeSizes: Tuple) extends HyperSpace
 

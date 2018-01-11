@@ -2,7 +2,7 @@ package com.fbot.main
 
 import breeze.linalg.{DenseMatrix, DenseVector}
 import com.fbot.algos.mutualinformation.MutualInformation
-import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.{ImmutableArray, Tuple}
 import com.fbot.common.fastcollections.ImmutableArray._
 import com.fbot.common.hyperspace._
 import org.apache.spark.sql.SparkSession
@@ -105,7 +105,7 @@ object Test extends App {
   println(y)
 
 
-  private def checkIfEqual(space: HyperSpace)(centerTuple: TupleX, resultBF: ImmutableArray[Int], result: ImmutableArray[Int]): Unit = {
+  private def checkIfEqual(space: HyperSpace)(centerTuple: Tuple, resultBF: ImmutableArray[Int], result: ImmutableArray[Int]): Unit = {
     val resultWithDistance = result.map(index => (index, space.distance(cloud.points(index), centerTuple)))
     val resultBFWithDistance = resultBF.map(index => (index, space.distance(cloud.points(index), centerTuple)))
 

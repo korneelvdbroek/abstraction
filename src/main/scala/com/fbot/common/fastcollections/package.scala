@@ -42,6 +42,12 @@ package object fastcollections {
   def Tuple(arr: Array[Double]): Tuple = newtype(arr)
   implicit val tupleOps = TupleOps
 
+  def Tuple(d: Double*): Tuple = Tuple(d.toArray)
+
+  object Tuple {
+    def fill(dim: Int)(elem: ⇒ Double): Tuple = Tuple(Array.fill(dim)(elem))
+  }
+
 
 
 

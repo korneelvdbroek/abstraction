@@ -1,7 +1,6 @@
 package com.fbot.common.fastcollections
 
-import com.fbot.common.hyperspace.TupleX$
-
+import com.fbot.common.fastcollections.Tuple
 import scala.annotation.tailrec
 import scala.collection.mutable
 
@@ -30,15 +29,15 @@ case class ImmutableTupleArray(points: mutable.WrappedArray[ImmutableArray[Doubl
 
   def isEmpty: Boolean = points.isEmpty || points.head.repr.isEmpty
 
-  def apply(index: Int): TupleX = TupleX(points.map(_(index)))
+  def apply(index: Int): Tuple = Tuple(points.map(_(index)))
 
   private def applyUnBoxed(index: Int): mutable.WrappedArray[Double] = points.map(_(index))
 
-  def head: TupleX = TupleX(points.map(_.head))
+  def head: Tuple = Tuple(points.map(_.head))
 
-  def headOption: Option[TupleX] = if (isEmpty) None else Some(head)
+  def headOption: Option[Tuple] = if (isEmpty) None else Some(head)
 
-  def last: TupleX = TupleX(points.map(_.last))
+  def last: Tuple = Tuple(points.map(_.last))
 
   def foreach(f: mutable.WrappedArray[Double] ⇒ Unit): Unit = {
     val len = length
@@ -50,18 +49,18 @@ case class ImmutableTupleArray(points: mutable.WrappedArray[ImmutableArray[Doubl
     }
   }
 
-  def foldLeft[Acc](z: Acc)(op: (Acc, TupleX) => Acc): Acc = {
+  def foldLeft[Acc](z: Acc)(op: (Acc, Tuple) => Acc): Acc = {
     var acc = z
     foreach(point => {
-      acc = op(acc, TupleX(point))
+      acc = op(acc, Tuple(point))
     })
     acc
   }
 
-  def foldLeftOrBreak[Acc](z: Acc)(op: (Acc, TupleX) => (Acc, Boolean)): Acc = foldl(0, length, (z, false), op)
+  def foldLeftOrBreak[Acc](z: Acc)(op: (Acc, Tuple) => (Acc, Boolean)): Acc = foldl(0, length, (z, false), op)
 
   @tailrec
-  private def foldl[Acc](start: Int, end: Int, z: (Acc, Boolean), op: (Acc, TupleX) => (Acc, Boolean)): Acc = {
+  private def foldl[Acc](start: Int, end: Int, z: (Acc, Boolean), op: (Acc, Tuple) => (Acc, Boolean)): Acc = {
     if (start == end || z._2) {
       z._1
     } else {
@@ -69,7 +68,7 @@ case class ImmutableTupleArray(points: mutable.WrappedArray[ImmutableArray[Doubl
     }
   }
 
-  def forall(p: (TupleX) => Boolean): Boolean = {
+  def forall(p: (Tuple) => Boolean): Boolean = {
     val len = length
 
     var i = 0
@@ -79,7 +78,7 @@ case class ImmutableTupleArray(points: mutable.WrappedArray[ImmutableArray[Doubl
     i == len
   }
 
-  def forallWithIndex(p: (TupleX, Int) => Boolean): Boolean = {
+  def forallWithIndex(p: (Tuple, Int) => Boolean): Boolean = {
     val len = length
 
     var i = 0
@@ -89,10 +88,10 @@ case class ImmutableTupleArray(points: mutable.WrappedArray[ImmutableArray[Doubl
     i == len
   }
 
-  def count(p: (TupleX) => Boolean): Int = {
+  def count(p: (Tuple) => Boolean): Int = {
     var counter = 0
     foreach(point => {
-      if (p(TupleX(point))) counter += 1
+      if (p(Tuple(point))) counter += 1
     })
     counter
   }

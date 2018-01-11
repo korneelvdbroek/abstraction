@@ -5,7 +5,7 @@ import breeze.stats.distributions.{Gaussian, MultivariateGaussian}
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.ImmutableArray._
-import com.fbot.common.hyperspace.TupleX$
+import com.fbot.common.fastcollections.Tuple
 import org.apache.spark.SparkContext
 
 import scala.util.Random
@@ -41,8 +41,8 @@ case class RndDataXd(dim: Int, N: Int)(implicit sc: SparkContext) extends TestDa
       Random.nextDouble() * 1000d
     }
 
-    val dataX = ImmutableArray.fill[TupleX](N)(TupleX.fill(dim)(randomDouble))
-    val dataY = ImmutableArray.fill[TupleX](N)(TupleX.fill(dim)(randomDouble))
+    val dataX = ImmutableArray.fill[Tuple](N)(Tuple.fill(dim)(randomDouble))
+    val dataY = ImmutableArray.fill[Tuple](N)(Tuple.fill(dim)(randomDouble))
 
     // 0 - 1,000   of 1,000,000 = 10^6
     // volume total space = 2000^8 = 2^8 10^(3*8)   = 256   10^24  --> 10^6  points
@@ -60,11 +60,11 @@ case class FxDataXd(dim: Int, N: Int)(implicit sc: SparkContext) extends TestDat
       Random.nextDouble() * 1000d
     }
 
-    def f(tuple: TupleX): TupleX = {
-      TupleX(tuple.repr.map(x => if (x >= 500d) Random.nextDouble() * 1000d else 0d))
+    def f(tuple: Tuple): Tuple = {
+      Tuple(tuple.repr.map(x => if (x >= 500d) Random.nextDouble() * 1000d else 0d))
     }
 
-    val dataX = ImmutableArray(Array.fill[TupleX](N)(TupleX(Array.fill(dim)(randomDouble))))
+    val dataX = ImmutableArray(Array.fill[Tuple](N)(Tuple(Array.fill(dim)(randomDouble))))
     val dataY = dataX.map(f)
 
     // 0 - 1,000   of 1,000,000 = 10^6
@@ -98,7 +98,7 @@ case class GaussianData(numberOfDataSets: Int, samplesSize: Int, sampleDim: Int,
   def data: MultiSeries = {
     val gaussian = MultivariateGaussian(mu, sigma)
 
-    val sampledData = ImmutableArray.fill[TupleX](samplesSize)(TupleX(gaussian.draw().toArray))
+    val sampledData = ImmutableArray.fill[Tuple](samplesSize)(Tuple(gaussian.draw().toArray))
 
     MultiSeries((0 until numberOfDataSets).map(d => sampledData.map(tuple => tuple.slice(d * sampleDim, d * sampleDim + sampleDim))): _*)
   }
@@ -111,9 +111,9 @@ case class ConstGaussianData2d(N: Int, const: Double, sigma: Double = 1d, mu: Do
   def data: MultiSeries = {
     val gaussian = Gaussian(mu, sigma)
 
-    val sample = ImmutableArray.fill[TupleX](N)(TupleX(const, const))
-    val dataX = sample.map(tuple => TupleX(tuple(0)))
-    val dataY = sample.map(tuple => TupleX(tuple(1)))
+    val sample = ImmutableArray.fill[Tuple](N)(Tuple(const, const))
+    val dataX = sample.map(tuple => Tuple(tuple(0)))
+    val dataY = sample.map(tuple => Tuple(tuple(1)))
 
     // 0 - 1,000   of 1,000,000 = 10^6
     // volume total space = 2000^8 = 2^8 10^(3*8)   = 256   10^24  --> 10^6  points
@@ -126,8 +126,8 @@ case class ConstGaussianData2d(N: Int, const: Double, sigma: Double = 1d, mu: Do
 case class KraskovData(implicit sc: SparkContext) extends TestData {
 
   def data: MultiSeries = {
-    val dataX = ImmutableArray(39, 65, 101, 169, 171, 205, 232, 243, 258, 277, 302, 355, 381).map(TupleX(_))
-    val dataY = ImmutableArray(358, 205, 126, 150, 350, 227, 390, 94, 268, 41, 328, 365, 119).map(TupleX(_))
+    val dataX = ImmutableArray(39, 65, 101, 169, 171, 205, 232, 243, 258, 277, 302, 355, 381).map(Tuple(_))
+    val dataY = ImmutableArray(358, 205, 126, 150, 350, 227, 390, 94, 268, 41, 328, 365, 119).map(Tuple(_))
 
     MultiSeries(dataX, dataY)
   }
@@ -153,11 +153,11 @@ case class Data2d(implicit sc: SparkContext) extends TestData {
     //  1     8   2   5
     //
     val data = ImmutableArray(
-      TupleX(0, 0),
-      TupleX(1, 0), TupleX(1, 1), TupleX(-1, 2), TupleX(-2, -3),
-      TupleX(5, 1), TupleX(1, 5), TupleX(-5, 1), TupleX(1, -5),
-      TupleX(5, 5), TupleX(-5, 5), TupleX(-5, -5), TupleX(5, -5),
-      TupleX(6, 5), TupleX(7, 6))
+      Tuple(0, 0),
+      Tuple(1, 0), Tuple(1, 1), Tuple(-1, 2), Tuple(-2, -3),
+      Tuple(5, 1), Tuple(1, 5), Tuple(-5, 1), Tuple(1, -5),
+      Tuple(5, 5), Tuple(-5, 5), Tuple(-5, -5), Tuple(5, -5),
+      Tuple(6, 5), Tuple(7, 6))
 
     MultiSeries(data, data)
   }

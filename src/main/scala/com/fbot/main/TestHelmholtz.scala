@@ -10,7 +10,7 @@ import ch.qos.logback.classic.{Level, Logger}
 import com.fbot.algos.clustering.{HelmholtzClustering, MISimilarity}
 import com.fbot.common.data.{IndexedSeries, MultiSeries, Series}
 import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.hyperspace.TupleX$
+import com.fbot.common.fastcollections.Tuple
 import com.fbot.common.linalg.RichDenseMatrix._
 import com.fbot.common.linalg.distributed.RichBlockMatrix
 import com.fbot.common.linalg.distributed.RichBlockMatrix._
@@ -57,8 +57,8 @@ object TestHelmholtz extends Logging {
                                    classOf[DenseMatrix],
                                    classOf[Array[Matrix]],
                                    classOf[ImmutableArray[Double]],
-                                   classOf[Array[TupleX]],
-                                   classOf[TupleX],
+                                   classOf[Array[Tuple]],
+                                   classOf[Tuple],
                                    classOf[IndexedSeries],
                                    classOf[Series],
                                    classOf[MultiSeries.SeriesIndexCombination],

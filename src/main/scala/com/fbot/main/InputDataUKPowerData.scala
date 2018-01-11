@@ -7,7 +7,7 @@ import java.time.{Instant, LocalDateTime, ZoneId, ZonedDateTime}
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.ImmutableArray._
-import com.fbot.common.hyperspace.TupleX$
+import com.fbot.common.fastcollections.Tuple
 import com.fbot.common.timeseries.TimeSeries
 import grizzled.slf4j.Logging
 import org.apache.spark.SparkContext
@@ -58,7 +58,7 @@ case class InputDataUKPowerData(implicit sc: SparkContext) extends TestData with
 
     val seriesData = MultiSeries(fragments.filter(timeSeries => {
       timeSeries.length == 48 * 3 && timeSeries.head._1.isAfter(Instant.parse("2015-12-31T23:59:59Z"))
-    }).map(_.values.map(TupleX(_))))
+    }).map(_.values.map(Tuple(_))))
 
     info(s"Number of data fragments = ${seriesData.length }")
     info(s"Length of each data fragment = ${seriesData(0).length }")

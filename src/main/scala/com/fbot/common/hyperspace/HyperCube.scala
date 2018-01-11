@@ -28,7 +28,7 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
     HyperCube(left + HyperSpaceUnit(leftDirection.repr), right + HyperSpaceUnit(rightDirection.repr))
   }
 
-  def growCubeSidesToIncludeDistanceAround(space: HyperSpace)(epsilon: Double, point: TupleX): HyperCube = {
+  def growCubeSidesToIncludeDistanceAround(space: HyperSpace)(epsilon: Double, point: Tuple): HyperCube = {
     val embeddedPoint = space.embed(point)
     val (vectorToLeft, vectorToRight) = (embeddedPoint - space.toCoordinate(left), space.toCoordinate(right) - embeddedPoint)
 

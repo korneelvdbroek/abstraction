@@ -4,9 +4,9 @@ import breeze.linalg.max
 import breeze.numerics.{digamma, pow, sqrt}
 import com.fbot.algos.nearestneighbors.NearestNeighbors
 import com.fbot.common.fastcollections.FastArray2Zipped._
-import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.{ImmutableArray, Tuple}
 import com.fbot.common.fastcollections.ImmutableArray._
-import com.fbot.common.hyperspace.{HyperSpace, HyperSpaceUnit, Space, TupleX$}
+import com.fbot.common.hyperspace.{HyperSpace, HyperSpaceUnit, Space}
 import com.fbot.main.Utils
 import grizzled.slf4j.Logging
 
@@ -19,9 +19,9 @@ import scala.util.Random
   *   Phys. Rev. E 69, 066138
   * arXiv:cond-mat/0305641
   */
-case class MutualInformation(dataX: ImmutableArray[TupleX], dataY: ImmutableArray[TupleX]) extends NearestNeighbors with Logging {
+case class MutualInformation(dataX: ImmutableArray[Tuple], dataY: ImmutableArray[Tuple]) extends NearestNeighbors with Logging {
 
-  val points: ImmutableArray[TupleX] = (dataX, dataY).map((x, y) => x ++ y)
+  val points: ImmutableArray[Tuple] = (dataX, dataY).map((x, y) => x ++ y)
 
   val length: Int = points.length
 
@@ -52,7 +52,7 @@ case class MutualInformation(dataX: ImmutableArray[TupleX], dataY: ImmutableArra
     * @param optimalPointsPerSpaceUnit ideal number of data points per spaceUnit (in case of uniform distribution)
     * @return unitSizes defining the grid in the space
     */
-  def getUnitSizes(massCubeEdgeSize: ImmutableArray[Double], numberOfPointsInMassCube: Double, optimalPointsPerSpaceUnit: Double): TupleX = {
+  def getUnitSizes(massCubeEdgeSize: ImmutableArray[Double], numberOfPointsInMassCube: Double, optimalPointsPerSpaceUnit: Double): Tuple = {
     val dim = massCubeEdgeSize.length
     val cutFactor = pow(numberOfPointsInMassCube / optimalPointsPerSpaceUnit, 1d / dim)
     val lowerCutFactor = cutFactor.floor
@@ -70,21 +70,21 @@ case class MutualInformation(dataX: ImmutableArray[TupleX], dataY: ImmutableArra
       }
     })._2.reverse
 
-    info(s"${massCubeEdgeSize.length }d space: split into ${TupleX(massCubeEdgeSize.toArray) / TupleX(partitionVector) } space units")
+    info(s"${massCubeEdgeSize.length }d space: split into ${Tuple(massCubeEdgeSize.toArray) / Tuple(partitionVector) } space units")
 
-    TupleX(partitionVector)
+    Tuple(partitionVector)
   }
 
-  val unitSizes: TupleX = getUnitSizes(massCubeVectors.map(_._2), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
-  val unitSizesX: TupleX = getUnitSizes(massCubeVectors.map(_._2).slice(0, dim), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
-  val unitSizesY: TupleX = getUnitSizes(massCubeVectors.map(_._2).slice(dim, 2 * dim), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
+  val unitSizes: Tuple = getUnitSizes(massCubeVectors.map(_._2), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
+  val unitSizesX: Tuple = getUnitSizes(massCubeVectors.map(_._2).slice(0, dim), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
+  val unitSizesY: Tuple = getUnitSizes(massCubeVectors.map(_._2).slice(dim, 2 * dim), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
 
   val space: HyperSpace = Space(ImmutableArray.range(0, 2 * dim), massCubeVectors.map(_._1), unitSizes)
   val spaceX: HyperSpace = Space(ImmutableArray.range(0, dim), massCubeVectors.map(_._1).slice(0, dim), unitSizesX)
   val spaceY: HyperSpace = Space(ImmutableArray.range(dim, 2 * dim), massCubeVectors.map(_._1).slice(dim, 2 * dim), unitSizesY)
 
   def groupPointsBySpaceUnits(space: HyperSpace,
-                              points: ImmutableArray[TupleX]): (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[Int]]) = {
+                              points: ImmutableArray[Tuple]): (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[Int]]) = {
     // Slow initial computation
     val (pointsBySpaceUnitKeys, pointsBySpaceUnitValues) =
       points.indexRange.groupBy(index => space.hyperSpaceUnitAround(points(index))).unzip
