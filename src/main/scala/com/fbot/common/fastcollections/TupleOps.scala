@@ -40,21 +40,38 @@ case class TupleOps(repr: Array[Double]) {
   def lastOption: Option[Double] = if (nonEmpty) Some(last) else None
 
 
-  def foldLeft[B](z: B)(op: (B, Double) => B): B = foldl(0, length, z, op)   //repr.foldLeft(z)(op)
-
-  def foldLeftOrBreak[B](z: B)(op: (B, Double) => (B, Boolean)): B = foldl(0, length, z, false, op)
+  def foldLeft[B](z: B)(op: (B, Double) => B): B = foldl(0, length, z, op)
 
   @tailrec
-  private def foldl[B](start: Int, end: Int, z: B, break: Boolean, op: (B, Double) => (B, Boolean)): B = {
-    if (start == end || break) {
-      z
+  private def foldl[B](start: Int, end: Int, acc: B, op: (B, Double) => B): B = {
+    if (start == end) {
+      acc
     } else {
-      val () = this(start)
-      foldl(start + 1, end, op(z, ), op)
+      foldl(start + 1, end, op(acc, apply(start)), op)
     }
   }
 
-  def forall(p: (Double) => Boolean): Boolean = repr.forall(p)
+  def foldLeftOrBreak[B](z: B)(op: (B, Double) => (B, Boolean)): B = foldl(0, length, z, break=false, op)
+
+  @tailrec
+  private def foldl[B](start: Int, end: Int, acc: B, break: Boolean, op: (B, Double) => (B, Boolean)): B = {
+    if (start == end || break) {
+      acc
+    } else {
+      val (newAcc, newBreak) = op(acc, apply(start))
+      foldl(start + 1, end, newAcc, newBreak, op)
+    }
+  }
+
+  def forall(p: (Double) => Boolean): Boolean = {
+    val len = length
+
+    var i = 0
+    while (i < len && p(repr(i))) {
+      i += 1
+    }
+    i == len
+  }
 
   def forallWithIndex(p: (Double, Int) => Boolean): Boolean = {
     val len = length

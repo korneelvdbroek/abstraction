@@ -22,7 +22,7 @@ import com.fbot.common.fastcollections.{ImmutableArrayX, immutableArrayX2Ops4Dou
 object TestBoxing extends App {
 
 
-  val x = Array(31d, 313d).foldLeft()
+  val x = Array(31d, 313d).forall()
   val a = ImmutableArrayX(x)
   val b = ImmutableArrayX(x)
 
