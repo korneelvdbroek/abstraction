@@ -10,6 +10,22 @@ import org.apache.spark.sql.SparkSession
 import scala.util.Random
 
 /**
+  * Copyright (C) 2017-2018  korneelvdbroek
+  *
+  * This program is free software: you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+  * the Free Software Foundation, either version 3 of the License, or
+  * (at your option) any later version.
+  *
+  * This program is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU General Public License for more details.
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  *
+  *
   * TODO:
   *  - even though we should not be partitioning // we still are (and have blocks with super small amount of points in them) ==> BUG IN ALGO
   *  - find heuristic for optimal number in a spaceUnit (based on uniform distribution)
@@ -89,7 +105,7 @@ object Test extends App {
   println(y)
 
 
-  private def checkIfEqual(space: HyperSpace)(centerTuple: Tuple, resultBF: ImmutableArray[Int], result: ImmutableArray[Int]): Unit = {
+  private def checkIfEqual(space: HyperSpace)(centerTuple: TupleX, resultBF: ImmutableArray[Int], result: ImmutableArray[Int]): Unit = {
     val resultWithDistance = result.map(index => (index, space.distance(cloud.points(index), centerTuple)))
     val resultBFWithDistance = resultBF.map(index => (index, space.distance(cloud.points(index), centerTuple)))
 

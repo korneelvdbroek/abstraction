@@ -12,13 +12,13 @@ import scala.annotation.tailrec
 trait NearestNeighbors {
 
   // TODO: refactor to unpack the Tuple to ImmutableArray[ImmutableArray[Double]]
-  def points: ImmutableArray[Tuple]
+  def points: ImmutableArray[TupleX]
 
   def pointsBySpaceUnitPerSpace: Map[HyperSpace, (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[Int]])]
 
 
   def kNearestBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[Int])
-                        (k: Int, currentTuple: Tuple): ImmutableArray[(Int, Double)] = {
+                        (k: Int, currentTuple: TupleX): ImmutableArray[(Int, Double)] = {
     pointSubsetIndices
       .map(index => (index, space.distance(points(index), currentTuple)))
       .partialSort(k, (el1, el2) => el1._2 < el2._2)
@@ -79,7 +79,7 @@ trait NearestNeighbors {
 
 
   def numberOfCloseByPointsBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[Int])
-                                     (distance: Double, centerTuple: Tuple): Int = {
+                                     (distance: Double, centerTuple: TupleX): Int = {
     // minus 1 to exclude the self (so self should be in pointSubsetIndices)
     pointSubsetIndices.count(index => space.distance(points(index), centerTuple) <= distance) - 1
   }

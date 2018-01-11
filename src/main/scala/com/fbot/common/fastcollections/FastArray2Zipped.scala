@@ -6,6 +6,20 @@ import scala.collection.mutable
 import scala.reflect.ClassTag
 
 /**
+  * Copyright (C) 2017-2018  korneelvdbroek
+  *
+  * This program is free software: you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+  * the Free Software Foundation, either version 3 of the License, or
+  * (at your option) any later version.
+  *
+  * This program is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU General Public License for more details.
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
 class FastArray2Zipped[El1, Self1[El1] <: FastArray[El1, Self1[El1]], El2, Self2[El2] <: FastArray[El2, Self2[El2]]]
@@ -17,7 +31,7 @@ class FastArray2Zipped[El1, Self1[El1] <: FastArray[El1, Self1[El1]], El2, Self2
     (zipArray._1(index), zipArray._2(index))
   }
 
-  def foreach[U](f: (El1, El2) ⇒ U): Unit = {
+  def foreach(f: (El1, El2) ⇒ Unit): Unit = {
     val len = length
 
     var i: Int = 0
@@ -27,7 +41,7 @@ class FastArray2Zipped[El1, Self1[El1] <: FastArray[El1, Self1[El1]], El2, Self2
     }
   }
 
-  def foreachWithIndex[U](f: (El1, El2, Int) ⇒ U): Unit = {
+  def foreachWithIndex(f: (El1, El2, Int) ⇒ Unit): Unit = {
     val len = length
 
     var i: Int = 0
@@ -41,7 +55,7 @@ class FastArray2Zipped[El1, Self1[El1] <: FastArray[El1, Self1[El1]], El2, Self2
     val zipped = new Array[B](length)
 
     foreachWithIndex((elem1, elem2, index) => {
-      zipped(index.toInt) = f(elem1, elem2)
+      zipped(index) = f(elem1, elem2)
     })
 
     builder.result(zipped)

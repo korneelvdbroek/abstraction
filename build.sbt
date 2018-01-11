@@ -4,6 +4,8 @@ version := "1.0"
 
 scalaVersion := "2.11.8"
 
+scalacOptions ++= Seq("-optimise")
+
 libraryDependencies ++= Seq(
   "org.mockito" % "mockito-core" % "1.10.17" % "test",
   "org.scalatest" %% "scalatest" % "2.2.5",

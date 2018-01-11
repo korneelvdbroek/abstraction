@@ -7,12 +7,28 @@ import java.time.{Instant, LocalDateTime, ZoneId, ZonedDateTime}
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.ImmutableArray._
-import com.fbot.common.hyperspace.Tuple
+import com.fbot.common.hyperspace.TupleX$
 import com.fbot.common.timeseries.TimeSeries
 import grizzled.slf4j.Logging
 import org.apache.spark.SparkContext
 
 /**
+  * Copyright (C) 2017-2018  korneelvdbroek
+  *
+  * This program is free software: you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+  * the Free Software Foundation, either version 3 of the License, or
+  * (at your option) any later version.
+  *
+  * This program is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU General Public License for more details.
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  *
+  *
   * Data file can be found on
   * http://www2.nationalgrid.com/UK/Industry-information/Electricity-transmission-operational-data/Data-Explorer/
   */
@@ -42,7 +58,7 @@ case class InputDataUKPowerData(implicit sc: SparkContext) extends TestData with
 
     val seriesData = MultiSeries(fragments.filter(timeSeries => {
       timeSeries.length == 48 * 3 && timeSeries.head._1.isAfter(Instant.parse("2015-12-31T23:59:59Z"))
-    }).map(_.values.map(Tuple(_))))
+    }).map(_.values.map(TupleX(_))))
 
     info(s"Number of data fragments = ${seriesData.length }")
     info(s"Length of each data fragment = ${seriesData(0).length }")

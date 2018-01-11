@@ -10,7 +10,7 @@ import ch.qos.logback.classic.{Level, Logger}
 import com.fbot.algos.clustering.{HelmholtzClustering, MISimilarity}
 import com.fbot.common.data.{IndexedSeries, MultiSeries, Series}
 import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.hyperspace.Tuple
+import com.fbot.common.hyperspace.TupleX$
 import com.fbot.common.linalg.RichDenseMatrix._
 import com.fbot.common.linalg.distributed.RichBlockMatrix
 import com.fbot.common.linalg.distributed.RichBlockMatrix._
@@ -25,6 +25,20 @@ import scala.collection.mutable
 import scala.reflect.ClassTag
 
 /**
+  * Copyright (C) 2017-2018  korneelvdbroek
+  *
+  * This program is free software: you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+  * the Free Software Foundation, either version 3 of the License, or
+  * (at your option) any later version.
+  *
+  * This program is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU General Public License for more details.
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
 object TestHelmholtz extends Logging {
@@ -43,8 +57,8 @@ object TestHelmholtz extends Logging {
                                    classOf[DenseMatrix],
                                    classOf[Array[Matrix]],
                                    classOf[ImmutableArray[Double]],
-                                   classOf[Array[Tuple]],
-                                   classOf[Tuple],
+                                   classOf[Array[TupleX]],
+                                   classOf[TupleX],
                                    classOf[IndexedSeries],
                                    classOf[Series],
                                    classOf[MultiSeries.SeriesIndexCombination],

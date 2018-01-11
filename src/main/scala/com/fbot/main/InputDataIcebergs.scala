@@ -7,7 +7,7 @@ import java.time.format.DateTimeFormatter
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.ImmutableArray._
-import com.fbot.common.hyperspace.Tuple
+import com.fbot.common.hyperspace.TupleX$
 import grizzled.slf4j.Logging
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
@@ -47,7 +47,7 @@ case class InputDataIcebergs(implicit sc: SparkContext) extends TestData with Lo
     }
 
     // load data
-    val data: RDD[(Long, ImmutableArray[Tuple])] = sc.objectFile(s"$objectFileName")
+    val data: RDD[(Long, ImmutableArray[TupleX])] = sc.objectFile(s"$objectFileName")
 
     MultiSeries(data.cache(), maxData)
   }
@@ -66,7 +66,7 @@ case class InputDataIcebergs(implicit sc: SparkContext) extends TestData with Lo
 
     // ingest data by iterating through the content of the json array
     var i = 0
-    var RDDData = sc.emptyRDD[(Long, ImmutableArray[Tuple])]
+    var RDDData = sc.emptyRDD[(Long, ImmutableArray[TupleX])]
     while (i < maxData && parser.nextToken() != JsonToken.END_ARRAY) {
       val node = parser.readValueAsTree()
 
@@ -87,26 +87,26 @@ case class InputDataIcebergs(implicit sc: SparkContext) extends TestData with Lo
   }
 
 
-  private def jsonDataToTuples(entry: InputData): ImmutableArray[Tuple] = {
-    val band1 = ImmutableArray(entry.band1).mapWithIndex[(Double, Tuple), ImmutableArray[(Double, Tuple)]]((value, pos) => {
+  private def jsonDataToTuples(entry: InputData): ImmutableArray[TupleX] = {
+    val band1 = ImmutableArray(entry.band1).mapWithIndex[(Double, TupleX), ImmutableArray[(Double, TupleX)]]((value, pos) => {
       val x = pos.toInt % 75
       val y = pos.toInt / 75
 
       val freq = value + 50f
       // value = -45.6dB - 34.6dB
-      (freq, Tuple(x.toDouble, y.toDouble, 0f, entry.incAngle.getOrElse(90f)))
+      (freq, TupleX(x.toDouble, y.toDouble, 0f, entry.incAngle.getOrElse(90f)))
     })
 
-    val band2 = ImmutableArray(entry.band2).mapWithIndex[(Double, Tuple), ImmutableArray[(Double, Tuple)]]((value, pos) => {
+    val band2 = ImmutableArray(entry.band2).mapWithIndex[(Double, TupleX), ImmutableArray[(Double, TupleX)]]((value, pos) => {
       val x = pos.toInt % 75
       val y = pos.toInt / 75
 
       val freq = value + 50f
       // value = -45.6dB - 34.6dB
-      (freq, Tuple(x.toDouble, y.toDouble, 1f, entry.incAngle.getOrElse(90f)))
+      (freq, TupleX(x.toDouble, y.toDouble, 1f, entry.incAngle.getOrElse(90f)))
     })
 
-    val dataTuples = (band1 ++ band2).sortBy(_._1).map(x => ImmutableArray.fill(x._1.toInt)(x._2)).flatten[Tuple, ImmutableArray[Tuple]]
+    val dataTuples = (band1 ++ band2).sortBy(_._1).map(x => ImmutableArray.fill(x._1.toInt)(x._2)).flatten[TupleX, ImmutableArray[TupleX]]
 
     if (dataTuples.length < 200000) throw new IllegalArgumentException("picture does not contain enough tuples")
 
