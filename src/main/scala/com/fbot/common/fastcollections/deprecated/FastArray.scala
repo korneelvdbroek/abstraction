@@ -1,4 +1,6 @@
-package com.fbot.common.fastcollections
+package com.fbot.common.fastcollections.deprecated
+
+import com.fbot.common.fastcollections.BuilderFromArray
 
 import scala.collection.mutable
 import scala.math.Ordering

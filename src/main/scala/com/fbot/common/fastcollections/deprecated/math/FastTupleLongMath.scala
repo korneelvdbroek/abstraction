@@ -1,6 +1,7 @@
-package com.fbot.common.fastcollections.math
+package com.fbot.common.fastcollections.deprecated.math
 
-import com.fbot.common.fastcollections.{FastTuple, ImmutableArray}
+import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.deprecated.FastTuple
 
 import scala.collection.mutable
 

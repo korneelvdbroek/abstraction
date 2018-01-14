@@ -1,8 +1,7 @@
 package com.fbot.main
 
 import com.fbot.algos.mutualinformation.{DelayIndependentMutualInformation, MutualInformation}
-import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.Tuple
+import com.fbot.common.fastcollections.{ImmutableArray, ImmutableTupleArray, Tuple}
 
 import scala.util.Random
 
@@ -49,7 +48,7 @@ object TestFilip {
     Random.nextDouble() * 1000d
   }
 
-  def getShiftedVersion(data: ImmutableArray[Tuple], shift: Int) : ImmutableArray[Tuple] = {
+  def getShiftedVersion(data: ImmutableTupleArray, shift: Int) : ImmutableTupleArray = {
     val part1 = (0 to shift).map(_ => Tuple(randomDouble)).toList
     val part2 = data.repr.take(data.length - shift).toList
 

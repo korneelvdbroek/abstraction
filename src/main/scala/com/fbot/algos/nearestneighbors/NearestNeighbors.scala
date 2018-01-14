@@ -1,7 +1,7 @@
 package com.fbot.algos.nearestneighbors
 
-import com.fbot.common.fastcollections.{ImmutableArray, Tuple}
-import com.fbot.common.fastcollections.ImmutableArray._
+import com.fbot.common.fastcollections.{ImmutableArray, ImmutableTupleArray, Tuple}
+import com.fbot.common.fastcollections._
 import com.fbot.common.hyperspace._
 
 import scala.annotation.tailrec
@@ -12,12 +12,12 @@ import scala.annotation.tailrec
 trait NearestNeighbors {
 
   // TODO: refactor to unpack the Tuple to ImmutableArray[ImmutableArray[Double]]
-  def points: ImmutableArray[Tuple]
+  def points: ImmutableTupleArray
 
   def pointsBySpaceUnitPerSpace: Map[HyperSpace, (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[Int]])]
 
 
-  def kNearestBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[Int])
+  def kNearestBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[ArrayIndex])
                         (k: Int, currentTuple: Tuple): ImmutableArray[(Int, Double)] = {
     pointSubsetIndices
       .map(index => (index, space.distance(points(index), currentTuple)))
@@ -25,7 +25,7 @@ trait NearestNeighbors {
   }
 
 
-  def kNearest(space: HyperSpace)(k: Int, centerTupleIndex: Int): ImmutableArray[Int] = {
+  def kNearest(space: HyperSpace)(k: Int, centerTupleIndex: ArrayIndex): ImmutableArray[Int] = {
 
     val centerTuple = points(centerTupleIndex)
     val (pointsBySpaceUnitKeys, pointsBySpaceUnitValues) = pointsBySpaceUnitPerSpace(space)

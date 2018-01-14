@@ -1,6 +1,4 @@
-package com.fbot.main
-
-import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray}
+package com.fbot.common.fastcollections.fastarrayops
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
@@ -19,11 +17,8 @@ import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray}
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-object TestBoxing extends App {
+case class FastGenericArrayOps[T](repr: Array[T]) extends FastArrayOps {
 
-  // TODO: checks
-  val b = ImmutableArray[Double] // check it is implemented as Array[Double] (check one of the functions)
-
-  val a = ImmutableArray[ArrayIndex]  // check it is implemented as Array[Int]
+  type A = T
 
 }

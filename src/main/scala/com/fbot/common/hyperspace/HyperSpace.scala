@@ -1,7 +1,7 @@
 package com.fbot.common.hyperspace
 
 import com.fbot.common.fastcollections.{ImmutableArray, Tuple}
-import com.fbot.common.fastcollections.ImmutableArray._
+import com.fbot.common.fastcollections._
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
@@ -33,7 +33,7 @@ trait HyperSpace {
 
   val embeddingAxes: ImmutableArray[Int]
 
-  lazy val dim: Int = unitCubeSizes.length
+  lazy val dim: Int = unitCubeSizes.dim
 
   def hyperSpaceUnitAround(point: Tuple): HyperSpaceUnit = {
     val location = (embed(point) - origin) / unitCubeSizes

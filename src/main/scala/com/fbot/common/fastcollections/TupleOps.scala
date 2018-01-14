@@ -1,5 +1,7 @@
 package com.fbot.common.fastcollections
 
+import shapeless.newtype.newtypeOps
+
 import scala.annotation.tailrec
 
 /**
@@ -100,7 +102,7 @@ case class TupleOps(repr: Array[Double]) {
 
   def ++ (that: Tuple): Tuple = {
     val thisLen = repr.length
-    val thatLen = that.repr.length
+    val thatLen = that.length
 
     val concat = new Array[Double](thisLen + thatLen)
     System.arraycopy(repr, 0, concat, 0, thisLen)

@@ -1,7 +1,8 @@
 package com.fbot.common.hyperspace
 
-import com.fbot.common.fastcollections.math.FastTupleLongMath
-import com.fbot.common.fastcollections.{BuilderFromArray, FastTuple, ImmutableArray}
+import com.fbot.common.fastcollections.deprecated.{BuilderFromArray, FastTuple}
+import com.fbot.common.fastcollections.deprecated.math.FastTupleLongMath
+import com.fbot.common.fastcollections.{BuilderFromArray, ImmutableArray$}
 
 import scala.collection.mutable
 import scala.reflect.ClassTag

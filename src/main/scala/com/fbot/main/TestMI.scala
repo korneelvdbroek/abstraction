@@ -29,7 +29,7 @@ import org.apache.spark.sql.SparkSession
   *
   * TODO:
   * - random sampling to get good and fast convergence --> foldLeft with early stopping criteria in ImmutableArray
-  * - Series as RDD[ImmutableArray[Tuple]]
+  * - Series as RDD[ImmutableTupleArray]
   * - implement the clustering algo
   *
   * References:

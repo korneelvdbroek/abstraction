@@ -1,6 +1,6 @@
-package com.fbot.common.fastcollections
+package com.fbot.common.fastcollections.deprecated
 
-import com.fbot.common.fastcollections.ImmutableArray._
+import com.fbot.common.fastcollections.ImmutableArrayY._
 
 import scala.collection.mutable
 import scala.reflect.ClassTag
@@ -73,7 +73,7 @@ class FastArray2Zipped[El1, Self1[El1] <: FastArray[El1, Self1[El1]], El2, Self2
   def groupBy[Key: ClassTag](f: (El1, El2) => Key)
                             (implicit evidence1: ClassTag[El1], evidence2: ClassTag[El2],
                              builder1: Array[El1] => Self1[El1], builder2: Array[El2] => Self2[El2]): Map[Key, (Self1[El1], Self2[El2])] = {
-    ImmutableArray.range(0, zipArray._1.length)
+    ImmutableArrayY.range(0, zipArray._1.length)
       .groupBy(index => f(zipArray._1(index), zipArray._2(index)))
       .mapValues(groupedIndices => (groupedIndices.map(index => zipArray._1(index)).toArray, groupedIndices.map(index => zipArray._2(index)).toArray))
   }
@@ -109,12 +109,12 @@ class FastArray2Zipped[El1, Self1[El1] <: FastArray[El1, Self1[El1]], El2, Self2
     new FastArray2Zipped(builder1.result(arrayBuilder1.result), builder2.result(arrayBuilder2.result))
   }
 
-  def indicesWhere(p: (El1, El2) ⇒ Boolean): ImmutableArray[Int] = {
+  def indicesWhere(p: (El1, El2) ⇒ Boolean): ImmutableArrayY[Int] = {
     val builder = new mutable.WrappedArrayBuilder[Int](ClassTag(classOf[Int]))
     foreachWithIndex((elem1, elem2, index) => {
       if (p(elem1, elem2)) builder += index
     })
-    ImmutableArray(builder.result())
+    ImmutableArrayY(builder.result())
   }
 
 }

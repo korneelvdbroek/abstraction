@@ -2,7 +2,7 @@ package com.fbot.main
 
 import breeze.linalg.{DenseMatrix, DenseVector}
 import com.fbot.algos.mutualinformation.MutualInformation
-import com.fbot.common.fastcollections.{ImmutableArray, Tuple}
+import com.fbot.common.fastcollections.{ImmutableArray$, Tuple}
 import com.fbot.common.fastcollections.ImmutableArray._
 import com.fbot.common.hyperspace._
 import org.apache.spark.sql.SparkSession

@@ -2,7 +2,7 @@ package com.fbot.common.timeseries
 
 import java.time.{Instant, ZonedDateTime}
 
-import com.fbot.common.fastcollections.FastArray2Zipped._
+import com.fbot.common.fastcollections.deprecated.FastArray2Zipped._
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections.ImmutableArray._
 

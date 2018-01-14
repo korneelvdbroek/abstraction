@@ -1,7 +1,8 @@
 package com.fbot.common.hyperspace
 
-import com.fbot.common.fastcollections.{BuilderFromArray, FastTuple, ImmutableArray}
-import com.fbot.common.fastcollections.math.FastTupleDoubleMath
+import com.fbot.common.fastcollections.deprecated.{BuilderFromArray, FastTuple, ImmutableArrayY}
+import com.fbot.common.fastcollections.{BuilderFromArray, ImmutableArray$}
+import com.fbot.common.fastcollections.deprecated.math.FastTupleDoubleMath
 
 import scala.collection.mutable
 import scala.reflect.ClassTag
@@ -52,7 +53,7 @@ object TupleX {
 
   def fill(dim: Int)(elem: ⇒ Double): TupleX = TupleX(Array.fill(dim)(elem))
 
-  implicit def fromImmutableArray(array: ImmutableArray[Double]): TupleX = TupleX(array.repr)
+  implicit def fromImmutableArray(array: ImmutableArrayY[Double]): TupleX = TupleX(array.repr)
 
   implicit def builderFromArray[T](implicit m: ClassTag[T]): BuilderFromArray[Double, TupleX] = {
     new BuilderFromArray[Double, TupleX] {

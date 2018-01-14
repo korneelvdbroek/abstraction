@@ -1,6 +1,7 @@
 package com.fbot.common
 
-import shapeless.newtype.{Newtype, newtypeOps}
+import com.fbot.common.fastcollections.fastarrayops._
+import shapeless.newtype.Newtype
 import shapeless.tag.@@
 import shapeless.{newtype, tag}
 
@@ -31,75 +32,50 @@ import shapeless.{newtype, tag}
   */
 package object fastcollections {
 
-  // ArrayIndex
+  /**
+    * ArrayIndex
+    */
   sealed trait ArrayIndexTag
+
   type ArrayIndex = Int @@ ArrayIndexTag
+
   def ArrayIndex(i: Int): ArrayIndex = tag[ArrayIndexTag][Int](i)
 
 
-  // Tuple
+  /**
+    * Tuple
+    */
   type Tuple = Newtype[Array[Double], TupleOps]
-  def Tuple(arr: Array[Double]): Tuple = newtype(arr)
-  implicit val tupleOps = TupleOps
 
+  def Tuple(arr: Array[Double]): Tuple = newtype[Array[Double], TupleOps](arr)
   def Tuple(d: Double*): Tuple = Tuple(d.toArray)
 
+  implicit def tupleOps(t: Tuple): TupleOps = TupleOps(t.asInstanceOf[Array[Double]])
+
   object Tuple {
+
     def fill(dim: Int)(elem: ⇒ Double): Tuple = Tuple(Array.fill(dim)(elem))
   }
 
+  /**
+    * ImmutableArray
+    */
+  type ImmutableArray[T] = Newtype[Array[T], FastArrayOps]
 
+  def ImmutableArray[T](arr: Array[T]): ImmutableArray[T] = newtype(arr)
 
+  implicit def immutableArrayOps4Generic[T](t: ImmutableArray[T]): FastGenericArrayOps[T] = FastGenericArrayOps(t.asInstanceOf[Array[T]])
+  implicit def immutableArrayOps4Double(t: ImmutableArray[Double]): FastDoubleArrayOps = FastDoubleArrayOps(t.asInstanceOf[Array[Double]])
+  implicit def immutableArrayOps4Int(t: ImmutableArray[Int]): FastIntArrayOps = FastIntArrayOps(t.asInstanceOf[Array[Int]])
+  implicit def immutableArrayOps4Long(t: ImmutableArray[Long]): FastLongArrayOps = FastLongArrayOps(t.asInstanceOf[Array[Long]])
 
+  object ImmutableArray {
 
-  // MyString is a new type with String as its underlying representation and with its operations
-  // provided by MyStringOps
-  type ImmutableArrayX[T] = Newtype[Array[T], ImmutableArrayXOps[T]]
+    def indexRange(length: Int): ImmutableArray[Int] = ImmutableArray(Array.range(0, length))
 
-  // MyString constructor
-  def ImmutableArrayX[T](arr: Array[T]): ImmutableArrayX[T] = newtype(arr)
+    def indexRange(length: Long): ImmutableArray[Long] = ImmutableArray(Array.range(0, length.toInt).map(_.toLong))
 
-  // Expose String#size as MyString#mySize. No other operations of String are accessible
-  trait ImmutableArrayXOps[@specialized(Double) T] {
-
-    def arr: Array[T]
-
-    def mapWithIndex(f: (T, Int) ⇒ T)(implicit evidence: scala.reflect.ClassTag[T]): ImmutableArrayX[T] = {
-      val len = arr.length
-      val mapped = new Array[T](len)
-
-      var i = 0
-      while (i < len) {
-        mapped(i) = f(arr(i), i)
-        i += 1
-      }
-
-      ImmutableArrayX(mapped)
-    }
-
-    def add(other: ImmutableArrayX[T])(implicit evidence: scala.reflect.ClassTag[T], num: Numeric[T]): ImmutableArrayX[T] = {
-      val len = arr.length
-      val res: Array[T] = new Array[T](len)
-
-      var i: Int = 0
-      while (i < len) {
-        res(i) = num.plus(arr(i), other.arr(i))
-        i += 1
-      }
-
-      ImmutableArrayX(res)
-    }
+    def empty[@specialized(Double, Int, Long) A]: ImmutableArray[A] = ImmutableArray(new Array[A](0))
   }
-
-  case class ImmutableArrayXOpsGeneric[T](arr: Array[T]) extends ImmutableArrayXOps[T]
-
-  case class ImmutableArrayXOpsDouble(arr: Array[Double]) extends ImmutableArrayXOps[Double]
-
-  //  case class ImmutableArrayXOpsInt(arr: Array[Int]) extends ImmutableArrayXOps[Int]
-  //  case class ImmutableArrayXOpsLong(arr: Array[Long]) extends ImmutableArrayXOps[Long]
-
-  implicit def toImmutableArrayXOps[@specialized(Double) T](arr: Array[T]): ImmutableArrayXOpsGeneric[T] = ImmutableArrayXOpsGeneric(arr)
-
-  implicit def immutableArrayX2Ops4Double(t: ImmutableArrayX[Double]): ImmutableArrayXOpsDouble = ImmutableArrayXOpsDouble(t.asInstanceOf[Array[Double]])
 
 }

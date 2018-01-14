@@ -1,4 +1,4 @@
-package com.fbot.common.fastcollections.math
+package com.fbot.common.fastcollections.deprecated.math
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek

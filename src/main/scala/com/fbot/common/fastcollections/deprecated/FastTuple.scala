@@ -1,4 +1,4 @@
-package com.fbot.common.fastcollections
+package com.fbot.common.fastcollections.deprecated
 
 import scala.annotation.tailrec
 import scala.collection.mutable
