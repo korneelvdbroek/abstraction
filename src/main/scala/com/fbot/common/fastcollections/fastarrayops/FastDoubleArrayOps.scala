@@ -1,6 +1,6 @@
 package com.fbot.common.fastcollections.fastarrayops
 
-import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray}
+import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray, Tuple}
 import shapeless.newtype.newtypeOps
 
 import scala.collection.mutable
@@ -27,17 +27,16 @@ case class FastDoubleArrayOps(repr: Array[Double]) extends FastArrayOps {
 
   type A = Double
 
-  def sorted: ImmutableArray[Double] = {
+  def indexOfSorted: ImmutableArray[ArrayIndex] = {
     val len = length
 
     if (len <= 1) {
-      ImmutableArray(repr)
+      ImmutableArray(repr.map(_ => ArrayIndex(0)))
     } else {
-      // we make a copy, such that the unsorted ImmutableArray remains untouched
-      val res: Array[Double] = new Array[Double](len)
-      System.arraycopy(repr, 0, res, 0, len)
-      java.util.Arrays.sort(res)
-      ImmutableArray(res)
+      val indices: Array[Int] = Array.range(0, len)
+      val ord: Ordering[Int] = Ordering.fromLessThan((i, j) => repr(i) < repr(j))
+      java.util.Arrays.sort(indices, ord.asInstanceOf[Ordering[Int]])
+      ImmutableArray(indices.asInstanceOf[Array[ArrayIndex]])
     }
 
   }
@@ -65,6 +64,9 @@ case class FastDoubleArrayOps(repr: Array[Double]) extends FastArrayOps {
     ImmutableArray(pq.dequeueAll.reverse.toArray)
   }
 
+
+  // conversion
+  def toTuple: Tuple = Tuple(repr)
 
   // Arithmetic
   def + (rhs: ImmutableArray[Double]): ImmutableArray[Double] = {
@@ -96,7 +98,7 @@ case class FastDoubleArrayOps(repr: Array[Double]) extends FastArrayOps {
   }
 
   def unary_-(): ImmutableArray[Double] = {
-    map(-_)
+    map((x: Double) => -x)
   }
 
   def sum: Double = {

@@ -3,6 +3,7 @@ package com.fbot.algos.mutualinformation
 import breeze.linalg.max
 import breeze.numerics.{digamma, pow, sqrt}
 import com.fbot.algos.nearestneighbors.NearestNeighbors
+import com.fbot.common.fastcollections.fastarrayops.FastIntArrayOps
 import com.fbot.common.fastcollections.{ImmutableArray, ImmutableTupleArray, Tuple, _}
 import com.fbot.common.hyperspace.{HyperSpace, HyperSpaceUnit, Space}
 import com.fbot.main.Utils
@@ -27,14 +28,15 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
 
   // determine where the mass of the distribution is located
   val margin: Double = 0.0001d
-  val massCubeVectors: ImmutableArray[(Double, Double)] = ImmutableArray.indexRange(2 * dim).map(d => {
-    val sortedCoordinate = points.coordinate(d).sorted
-    val xLow = sortedCoordinate(0)
-    val xHigh = sortedCoordinate(length - 1)
+  val massCubeVectors: ImmutableTupleArray = ImmutableArray.indexRange(2 * dim).map(d => {
+    val coordinates = points.coordinate(d)
+    val sortedIndices = coordinates.indexOfSorted
+    val xLow = coordinates(sortedIndices.head)
+    val xHigh = coordinates(sortedIndices.last)
 
     val edgeLength = if (xHigh - xLow == 0) 1d else xHigh - xLow
 
-    (xLow - margin * edgeLength, edgeLength * (1d + 2d * margin))
+    Tuple(xLow - margin * edgeLength, edgeLength * (1d + 2d * margin))
   })
 
   val numberOfPointsInMassCube: Double = length
@@ -73,13 +75,13 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
     Tuple(partitionVector.toArray)
   }
 
-  val unitSizes: Tuple = getUnitSizes(massCubeVectors.map(_._2), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
-  val unitSizesX: Tuple = getUnitSizes(massCubeVectors.map(_._2).slice(0, dim), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
-  val unitSizesY: Tuple = getUnitSizes(massCubeVectors.map(_._2).slice(dim, 2 * dim), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
+  val unitSizes: Tuple = getUnitSizes(massCubeVectors.coordinate(1), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
+  val unitSizesX: Tuple = getUnitSizes(massCubeVectors.coordinate(1).slice(0, dim), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
+  val unitSizesY: Tuple = getUnitSizes(massCubeVectors.coordinate(1).slice(dim, 2 * dim), numberOfPointsInMassCube, optimalPointsPerSpaceUnit)
 
-  val space: HyperSpace = Space(ImmutableArray.range(0, 2 * dim), massCubeVectors.map(_._1), unitSizes)
-  val spaceX: HyperSpace = Space(ImmutableArray.range(0, dim), massCubeVectors.map(_._1).slice(0, dim), unitSizesX)
-  val spaceY: HyperSpace = Space(ImmutableArray.range(dim, 2 * dim), massCubeVectors.map(_._1).slice(dim, 2 * dim), unitSizesY)
+  val space: HyperSpace = Space(ImmutableArray.range(0, 2 * dim), massCubeVectors.coordinate(0).toTuple, unitSizes)
+  val spaceX: HyperSpace = Space(ImmutableArray.range(0, dim), massCubeVectors.coordinate(0).slice(0, dim).toTuple, unitSizesX)
+  val spaceY: HyperSpace = Space(ImmutableArray.range(dim, 2 * dim), massCubeVectors.coordinate(0).slice(dim, 2 * dim).toTuple, unitSizesY)
 
   def groupPointsBySpaceUnits(space: HyperSpace,
                               points: ImmutableTupleArray): (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[Int]]) = {
@@ -89,7 +91,7 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
 
     info(s"${space.dim }d space: actual ${pointsBySpaceUnitKeys.size } space units")
 
-    (ImmutableArray(pointsBySpaceUnitKeys), ImmutableArray(pointsBySpaceUnitValues))
+    (ImmutableArray(pointsBySpaceUnitKeys.toArray), ImmutableArray(pointsBySpaceUnitValues.toArray))
   }
 
   lazy val pointsBySpaceUnitPerSpace: Map[HyperSpace, (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[Int]])] = {
@@ -100,20 +102,18 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
 
   def MI(k: Int = 10, absoluteTolerance: Double = 0.01): Double = {
     val sampleIndices = ImmutableArray.range(0, length)
-      .map(i => (i, Random.nextDouble()))
-      .sortBy(_._2)
-      .mapWithIndex((x, index) => (x._1, index))
+      .map((_: Int) => Random.nextDouble())
+      .indexOfSorted
 
-    val (mean, _): (Double, Double) = sampleIndices.foldLeftOrBreak((0d, 0d))((acc, doubleIndex) => {
-      val (sampleIndex, countIndex) = doubleIndex
+    val (mean, _): (Double, Double) = sampleIndices.foldLeftOrBreakWithIndex((0d, 0d))((acc, sampleIndex, countIndex) => {
       val (oldMean, oldSumOfSquares) = acc
 
       val (kNearestIndices, t1) = Utils.timeIt {
         kNearest(space)(k, sampleIndex)
       }
 
-      val epsilonX = kNearestIndices.map(kNearestIndex => spaceX.distance(points(sampleIndex), points(kNearestIndex))).max
-      val epsilonY = kNearestIndices.map(kNearestIndex => spaceY.distance(points(sampleIndex), points(kNearestIndex))).max
+      val epsilonX = kNearestIndices.map((kNearestIndex: ArrayIndex) => spaceX.distance(points(sampleIndex), points(kNearestIndex))).max
+      val epsilonY = kNearestIndices.map((kNearestIndex: ArrayIndex) => spaceY.distance(points(sampleIndex), points(kNearestIndex))).max
 
       val (x, t2) = Utils.timeIt {
         digamma(numberOfCloseByPoints(spaceX)(epsilonX, sampleIndex)) + digamma(numberOfCloseByPoints(spaceY)(epsilonY, sampleIndex))

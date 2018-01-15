@@ -1,9 +1,8 @@
 package com.fbot.common
 
 import com.fbot.common.fastcollections.fastarrayops._
+import shapeless.newtype
 import shapeless.newtype.Newtype
-import shapeless.tag.@@
-import shapeless.{newtype, tag}
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
@@ -35,11 +34,22 @@ package object fastcollections {
   /**
     * ArrayIndex
     */
-  sealed trait ArrayIndexTag
+  type ArrayIndex = Newtype[Int, ArrayIndexOps]
 
-  type ArrayIndex = Int @@ ArrayIndexTag
+  def ArrayIndex(i: Int): ArrayIndex = newtype[Int, ArrayIndexOps](i)
 
-  def ArrayIndex(i: Int): ArrayIndex = tag[ArrayIndexTag][Int](i)
+  case class ArrayIndexOps(i: Int) {
+
+    def toInt: Int = i
+
+    def +=(j: Int): ArrayIndex = ArrayIndex(i + j)
+
+    def <(j: Int): Boolean = i < j
+    def ==(j: Int): Boolean = i == j
+    def >(j: Int): Boolean = i > j
+  }
+
+  implicit def arrayIndexOps(index: ArrayIndex): ArrayIndexOps = ArrayIndexOps(index.asInstanceOf[Int])
 
 
   /**
@@ -48,6 +58,7 @@ package object fastcollections {
   type Tuple = Newtype[Array[Double], TupleOps]
 
   def Tuple(arr: Array[Double]): Tuple = newtype[Array[Double], TupleOps](arr)
+
   def Tuple(d: Double*): Tuple = Tuple(d.toArray)
 
   implicit def tupleOps(t: Tuple): TupleOps = TupleOps(t.asInstanceOf[Array[Double]])
@@ -65,17 +76,25 @@ package object fastcollections {
   def ImmutableArray[T](arr: Array[T]): ImmutableArray[T] = newtype(arr)
 
   implicit def immutableArrayOps4Generic[T](t: ImmutableArray[T]): FastGenericArrayOps[T] = FastGenericArrayOps(t.asInstanceOf[Array[T]])
+
   implicit def immutableArrayOps4Double(t: ImmutableArray[Double]): FastDoubleArrayOps = FastDoubleArrayOps(t.asInstanceOf[Array[Double]])
+
   implicit def immutableArrayOps4Int(t: ImmutableArray[Int]): FastIntArrayOps = FastIntArrayOps(t.asInstanceOf[Array[Int]])
+
   implicit def immutableArrayOps4Long(t: ImmutableArray[Long]): FastLongArrayOps = FastLongArrayOps(t.asInstanceOf[Array[Long]])
 
   object ImmutableArray {
+
+    def empty[@specialized(Double, Int, Long) A]: ImmutableArray[A] = ImmutableArray(new Array[A](0))
 
     def indexRange(length: Int): ImmutableArray[Int] = ImmutableArray(Array.range(0, length))
 
     def indexRange(length: Long): ImmutableArray[Long] = ImmutableArray(Array.range(0, length.toInt).map(_.toLong))
 
-    def empty[@specialized(Double, Int, Long) A]: ImmutableArray[A] = ImmutableArray(new Array[A](0))
+    def range(from: Int, to: Int): ImmutableArray[Int] = ImmutableArray(Array.range(from, to))
+
+    def range(from: Long, to: Long): ImmutableArray[Long] = ImmutableArray(Array.range(from.toInt, to.toInt).map(_.toLong))
+
   }
 
 }

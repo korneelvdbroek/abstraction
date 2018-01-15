@@ -1,6 +1,7 @@
 package com.fbot.common.fastcollections.fastarrayops
 
-import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray}
+import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray, ImmutableTupleArray, Tuple}
+import com.fbot.common.fastcollections._
 import shapeless.newtype.newtypeOps
 
 import scala.annotation.tailrec
@@ -61,10 +62,10 @@ trait FastArrayOps {
     }
   }
 
-  def foldLeftOrBreak[B](z: B)(op: (B, A) => (B, Boolean)): B = foldl(0, length, z, break = false, op)
+  def foldLeftOrBreakWithIndex[B](z: B)(op: (B, A, Int) => (B, Boolean)): B = foldl(0, length, z, break = false, op)
 
   @tailrec
-  private def foldl[B](start: Int, end: Int, acc: B, break: Boolean, op: (B, A) => (B, Boolean)): B = {
+  private def foldl[B](start: Int, end: Int, acc: B, break: Boolean, op: (B, A, Int) => (B, Boolean)): B = {
     if (start == end || break) {
       acc
     } else {
@@ -116,6 +117,9 @@ trait FastArrayOps {
     ImmutableArray[A](concat)
   }
 
+  def indexRange: ImmutableArray[Int] = {
+    ImmutableArray(Array.range(0, length))
+  }
 
   def map(f: A => A): ImmutableArray[A] = {
     val len = length
@@ -130,20 +134,43 @@ trait FastArrayOps {
   }
 
 
-  // TODO: CONTINUE HERE
-  def map[B: ClassTag](f: A => B): ImmutableArray[A] = {
+  def map[@specialized(Int, Long, Double) B: ClassTag](f: A => B): ImmutableArray[B] = {
     val len = length
-    val res: Array[A] = new Array[A](len)
+    val res: Array[B] = new Array[B](len)
 
     var i = 0
     while (i < len) {
       res(i) = f(apply(ArrayIndex(i)))
       i += 1
     }
-    ImmutableArray[A](res)
+    ImmutableArray[B](res)
   }
 
-  def mapWithIndex(f: (A, Int) ⇒ A): ImmutableArray[A] = {
+  def map(f: A => Tuple): ImmutableTupleArray = {
+    val len = length
+
+    if (len == 0) {
+      ImmutableTupleArray.empty(0)
+    } else {
+      val dim = f(head).dim
+
+      val res = ImmutableTupleArray.empty(dim, len).asInstanceOf[Array[Array[Double]]]
+
+      var i = 0
+      while (i < len) {
+        var d = 0
+        while (d < dim) {
+          res(d)(i) = f(apply(ArrayIndex(i)))(d)
+          d += 1
+        }
+        i += 1
+      }
+
+      ImmutableTupleArray(res.asInstanceOf[Array[ImmutableArray[Double]]])
+    }
+  }
+
+  def mapWithIndex(f: ((A, Int)) ⇒ A): ImmutableArray[A] = {
     val len = length
     val res: Array[A] = new Array[A](len)
 

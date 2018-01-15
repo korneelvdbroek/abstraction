@@ -1,6 +1,7 @@
 package com.fbot.main
 
 import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray}
+import com.fbot.common.fastcollections._
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
@@ -22,8 +23,11 @@ import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray}
 object TestBoxing extends App {
 
   // TODO: checks
-  val b = ImmutableArray[Double] // check it is implemented as Array[Double] (check one of the functions)
+  val a = ImmutableArray[ArrayIndex](Array(ArrayIndex(4), ArrayIndex(11)))  // check it is implemented as Array[Int]
 
-  val a = ImmutableArray[ArrayIndex]  // check it is implemented as Array[Int]
+  val b = ImmutableArray[Double](Array(4d, 11d, 8d, 2d, 13d)) // check it is implemented as Array[Double] (check one of the functions)
 
+  val c = b.map((x: Double) => x.toInt)
+
+  val d = b.indexOfSorted
 }

@@ -25,7 +25,7 @@ trait NearestNeighbors {
   }
 
 
-  def kNearest(space: HyperSpace)(k: Int, centerTupleIndex: ArrayIndex): ImmutableArray[Int] = {
+  def kNearest(space: HyperSpace)(k: Int, centerTupleIndex: ArrayIndex): ImmutableArray[ArrayIndex] = {
 
     val centerTuple = points(centerTupleIndex)
     val (pointsBySpaceUnitKeys, pointsBySpaceUnitValues) = pointsBySpaceUnitPerSpace(space)
@@ -78,7 +78,7 @@ trait NearestNeighbors {
   }
 
 
-  def numberOfCloseByPointsBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[Int])
+  def numberOfCloseByPointsBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[ArrayIndex])
                                      (distance: Double, centerTuple: Tuple): Int = {
     // minus 1 to exclude the self (so self should be in pointSubsetIndices)
     pointSubsetIndices.count(index => space.distance(points(index), centerTuple) <= distance) - 1
@@ -88,7 +88,7 @@ trait NearestNeighbors {
   /**
     * Number of points x_j which have ||x_j - x_i|| <= distance and j != i
     */
-  def numberOfCloseByPoints(space: HyperSpace)(distance: Double, centerTupleIndex: Int): Int = {
+  def numberOfCloseByPoints(space: HyperSpace)(distance: Double, centerTupleIndex: ArrayIndex): Int = {
     val centerTuple = points(centerTupleIndex)
 
     val cube = HyperCube.from(space.hyperSpaceUnitAround(centerTuple)).growCubeSidesToIncludeDistanceAround(space)(distance, centerTuple)

@@ -232,6 +232,10 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
     ImmutableTupleArray(res)
   }
 
+  def indexRange: ImmutableArray[Int] = {
+    ImmutableArray(Array.range(0, length))
+  }
+
   def filter(p: Tuple ⇒ Boolean): ImmutableTupleArray = {
     select(filterIndices(p))
   }
@@ -377,5 +381,39 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
 
 
 object ImmutableTupleArray {
+
+  def fromTuples(tuples: ImmutableArray[Tuple]): ImmutableTupleArray = {
+    val len = tuples.length
+
+    if (len == 0) {
+      ImmutableTupleArray.empty(0)
+    } else {
+      val dim = tuples.head.dim
+
+      val res = ImmutableTupleArray.empty(dim, len).asInstanceOf[Array[Array[Double]]]
+
+      var i = 0
+      while (i < len) {
+        var d = 0
+        while (d < dim) {
+          res(d)(i) = tuples(ArrayIndex(i))(d)
+          d += 1
+        }
+        i += 1
+      }
+
+      ImmutableTupleArray(res.asInstanceOf[Array[ImmutableArray[Double]]])
+    }
+  }
+
+  def empty(dim: Int, len: Int = 0): ImmutableTupleArray = {
+    var d: Int = 0
+    val res: Array[Array[Double]] = new Array[Array[Double]](dim)
+    while (d < dim) {
+      res(d) = new Array[Double](len)
+      d += 1
+    }
+    ImmutableTupleArray(res.asInstanceOf[Array[ImmutableArray[Double]]])
+  }
 
 }
