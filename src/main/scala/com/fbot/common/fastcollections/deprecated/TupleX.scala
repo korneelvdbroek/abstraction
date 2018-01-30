@@ -1,7 +1,5 @@
-package com.fbot.common.hyperspace
+package com.fbot.common.fastcollections.deprecated
 
-import com.fbot.common.fastcollections.deprecated.{BuilderFromArray, FastTuple, ImmutableArrayY}
-import com.fbot.common.fastcollections.{BuilderFromArray, ImmutableArray$}
 import com.fbot.common.fastcollections.deprecated.math.FastTupleDoubleMath
 
 import scala.collection.mutable

@@ -1,10 +1,11 @@
 package com.fbot.common.fastcollections.fastarrayops
 
 import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray, Tuple}
-import shapeless.newtype.newtypeOps
+import com.fbot.common.fastcollections._
 
 import scala.collection.mutable
 import scala.math.Ordering
+import scala.reflect.ClassTag
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
@@ -27,41 +28,43 @@ case class FastDoubleArrayOps(repr: Array[Double]) extends FastArrayOps {
 
   type A = Double
 
+  implicit val evidence: ClassTag[Double] = ClassTag.Double
+
   def indexOfSorted: ImmutableArray[ArrayIndex] = {
     val len = length
 
     if (len <= 1) {
       ImmutableArray(repr.map(_ => ArrayIndex(0)))
     } else {
-      val indices: Array[Int] = Array.range(0, len)
+      val indices: Array[AnyRef] = Array.range(0, len).map(_.asInstanceOf[AnyRef])
       val ord: Ordering[Int] = Ordering.fromLessThan((i, j) => repr(i) < repr(j))
-      java.util.Arrays.sort(indices, ord.asInstanceOf[Ordering[Int]])
+      java.util.Arrays.sort(indices, ord.asInstanceOf[Ordering[Object]])
       ImmutableArray(indices.asInstanceOf[Array[ArrayIndex]])
     }
-
   }
 
-  def partialSort(k: Int): ImmutableArray[Double] = {
+  def partialSort(k: Int): (ImmutableArray[ArrayIndex], ImmutableArray[Double]) = {
     val len = length
-    val pq: mutable.PriorityQueue[Double] = new mutable.PriorityQueue[Double]()(Ordering.Double.lt)
+    val pq: mutable.PriorityQueue[(ArrayIndex, Double)] = new mutable.PriorityQueue[(ArrayIndex, Double)]()(Ordering.by(_._2))
 
     // load up the PQ
     var i = 0
     while (i < k && i < len) {
-      pq.enqueue(repr(i))
+      pq.enqueue((ArrayIndex(i), repr(i)))
       i += 1
     }
 
     // evaluate rest of array
     while (i < len) {
-      if (repr(i) <= pq.head) {
+      if (repr(i) <= pq.head._2) {
         pq.dequeue()
-        pq.enqueue(repr(i))
+        pq.enqueue((ArrayIndex(i), repr(i)))
       }
       i += 1
     }
 
-    ImmutableArray(pq.dequeueAll.reverse.toArray)
+    val (sortedIndices, sortedValues) = pq.dequeueAll.reverse.unzip
+    (ImmutableArray(sortedIndices), ImmutableArray(sortedValues))
   }
 
 
@@ -91,7 +94,7 @@ case class FastDoubleArrayOps(repr: Array[Double]) extends FastArrayOps {
 
     var i = 0
     while (i < len) {
-      res(i) = f(apply(ArrayIndex(i)), newtypeOps(rhs).repr.apply(i))
+      res(i) = f(apply(ArrayIndex(i)), rhs.repr.apply(i))
       i += 1
     }
     ImmutableArray[Double](res)

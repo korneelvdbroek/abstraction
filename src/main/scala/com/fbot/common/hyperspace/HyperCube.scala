@@ -1,7 +1,7 @@
 package com.fbot.common.hyperspace
 
-import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.ImmutableArray._
+import com.fbot.common.fastcollections.{HyperSpaceUnit, ImmutableArray}
+import com.fbot.common.fastcollections._
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
@@ -32,14 +32,14 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
     val embeddedPoint = space.embed(point)
     val (vectorToLeft, vectorToRight) = (embeddedPoint - space.toCoordinate(left), space.toCoordinate(right) - embeddedPoint)
 
-    val unitsToGrow = ImmutableArray.range(0, dim).map(axis => {
+    val unitsToGrow = ImmutableArray.range(0, dim).mapToNewType((axis: Int) => {
       val unitLength = space.unitCubeSizes(axis)
       val (l, r) = (vectorToLeft(axis), vectorToRight(axis))
 
       (if (l < epsilon) -((epsilon - l) / unitLength).floor.toLong - 1L else 0L,
         if (r <= epsilon) ((epsilon - r) / unitLength).floor.toLong + 1L else 0L)
     })
-    grow(unitsToGrow.map(_._1), unitsToGrow.map(_._2))
+    grow(unitsToGrow.mapToNewType(_._1), unitsToGrow.mapToNewType(_._2))
   }
 
   def contains(unitHyperSpace: HyperSpaceUnit): Boolean = {

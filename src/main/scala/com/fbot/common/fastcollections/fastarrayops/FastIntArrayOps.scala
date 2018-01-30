@@ -1,10 +1,11 @@
 package com.fbot.common.fastcollections.fastarrayops
 
 import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray}
-import shapeless.newtype.newtypeOps
+import com.fbot.common.fastcollections._
 
 import scala.collection.mutable
 import scala.math.Ordering
+import scala.reflect.ClassTag
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
@@ -27,6 +28,8 @@ case class FastIntArrayOps(repr: Array[Int]) extends FastArrayOps {
 
   type A = Int
 
+  implicit val evidence: ClassTag[Int] = ClassTag.Int
+
   def sorted: ImmutableArray[Int] = {
     val len = length
 
@@ -42,27 +45,28 @@ case class FastIntArrayOps(repr: Array[Int]) extends FastArrayOps {
 
   }
 
-  def partialSort(k: Int): ImmutableArray[Int] = {
+  def partialSort(k: Int): (ImmutableArray[ArrayIndex], ImmutableArray[Int]) = {
     val len = length
-    val pq: mutable.PriorityQueue[Int] = new mutable.PriorityQueue[Int]()(Ordering.Int.lt)
+    val pq: mutable.PriorityQueue[(ArrayIndex, Int)] = new mutable.PriorityQueue[(ArrayIndex, Int)]()(Ordering.by(_._2))
 
     // load up the PQ
     var i = 0
     while (i < k && i < len) {
-      pq.enqueue(repr(i))
+      pq.enqueue((ArrayIndex(i), repr(i)))
       i += 1
     }
 
     // evaluate rest of array
     while (i < len) {
-      if (repr(i) <= pq.head) {
+      if (repr(i) <= pq.head._2) {
         pq.dequeue()
-        pq.enqueue(repr(i))
+        pq.enqueue((ArrayIndex(i), repr(i)))
       }
       i += 1
     }
 
-    ImmutableArray(pq.dequeueAll.reverse.toArray)
+    val (sortedIndices, sortedValues) = pq.dequeueAll.reverse.unzip
+    (ImmutableArray(sortedIndices), ImmutableArray(sortedValues))
   }
 
 
@@ -85,14 +89,14 @@ case class FastIntArrayOps(repr: Array[Int]) extends FastArrayOps {
 
     var i = 0
     while (i < len) {
-      res(i) = f(apply(ArrayIndex(i)), newtypeOps(rhs).repr.apply(i))
+      res(i) = f(apply(ArrayIndex(i)), rhs.repr.apply(i))
       i += 1
     }
     ImmutableArray[Int](res)
   }
 
   def unary_-(): ImmutableArray[Int] = {
-    map(-_)
+    map((x: Int) => -x)
   }
 
   def sum: Int = {

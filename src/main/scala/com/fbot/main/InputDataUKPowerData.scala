@@ -6,7 +6,7 @@ import java.time.{Instant, LocalDateTime, ZoneId, ZonedDateTime}
 
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.ImmutableArray._
+import com.fbot.common.fastcollections._
 import com.fbot.common.fastcollections.Tuple
 import com.fbot.common.timeseries.TimeSeries
 import grizzled.slf4j.Logging
@@ -40,11 +40,11 @@ case class InputDataUKPowerData(implicit sc: SparkContext) extends TestData with
     val csvFormatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss")
 
     val powerTimeSeries = TimeSeries.fromCsv("data/UK_grid_power/DemandData_2011-2016.csv")(row => {
-      val date = ZonedDateTime.of(LocalDateTime.parse(row(0) + " 00:00:00", csvFormatter), timeZone)
-      val minutes = (row(1).toLong - 1L) * 30L
+      val date = ZonedDateTime.of(LocalDateTime.parse(row(ArrayIndex(0)) + " 00:00:00", csvFormatter), timeZone)
+      val minutes = (row(ArrayIndex(1)).toLong - 1L) * 30L
       val dateTime = date.plusMinutes(minutes)
 
-      val value = row(2).toDouble
+      val value = row(ArrayIndex(2)).toDouble
       (dateTime, value)
     })
 
@@ -58,7 +58,7 @@ case class InputDataUKPowerData(implicit sc: SparkContext) extends TestData with
 
     val seriesData = MultiSeries(fragments.filter(timeSeries => {
       timeSeries.length == 48 * 3 && timeSeries.head._1.isAfter(Instant.parse("2015-12-31T23:59:59Z"))
-    }).map(_.values.map(Tuple(_))))
+    }).mapToNewType(_.values.mapToTuple(Tuple(_))))
 
     info(s"Number of data fragments = ${seriesData.length }")
     info(s"Length of each data fragment = ${seriesData(0).length }")

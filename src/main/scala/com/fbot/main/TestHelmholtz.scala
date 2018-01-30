@@ -52,13 +52,9 @@ object TestHelmholtz extends Logging {
 
 
     val conf = new SparkConf().setAppName("Simple Application")
-    conf.registerKryoClasses(Array(classOf[mutable.WrappedArray.ofRef[_]],
-                                   classOf[mutable.WrappedArray.ofDouble],
-                                   classOf[DenseMatrix],
+    conf.registerKryoClasses(Array(classOf[DenseMatrix],
                                    classOf[Array[Matrix]],
-                                   classOf[ImmutableArray[Double]],
-                                   classOf[Array[Tuple]],
-                                   classOf[Tuple],
+                                   classOf[Array[Double]],
                                    classOf[IndexedSeries],
                                    classOf[Series],
                                    classOf[MultiSeries.SeriesIndexCombination],

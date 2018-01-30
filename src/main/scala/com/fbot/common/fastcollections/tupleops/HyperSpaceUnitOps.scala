@@ -1,6 +1,8 @@
-package com.fbot.common.fastcollections
+package com.fbot.common.fastcollections.tupleops
 
-import shapeless.newtype.newtypeOps
+import com.fbot.common.fastcollections.HyperSpaceUnit
+import com.fbot.common.fastcollections._
+import com.fbot.common.hyperspace.HyperSpace
 
 import scala.annotation.tailrec
 
@@ -21,7 +23,7 @@ import scala.annotation.tailrec
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-case class TupleOps(repr: Array[Double]) {
+case class HyperSpaceUnitOps(repr: Array[Long]) {
 
   def length: Int = repr.length
 
@@ -32,22 +34,22 @@ case class TupleOps(repr: Array[Double]) {
   def nonEmpty: Boolean = !isEmpty
 
 
-  def apply(index: Int): Double = repr(index)
+  def apply(index: Int): Long = repr(index)
 
 
-  def head: Double = repr(0)
+  def head: Long = repr(0)
 
-  def headOption: Option[Double] = if (nonEmpty) Some(head) else None
+  def headOption: Option[Long] = if (nonEmpty) Some(head) else None
 
-  def last: Double = repr(length - 1)
+  def last: Long = repr(length - 1)
 
-  def lastOption: Option[Double] = if (nonEmpty) Some(last) else None
+  def lastOption: Option[Long] = if (nonEmpty) Some(last) else None
 
 
-  def foldLeft[B](z: B)(op: (B, Double) => B): B = foldl(0, length, z, op)
+  def foldLeft[B](z: B)(op: (B, Long) => B): B = foldl(0, length, z, op)
 
   @tailrec
-  private def foldl[B](start: Int, end: Int, acc: B, op: (B, Double) => B): B = {
+  private def foldl[B](start: Int, end: Int, acc: B, op: (B, Long) => B): B = {
     if (start == end) {
       acc
     } else {
@@ -55,10 +57,10 @@ case class TupleOps(repr: Array[Double]) {
     }
   }
 
-  def foldLeftOrBreak[B](z: B)(op: (B, Double) => (B, Boolean)): B = foldl(0, length, z, break = false, op)
+  def foldLeftOrBreak[B](z: B)(op: (B, Long) => (B, Boolean)): B = foldl(0, length, z, break = false, op)
 
   @tailrec
-  private def foldl[B](start: Int, end: Int, acc: B, break: Boolean, op: (B, Double) => (B, Boolean)): B = {
+  private def foldl[B](start: Int, end: Int, acc: B, break: Boolean, op: (B, Long) => (B, Boolean)): B = {
     if (start == end || break) {
       acc
     } else {
@@ -67,7 +69,7 @@ case class TupleOps(repr: Array[Double]) {
     }
   }
 
-  def forall(p: (Double) => Boolean): Boolean = {
+  def forall(p: (Long) => Boolean): Boolean = {
     val len = length
 
     var i = 0
@@ -77,7 +79,7 @@ case class TupleOps(repr: Array[Double]) {
     i == len
   }
 
-  def forallWithIndex(p: (Double, Int) => Boolean): Boolean = {
+  def forallWithIndex(p: (Long, Int) => Boolean): Boolean = {
     val len = length
 
     var i = 0
@@ -87,7 +89,7 @@ case class TupleOps(repr: Array[Double]) {
     i == len
   }
 
-  def count(p: (Double) => Boolean): Int = {
+  def count(p: (Long) => Boolean): Int = {
     val len = length
 
     var count = 0
@@ -100,70 +102,75 @@ case class TupleOps(repr: Array[Double]) {
     count
   }
 
-  def ++ (that: Tuple): Tuple = {
+  def ++ (that: HyperSpaceUnit): HyperSpaceUnit = {
     val thisLen = repr.length
     val thatLen = that.length
 
-    val concat = new Array[Double](thisLen + thatLen)
+    val concat = new Array[Long](thisLen + thatLen)
     System.arraycopy(repr, 0, concat, 0, thisLen)
     System.arraycopy(that.repr, 0, concat, thisLen, thatLen)
-    Tuple(concat)
+    HyperSpaceUnit(concat)
   }
 
-  def toList: List[Double] = doubleArrayOps(repr).toList
+  def toList: List[Long] = repr.toList
 
-  def toSet: Set[Double] = doubleArrayOps(repr).toSet
+  def toSet: Set[Long] = repr.toSet
 
-  override def toString: String = mkString("(", ", ", ")")
+  override def toString: String = mkString("HyperSpaceUnit(", ", ", ")")
 
   def mkString(start: String, sep: String, end: String): String = {
-    doubleArrayOps(repr).mkString(start, sep, end)
+    repr.mkString(start, sep, end)
+  }
+
+  def mkString(space: HyperSpace): String = {
+    space.toCoordinate(HyperSpaceUnit(repr)).mkString("SpaceUnit(", ",", ")")
   }
 
 
-  def + (rhs: Tuple): Tuple = {
+  def + (rhs: HyperSpaceUnit): HyperSpaceUnit = {
     elementWise(_ + _)(rhs)
   }
 
-  def - (rhs: Tuple): Tuple = {
+  def - (rhs: HyperSpaceUnit): HyperSpaceUnit = {
     elementWise(_ - _)(rhs)
   }
 
-  def * (rhs: Tuple): Tuple = {
+  def * (rhs: HyperSpaceUnit): HyperSpaceUnit = {
     elementWise(_ * _)(rhs)
   }
 
-  def / (rhs: Tuple): Tuple = {
+  def / (rhs: HyperSpaceUnit): HyperSpaceUnit = {
     elementWise(_ / _)(rhs)
   }
 
-  private def elementWise(f: (Double, Double) => Double)(rhs: Tuple): Tuple = {
+  private def elementWise(f: (Long, Long) => Long)(rhs: HyperSpaceUnit): HyperSpaceUnit = {
     val len = length
-    val res: Array[Double] = new Array[Double](length)
+    val res: Array[Long] = new Array[Long](length)
 
     var i = 0
     while (i < len) {
       res(i) = f(apply(i), rhs.repr.apply(i))
       i += 1
     }
-    Tuple(res)
+    HyperSpaceUnit(res)
   }
 
-  def unary_-(): Tuple = {
+  def unary_-(): HyperSpaceUnit = {
     map(-_)
   }
 
-  private def map(f: Double => Double): Tuple = {
+  private def map(f: Long => Long): HyperSpaceUnit = {
     val len = length
-    val res: Array[Double] = new Array[Double](length)
+    val res: Array[Long] = new Array[Long](length)
 
     var i = 0
     while (i < len) {
       res(i) = f(apply(i))
       i += 1
     }
-    Tuple(res)
+    HyperSpaceUnit(res)
   }
 
 
 }
+

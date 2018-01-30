@@ -1,8 +1,12 @@
 package com.fbot.common
 
 import com.fbot.common.fastcollections.fastarrayops._
+import com.fbot.common.fastcollections.tupleops.{HyperSpaceUnitOps, TupleOps}
 import shapeless.newtype
 import shapeless.newtype.Newtype
+
+import scala.io.Source
+import scala.reflect.ClassTag
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
@@ -68,12 +72,34 @@ package object fastcollections {
     def fill(dim: Int)(elem: ⇒ Double): Tuple = Tuple(Array.fill(dim)(elem))
   }
 
+
+  /**
+    * HyperSpaceUnit
+    */
+  type HyperSpaceUnit = Newtype[Array[Long], HyperSpaceUnitOps]
+
+  def HyperSpaceUnit(arr: Array[Long]): HyperSpaceUnit = newtype[Array[Long], HyperSpaceUnitOps](arr)
+
+  def HyperSpaceUnit(d: Long*): HyperSpaceUnit = HyperSpaceUnit(d.toArray)
+
+  implicit def hyperSpaceUnitOps(t: HyperSpaceUnit): HyperSpaceUnitOps = HyperSpaceUnitOps(t.asInstanceOf[Array[Long]])
+
+  object HyperSpaceUnit {
+
+    def fill(dim: Int)(elem: ⇒ Long): HyperSpaceUnit = HyperSpaceUnit(Array.fill(dim)(elem))
+
+    def apply(position: Long*): HyperSpaceUnit = HyperSpaceUnit(position.toArray)
+
+    def unit(dim: Int): HyperSpaceUnit = HyperSpaceUnit(Array.fill[Long](dim)(1L))
+  }
+
+
   /**
     * ImmutableArray
     */
   type ImmutableArray[T] = Newtype[Array[T], FastArrayOps]
 
-  def ImmutableArray[T](arr: Array[T]): ImmutableArray[T] = newtype(arr)
+  def ImmutableArray[@specialized(Double, Int, Long) T](arr: Array[T]): ImmutableArray[T] = newtype(arr)
 
   implicit def immutableArrayOps4Generic[T](t: ImmutableArray[T]): FastGenericArrayOps[T] = FastGenericArrayOps(t.asInstanceOf[Array[T]])
 
@@ -84,8 +110,13 @@ package object fastcollections {
   implicit def immutableArrayOps4Long(t: ImmutableArray[Long]): FastLongArrayOps = FastLongArrayOps(t.asInstanceOf[Array[Long]])
 
   object ImmutableArray {
+    def apply[@specialized(Double, Int, Long) A: ClassTag](data0: A, dataRest: A*): ImmutableArray[A] = ImmutableArray[A]((data0 +: dataRest).toArray)
 
-    def empty[@specialized(Double, Int, Long) A]: ImmutableArray[A] = ImmutableArray(new Array[A](0))
+    def apply[@specialized(Double, Int, Long) A: ClassTag](data: TraversableOnce[A]): ImmutableArray[A] = ImmutableArray[A](data.toArray)
+
+    def fill[@specialized(Double, Int, Long) A: ClassTag](n: Int)(elem: ⇒ A): ImmutableArray[A] = ImmutableArray(Array.fill[A](n)(elem))
+
+    def empty[@specialized(Double, Int, Long) A: ClassTag]: ImmutableArray[A] = ImmutableArray(new Array[A](0))
 
     def indexRange(length: Int): ImmutableArray[Int] = ImmutableArray(Array.range(0, length))
 
@@ -95,6 +126,17 @@ package object fastcollections {
 
     def range(from: Long, to: Long): ImmutableArray[Long] = ImmutableArray(Array.range(from.toInt, to.toInt).map(_.toLong))
 
+    def fromCsv[T: ClassTag](fileName: String,
+                             separator: String = ",", skipHeaderLines: Int = 1)
+                            (valueFromRow: ImmutableArray[String] => T): ImmutableArray[T] = {
+      val bufferedSource = Source.fromFile(fileName)
+
+      val rows = ImmutableArray(bufferedSource.getLines.map(line => {
+        ImmutableArray(line.split(separator, -1))
+      }).drop(skipHeaderLines))
+
+      rows.mapToNewType(valueFromRow)
+    }
   }
 
 }

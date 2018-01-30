@@ -2,7 +2,6 @@ package com.fbot.common.fastcollections.fastarrayops
 
 import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray, ImmutableTupleArray, Tuple}
 import com.fbot.common.fastcollections._
-import shapeless.newtype.newtypeOps
 
 import scala.annotation.tailrec
 import scala.reflect.ClassTag
@@ -28,6 +27,8 @@ trait FastArrayOps {
 
   type A
 
+  implicit val evidence: ClassTag[A]
+
   def repr: Array[A]
 
   def length: Int = repr.length
@@ -39,7 +40,7 @@ trait FastArrayOps {
   def nonEmpty: Boolean = !isEmpty
 
 
-  def apply(index: ArrayIndex): A = repr(index)
+  def apply(index: ArrayIndex): A = repr(index.toInt)
 
 
   def head: A = repr(0)
@@ -62,14 +63,14 @@ trait FastArrayOps {
     }
   }
 
-  def foldLeftOrBreakWithIndex[B](z: B)(op: (B, A, Int) => (B, Boolean)): B = foldl(0, length, z, break = false, op)
+  def foldLeftOrBreakWithIndex[B](z: B)(op: (B, A, ArrayIndex) => (B, Boolean)): B = foldl(0, length, z, break = false, op)
 
   @tailrec
-  private def foldl[B](start: Int, end: Int, acc: B, break: Boolean, op: (B, A, Int) => (B, Boolean)): B = {
+  private def foldl[B](start: Int, end: Int, acc: B, break: Boolean, op: (B, A, ArrayIndex) => (B, Boolean)): B = {
     if (start == end || break) {
       acc
     } else {
-      val (newAcc, newBreak) = op(acc, apply(ArrayIndex(start)))
+      val (newAcc, newBreak) = op(acc, apply(ArrayIndex(start)), ArrayIndex(start))
       foldl(start + 1, end, newAcc, newBreak, op)
     }
   }
@@ -107,13 +108,13 @@ trait FastArrayOps {
     count
   }
 
-  def ++ (that: ImmutableArray[A]): ImmutableArray[A] = {
+  def ++(that: ImmutableArray[A]): ImmutableArray[A] = {
     val thisLen = repr.length
-    val thatLen = newtypeOps(that).length
+    val thatLen = that.length
 
     val concat = new Array[A](thisLen + thatLen)
     System.arraycopy(repr, 0, concat, 0, thisLen)
-    System.arraycopy(newtypeOps(that).repr, 0, concat, thisLen, thatLen)
+    System.arraycopy(that.repr, 0, concat, thisLen, thatLen)
     ImmutableArray[A](concat)
   }
 
@@ -134,7 +135,7 @@ trait FastArrayOps {
   }
 
 
-  def map[@specialized(Int, Long, Double) B: ClassTag](f: A => B): ImmutableArray[B] = {
+  def mapToNewType[@specialized(Int, Long, Double) B: ClassTag](f: A => B): ImmutableArray[B] = {
     val len = length
     val res: Array[B] = new Array[B](len)
 
@@ -146,7 +147,7 @@ trait FastArrayOps {
     ImmutableArray[B](res)
   }
 
-  def map(f: A => Tuple): ImmutableTupleArray = {
+  def mapToTuple(f: A => Tuple): ImmutableTupleArray = {
     val len = length
 
     if (len == 0) {
@@ -170,16 +171,31 @@ trait FastArrayOps {
     }
   }
 
-  def mapWithIndex(f: ((A, Int)) ⇒ A): ImmutableArray[A] = {
+  def mapWithIndexToNewType[@specialized(Int, Long, Double) B: ClassTag](f: (A, ArrayIndex) ⇒ B): ImmutableArray[B] = {
     val len = length
-    val res: Array[A] = new Array[A](len)
+    val res: Array[B] = new Array[B](len)
 
     var i = 0
     while (i < len) {
-      res(i) = f(apply(ArrayIndex(i)), i)
+      res(i) = f(apply(ArrayIndex(i)), ArrayIndex(i))
       i += 1
     }
-    ImmutableArray[A](res)
+    ImmutableArray[B](res)
+  }
+
+  private def flattenArray[@specialized(Double, Int, Long) B: ClassTag](unFlattened: Array[ImmutableArray[B]], flattenedLen: Int): ImmutableArray[B] = {
+    val len = length
+    val res: Array[B] = new Array[B](flattenedLen)
+
+    var i = 0
+    var pos = 0
+    while (i < len) {
+      val element = unFlattened(i)
+      System.arraycopy(element, 0, res, pos, element.length)
+      pos += element.length
+      i += 1
+    }
+    ImmutableArray[B](res)
   }
 
   def flatMap(f: A => ImmutableArray[A]): ImmutableArray[A] = {
@@ -191,23 +207,24 @@ trait FastArrayOps {
     while (i < len) {
       val mapped = f(apply(ArrayIndex(i)))
       unFlattened(i) = mapped
-      flattenedLength += newtypeOps(mapped).length
+      flattenedLength += mapped.length
       i += 1
     }
 
-    def flattenArray(unFlattened: Array[ImmutableArray[A]], flattenedLen: Int): ImmutableArray[A] = {
-      val len = length
-      val res: Array[A] = new Array[A](flattenedLen)
+    flattenArray(unFlattened, flattenedLength)
+  }
 
-      var i = 0
-      var pos = 0
-      while (i < len) {
-        val element = unFlattened(i)
-        System.arraycopy(element, 0, res, pos, newtypeOps(element).length)
-        pos += newtypeOps(element).length
-        i += 1
-      }
-      ImmutableArray[A](res)
+  def flatMapWithIndex[B: ClassTag](f: (A, ArrayIndex) => ImmutableArray[B]): ImmutableArray[B] = {
+    val len = length
+    val unFlattened: Array[ImmutableArray[B]] = new Array[ImmutableArray[B]](len)
+
+    var i = 0
+    var flattenedLength = 0
+    while (i < len) {
+      val mapped = f(apply(ArrayIndex(i)), ArrayIndex(i))
+      unFlattened(i) = mapped
+      flattenedLength += mapped.length
+      i += 1
     }
 
     flattenArray(unFlattened, flattenedLength)
@@ -277,7 +294,7 @@ trait FastArrayOps {
   }
 
   def groupBy[Key: ClassTag](f: A ⇒ Key): Map[Key, ImmutableArray[A]] = {
-    repr.groupBy(f).mapValues(ImmutableArray)
+    repr.groupBy(f).mapValues(grouped => ImmutableArray(grouped))
   }
 
 

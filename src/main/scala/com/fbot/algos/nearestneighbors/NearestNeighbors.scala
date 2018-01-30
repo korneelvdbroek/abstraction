@@ -14,14 +14,16 @@ trait NearestNeighbors {
   // TODO: refactor to unpack the Tuple to ImmutableArray[ImmutableArray[Double]]
   def points: ImmutableTupleArray
 
-  def pointsBySpaceUnitPerSpace: Map[HyperSpace, (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[Int]])]
+  def pointsBySpaceUnitPerSpace: Map[HyperSpace, (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[ArrayIndex]])]
 
 
   def kNearestBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[ArrayIndex])
-                        (k: Int, currentTuple: Tuple): ImmutableArray[(Int, Double)] = {
-    pointSubsetIndices
-      .map(index => (index, space.distance(points(index), currentTuple)))
-      .partialSort(k, (el1, el2) => el1._2 < el2._2)
+                        (k: Int, currentTuple: Tuple): (ImmutableArray[ArrayIndex], ImmutableArray[Double]) = {
+    val (sortedSubIndices, sortedDistances) = pointSubsetIndices
+      .mapToNewType(index => space.distance(points(index), currentTuple))
+      .partialSort(k)
+
+    (sortedSubIndices.map(subIndex => pointSubsetIndices(subIndex)), sortedDistances)
   }
 
 
@@ -32,18 +34,16 @@ trait NearestNeighbors {
 
 
     @tailrec
-    def kNearestInCube(kNearestCandidates: ImmutableArray[Int],
-                       cube: HyperCube, oldCube: HyperCube): ImmutableArray[(Int, Double)] = {
+    def kNearestInCube(kNearestCandidates: ImmutableArray[ArrayIndex],
+                       cube: HyperCube, oldCube: HyperCube): (ImmutableArray[ArrayIndex], ImmutableArray[Double]) = {
 
-      val pointsInNewUnitCubesUnflattened: ImmutableArray[ImmutableArray[Int]] = pointsBySpaceUnitKeys.mapWithIndex((hyperSpaceUnit, index) => {
+      val pointsInNewUnitCubes: ImmutableArray[ArrayIndex] = pointsBySpaceUnitKeys.flatMapWithIndex((hyperSpaceUnit, index) => {
         if (cube.contains(hyperSpaceUnit) && !oldCube.contains(hyperSpaceUnit)) {
           pointsBySpaceUnitValues(index)
         } else {
-          ImmutableArray.empty[Int]
+          ImmutableArray.empty[ArrayIndex]
         }
       })
-      val pointsInNewUnitCubes: ImmutableArray[Int] = pointsInNewUnitCubesUnflattened
-        .flatten[Int, ImmutableArray[Int]]
 
       val newCandidatePoints = if (kNearestCandidates.isEmpty) {
         pointsInNewUnitCubes.filterNot(_ == centerTupleIndex)
@@ -53,14 +53,14 @@ trait NearestNeighbors {
 
       if (newCandidatePoints.length >= k) {
         val kNearestWithDistance = kNearestBruteForce(space, newCandidatePoints)(k, centerTuple)
-        val epsilon = kNearestWithDistance.last._2
+        val epsilon = kNearestWithDistance._2.last
 
         val newCube = cube.growCubeSidesToIncludeDistanceAround(space)(epsilon, centerTuple)
 
         if (newCube == cube) {
           kNearestWithDistance
         } else {
-          kNearestInCube(kNearestWithDistance.map(_._1), newCube, cube)
+          kNearestInCube(kNearestWithDistance._1, newCube, cube)
         }
 
       } else {
@@ -72,9 +72,8 @@ trait NearestNeighbors {
 
     // initialize
     val spaceUnitAroundTuple = space.hyperSpaceUnitAround(centerTuple)
-    val kNearestCandidates = ImmutableArray.empty[Int]
-    kNearestInCube(kNearestCandidates, HyperCube.from(spaceUnitAroundTuple), HyperCube.empty(spaceUnitAroundTuple))
-      .map(_._1)
+    val kNearestCandidates = ImmutableArray.empty[ArrayIndex]
+    kNearestInCube(kNearestCandidates, HyperCube.from(spaceUnitAroundTuple), HyperCube.empty(spaceUnitAroundTuple))._1
   }
 
 
@@ -94,13 +93,13 @@ trait NearestNeighbors {
     val cube = HyperCube.from(space.hyperSpaceUnitAround(centerTuple)).growCubeSidesToIncludeDistanceAround(space)(distance, centerTuple)
 
     val (pointsBySpaceUnitKeys, pointsBySpaceUnitValues) = pointsBySpaceUnitPerSpace(space)
-    val potentialCloseByPoints: ImmutableArray[Int] = pointsBySpaceUnitKeys.mapWithIndex((hyperSpaceUnit, index) => {
+    val potentialCloseByPoints: ImmutableArray[ArrayIndex] = pointsBySpaceUnitKeys.flatMapWithIndex((hyperSpaceUnit, index) => {
       if (cube.contains(hyperSpaceUnit)) {
         pointsBySpaceUnitValues(index)
       } else {
-        ImmutableArray.empty[Int]
+        ImmutableArray.empty[ArrayIndex]
       }
-    }).flatten[Int, ImmutableArray[Int]]
+    })
 
 
     numberOfCloseByPointsBruteForce(space, potentialCloseByPoints)(distance, centerTuple)

@@ -1,6 +1,7 @@
 package com.fbot.common.data
 
 import com.fbot.common.fastcollections.{ImmutableArray, ImmutableTupleArray, Tuple}
+import com.fbot.common.fastcollections._
 import grizzled.slf4j.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{HashPartitioner, SparkContext}
@@ -70,6 +71,10 @@ case class MultiSeries(series: RDD[(Long, ImmutableTupleArray)], length: Int) ex
 
 object MultiSeries {
 
+  def apply(series: ImmutableArray[Tuple]*)(implicit sc: SparkContext): MultiSeries = {
+    MultiSeries(series.toArray.map(ImmutableTupleArray.fromTuples))
+  }
+
   def apply(series: ImmutableTupleArray*)(implicit sc: SparkContext): MultiSeries = {
     MultiSeries(series.toList)
   }
@@ -79,7 +84,9 @@ object MultiSeries {
   }
 
   def apply(series: ImmutableArray[ImmutableTupleArray])(implicit sc: SparkContext): MultiSeries = {
-    val matrix = series.mapWithIndex((row, index) => (index.toLong, row)).toArray
+    val matrix = series.mapWithIndexToNewType((row, index) => {
+      (index.toInt.toLong, row)
+    }).toArray
 
     // https://stackoverflow.com/questions/40636554/spark-ui-dag-stage-disconnected
     // .partitionBy right after parallelization is still advantageous since we partition by the row index
@@ -90,7 +97,7 @@ object MultiSeries {
 
   case class SeriesIndexCombination(combination: ImmutableArray[Long], partitionIndex: Int) {
 
-    def apply(pairIndex: Int): Long = combination(pairIndex)
+    def apply(pairIndex: ArrayIndex): Long = combination(pairIndex)
   }
 
   type SeriesCombination = Vector[IndexedSeries]

@@ -232,8 +232,8 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
     ImmutableTupleArray(res)
   }
 
-  def indexRange: ImmutableArray[Int] = {
-    ImmutableArray(Array.range(0, length))
+  def indexRange: ImmutableArray[ArrayIndex] = {
+    ImmutableArray(Array.range(0, length).map(ArrayIndex(_)))
   }
 
   def filter(p: Tuple ⇒ Boolean): ImmutableTupleArray = {
@@ -338,39 +338,6 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
   }
 
 
-  //  def sortWith(lt: (A, A) ⇒ Boolean)(implicit evidence: scala.reflect.ClassTag[A], builder: BuilderFromArray[A, Repr]): Repr = builder
-  //    .result(repr.sortWith(lt).toArray)
-  //
-  //  def sortBy[B](f: (A) ⇒ B)(implicit evidence: scala.reflect.ClassTag[A], ord: Ordering[B], builder: BuilderFromArray[A, Repr]): Repr = builder
-  //    .result(repr.sortBy(f).toArray)
-
-  def partialSort(k: Int): ImmutableTupleArray = {
-    val len = length
-
-    val array = repr.toArray
-    val pq: mutable.PriorityQueue[Tuple] = new mutable.PriorityQueue[Tuple]()(ordering)
-
-    // load up the PQ
-    var i: Int = 0
-    while (i < k && i < len) {
-      pq.enqueue(array(i))
-      i += 1
-    }
-
-    // evaluate rest of array
-    while (i < len) {
-      //println(s"${ array(i) } ${ ordering.compare(array(i), pq.head) }")
-      if (ordering.compare(array(i), pq.head) <= 0) {
-        pq.dequeue()
-        pq.enqueue(array(i))
-      }
-      i += 1
-    }
-
-    builder.result(pq.dequeueAll.reverse.toArray)
-  }
-
-
   // Strings
   override def toString: String = mkString("[", ", ", "]")
 
@@ -381,6 +348,8 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
 
 
 object ImmutableTupleArray {
+
+  def fill(n: Int)(elem: ⇒ Tuple): ImmutableTupleArray = fromTuples(ImmutableArray(Array.fill[Tuple](n)(elem)))
 
   def fromTuples(tuples: ImmutableArray[Tuple]): ImmutableTupleArray = {
     val len = tuples.length

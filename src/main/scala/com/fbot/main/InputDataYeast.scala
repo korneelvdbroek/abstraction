@@ -2,7 +2,7 @@ package com.fbot.main
 
 import com.fbot.common.data.MultiSeries
 import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.ImmutableArray._
+import com.fbot.common.fastcollections._
 import com.fbot.common.fastcollections.Tuple
 import org.apache.spark.SparkContext
 
@@ -38,23 +38,23 @@ case class InputDataYeast(implicit sc: SparkContext) extends TestData {
         Tuple(Try(dataCell.toDouble).getOrElse(0.0))
       }))
     }))
-    val dataSeriesNoHeader = dataSeries.slice(1, dataSeries.length)
+    val dataSeriesNoHeader: ImmutableArray[ImmutableArray[Tuple]] = dataSeries.slice(1, dataSeries.length)
     bufferedSource.close
 
-    println(dataSeriesNoHeader(0))
-    println(dataSeriesNoHeader(1))
-    println(dataSeriesNoHeader(2))
+    println(dataSeriesNoHeader(ArrayIndex(0)))
+    println(dataSeriesNoHeader(ArrayIndex(1)))
+    println(dataSeriesNoHeader(ArrayIndex(2)))
 
     // validation on length of series
-    val expectedLength = dataSeriesNoHeader(0).length
-    dataSeriesNoHeader.map(_.length).toList.zipWithIndex.foreach(x => {
+    val expectedLength = dataSeriesNoHeader(ArrayIndex(0)).length
+    dataSeriesNoHeader.mapToNewType(_.length).toList.zipWithIndex.foreach(x => {
       val (len, line) = x
       if (len != expectedLength) {
         println(s"issue on line $line: len = $len != $expectedLength")
       }
     })
 
-    MultiSeries(dataSeriesNoHeader)
+    MultiSeries(dataSeriesNoHeader.toArray.map(ImmutableTupleArray.fromTuples))
   }
 
 }

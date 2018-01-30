@@ -1,10 +1,11 @@
 package com.fbot.common.fastcollections.fastarrayops
 
 import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray}
-import shapeless.newtype.newtypeOps
+import com.fbot.common.fastcollections._
 
 import scala.collection.mutable
 import scala.math.Ordering
+import scala.reflect.ClassTag
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
@@ -27,6 +28,8 @@ case class FastLongArrayOps(repr: Array[Long]) extends FastArrayOps {
 
   type A = Long
 
+  implicit val evidence: ClassTag[Long] = ClassTag.Long
+
   def sorted: ImmutableArray[Long] = {
     val len = length
 
@@ -42,27 +45,28 @@ case class FastLongArrayOps(repr: Array[Long]) extends FastArrayOps {
 
   }
 
-  def partialSort(k: Long): ImmutableArray[Long] = {
+  def partialSort(k: Long): (ImmutableArray[ArrayIndex], ImmutableArray[Long]) = {
     val len = length
-    val pq: mutable.PriorityQueue[Long] = new mutable.PriorityQueue[Long]()(Ordering.Long.lt)
+    val pq: mutable.PriorityQueue[(ArrayIndex, Long)] = new mutable.PriorityQueue[(ArrayIndex, Long)]()(Ordering.by(_._2))
 
     // load up the PQ
     var i = 0
     while (i < k && i < len) {
-      pq.enqueue(repr(i))
+      pq.enqueue((ArrayIndex(i), repr(i)))
       i += 1
     }
 
     // evaluate rest of array
     while (i < len) {
-      if (repr(i) <= pq.head) {
+      if (repr(i) <= pq.head._2) {
         pq.dequeue()
-        pq.enqueue(repr(i))
+        pq.enqueue((ArrayIndex(i), repr(i)))
       }
       i += 1
     }
 
-    ImmutableArray(pq.dequeueAll.reverse.toArray)
+    val (sortedIndices, sortedValues) = pq.dequeueAll.reverse.unzip
+    (ImmutableArray(sortedIndices), ImmutableArray(sortedValues))
   }
 
 
@@ -85,14 +89,14 @@ case class FastLongArrayOps(repr: Array[Long]) extends FastArrayOps {
 
     var i = 0
     while (i < len) {
-      res(i) = f(apply(ArrayIndex(i)), newtypeOps(rhs).repr.apply(i))
+      res(i) = f(apply(ArrayIndex(i)), rhs.repr.apply(i))
       i += 1
     }
     ImmutableArray[Long](res)
   }
 
   def unary_-(): ImmutableArray[Long] = {
-    map(-_)
+    map((x: Long) => -x)
   }
 
   def sum: Long = {

@@ -2,9 +2,8 @@ package com.fbot.common.timeseries
 
 import java.time.{Instant, ZonedDateTime}
 
-import com.fbot.common.fastcollections.deprecated.FastArray2Zipped._
+import com.fbot.common.fastcollections._
 import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.ImmutableArray._
 
 import scala.reflect.ClassTag
 
@@ -71,7 +70,7 @@ object TimeSeries {
   def fromCsv(fileName: String,
               separator: String = ",", skipHeaderLines: Int = 1)
              (timestampedValueFromRow: ImmutableArray[String] => (ZonedDateTime, Double)): TimeSeries = {
-    TimeSeries(ImmutableArray.fromCsv("data/UK_grid_power/DemandData_2011-2016.csv")(timestampedValueFromRow).toWrappedArray)
+    TimeSeries(ImmutableArray.fromCsv("data/UK_grid_power/DemandData_2011-2016.csv")(timestampedValueFromRow).toArray)
   }
 
 }

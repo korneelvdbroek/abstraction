@@ -2,8 +2,8 @@ package com.fbot.main
 
 import breeze.linalg.{DenseMatrix, DenseVector}
 import com.fbot.algos.mutualinformation.MutualInformation
-import com.fbot.common.fastcollections.{ImmutableArray$, Tuple}
-import com.fbot.common.fastcollections.ImmutableArray._
+import com.fbot.common.fastcollections.Tuple
+import com.fbot.common.fastcollections._
 import com.fbot.common.hyperspace._
 import org.apache.spark.sql.SparkSession
 
@@ -66,13 +66,13 @@ object Test extends App {
 
   var aveTime: Long = 0L
   for (loop <- 0 until 20) {
-    val centerTupleIndex = Random.nextInt(cloud.points.length)
+    val centerTupleIndex = ArrayIndex(Random.nextInt(cloud.points.length))
     val centerTuple = cloud.points(centerTupleIndex)
 
     // Brute force
     val allPoints = cloud.points.indexRange.filterNot(_ == centerTupleIndex)
     val (resultBF, tBruteForce) = timeIt { cloud.kNearestBruteForce(space, allPoints)(k, centerTuple) }
-    val resultBruteForce = resultBF.map(_._1)
+    val resultBruteForce = resultBF._1
 
     // Optimized
     val (result, t) = timeIt { cloud.kNearest(space)(k, centerTupleIndex) }
@@ -92,7 +92,7 @@ object Test extends App {
   }
   println(f"ave time = $aveTime (${prettyPrintTime(aveTime) })")
 
-  val centerTupleIndex = Random.nextInt(cloud.points.length)
+  val centerTupleIndex = ArrayIndex(Random.nextInt(cloud.points.length))
   val centerTuple = cloud.points(centerTupleIndex)
 
 
@@ -105,13 +105,13 @@ object Test extends App {
   println(y)
 
 
-  private def checkIfEqual(space: HyperSpace)(centerTuple: Tuple, resultBF: ImmutableArray[Int], result: ImmutableArray[Int]): Unit = {
-    val resultWithDistance = result.map(index => (index, space.distance(cloud.points(index), centerTuple)))
-    val resultBFWithDistance = resultBF.map(index => (index, space.distance(cloud.points(index), centerTuple)))
+  private def checkIfEqual(space: HyperSpace)(centerTuple: Tuple, resultBF: ImmutableArray[ArrayIndex], result: ImmutableArray[ArrayIndex]): Unit = {
+    val resultWithDistance = result.mapToNewType(index => (index, space.distance(cloud.points(index), centerTuple)))
+    val resultBFWithDistance = resultBF.mapToNewType(index => (index, space.distance(cloud.points(index), centerTuple)))
 
-    def removeLargestDistance(data: ImmutableArray[(Int, Double)]): Map[Double, Set[Int]] = {
-      val maxDistance = data.map(_._2).repr.max // filter out biggest distance since we might have multiplicities...
-      data.groupBy(_._2).map(x => (x._1, x._2.map(_._1).toSet)).filterKeys(distance => distance != maxDistance)
+    def removeLargestDistance(data: ImmutableArray[(ArrayIndex, Double)]): Map[Double, Set[ArrayIndex]] = {
+      val maxDistance = data.mapToNewType(_._2).repr.max // filter out biggest distance since we might have multiplicities...
+      data.groupBy(_._2).map(x => (x._1, x._2.mapToNewType(x => x._1).toSet)).filterKeys(distance => distance != maxDistance)
     }
 
     if (removeLargestDistance(resultBFWithDistance) != removeLargestDistance(resultWithDistance)) {

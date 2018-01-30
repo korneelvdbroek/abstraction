@@ -5,6 +5,8 @@ import breeze.numerics.log
 import com.fbot.algos.mutualinformation.MutualInformation
 import com.fbot.common.data.MultiSeries.SeriesIndexCombination
 import com.fbot.common.data.{IndexedSeries, MultiSeries}
+import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections._
 import grizzled.slf4j.Logging
 import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry}
 import org.apache.spark.rdd.RDD
@@ -75,8 +77,8 @@ object TestMI extends Logging {
 
     info(sc.defaultParallelism)
 
-    val seriesPairs = (0 until data.length).combinations(2).toArray.map(_.toArray)
-      .zipWithIndex.map(x => SeriesIndexCombination(x._1.map(_.toLong), x._2))
+    val seriesPairs = (0 until data.length).combinations(2).toArray.map(ImmutableArray(_))
+      .zipWithIndex.map(x => SeriesIndexCombination(x._1.mapToNewType(_.toLong), x._2))
 
 
     // For every action performed on a dataframe, all transformations (=lazy) will be recomputed.

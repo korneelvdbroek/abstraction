@@ -3,9 +3,8 @@ package com.fbot.algos.mutualinformation
 import breeze.linalg.max
 import breeze.numerics.{digamma, pow, sqrt}
 import com.fbot.algos.nearestneighbors.NearestNeighbors
-import com.fbot.common.fastcollections.fastarrayops.FastIntArrayOps
 import com.fbot.common.fastcollections.{ImmutableArray, ImmutableTupleArray, Tuple, _}
-import com.fbot.common.hyperspace.{HyperSpace, HyperSpaceUnit, Space}
+import com.fbot.common.hyperspace.{HyperSpace, Space}
 import com.fbot.main.Utils
 import grizzled.slf4j.Logging
 
@@ -28,7 +27,7 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
 
   // determine where the mass of the distribution is located
   val margin: Double = 0.0001d
-  val massCubeVectors: ImmutableTupleArray = ImmutableArray.indexRange(2 * dim).map(d => {
+  val massCubeVectors: ImmutableTupleArray = ImmutableArray.indexRange(2 * dim).mapToTuple(d => {
     val coordinates = points.coordinate(d)
     val sortedIndices = coordinates.indexOfSorted
     val xLow = coordinates(sortedIndices.head)
@@ -84,7 +83,7 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
   val spaceY: HyperSpace = Space(ImmutableArray.range(dim, 2 * dim), massCubeVectors.coordinate(0).slice(dim, 2 * dim).toTuple, unitSizesY)
 
   def groupPointsBySpaceUnits(space: HyperSpace,
-                              points: ImmutableTupleArray): (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[Int]]) = {
+                              points: ImmutableTupleArray): (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[ArrayIndex]]) = {
     // Slow initial computation
     val (pointsBySpaceUnitKeys, pointsBySpaceUnitValues) =
       points.indexRange.groupBy(index => space.hyperSpaceUnitAround(points(index))).unzip
@@ -94,7 +93,7 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
     (ImmutableArray(pointsBySpaceUnitKeys.toArray), ImmutableArray(pointsBySpaceUnitValues.toArray))
   }
 
-  lazy val pointsBySpaceUnitPerSpace: Map[HyperSpace, (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[Int]])] = {
+  lazy val pointsBySpaceUnitPerSpace: Map[HyperSpace, (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[ArrayIndex]])] = {
     Map(space -> groupPointsBySpaceUnits(space, points),
         spaceX -> groupPointsBySpaceUnits(spaceX, points),
         spaceY -> groupPointsBySpaceUnits(spaceY, points))
@@ -102,7 +101,7 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
 
   def MI(k: Int = 10, absoluteTolerance: Double = 0.01): Double = {
     val sampleIndices = ImmutableArray.range(0, length)
-      .map((_: Int) => Random.nextDouble())
+      .mapToNewType((_: Int) => Random.nextDouble())
       .indexOfSorted
 
     val (mean, _): (Double, Double) = sampleIndices.foldLeftOrBreakWithIndex((0d, 0d))((acc, sampleIndex, countIndex) => {
@@ -112,8 +111,8 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
         kNearest(space)(k, sampleIndex)
       }
 
-      val epsilonX = kNearestIndices.map((kNearestIndex: ArrayIndex) => spaceX.distance(points(sampleIndex), points(kNearestIndex))).max
-      val epsilonY = kNearestIndices.map((kNearestIndex: ArrayIndex) => spaceY.distance(points(sampleIndex), points(kNearestIndex))).max
+      val epsilonX = kNearestIndices.mapToNewType(kNearestIndex => spaceX.distance(points(sampleIndex), points(kNearestIndex))).max
+      val epsilonY = kNearestIndices.mapToNewType(kNearestIndex => spaceY.distance(points(sampleIndex), points(kNearestIndex))).max
 
       val (x, t2) = Utils.timeIt {
         digamma(numberOfCloseByPoints(spaceX)(epsilonX, sampleIndex)) + digamma(numberOfCloseByPoints(spaceY)(epsilonY, sampleIndex))

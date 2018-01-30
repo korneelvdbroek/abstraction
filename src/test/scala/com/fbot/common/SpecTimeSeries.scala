@@ -2,7 +2,7 @@ package com.fbot.common
 
 import java.time.{ZoneId, ZonedDateTime}
 
-import com.fbot.common.fastcollections.ImmutableArrayY$
+import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.timeseries.TimeSeries
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -10,13 +10,14 @@ import org.scalatest.{FlatSpec, Matchers}
   *
   */
 class SpecTimeSeries extends FlatSpec with Matchers {
+
   import SpecTimeSeries._
 
   "fragmentBy" should "return 2 timeseries each containing 2 data points" in {
     val fragments = timeSeries1.fragmentBy((t, _) => ZonedDateTime.ofInstant(t, timeZone).getHour % 2 == 0,
                                            (start, end) => end._1.minusSeconds(3600 + 1).isBefore(start._1))
-    fragments shouldBe ImmutableArrayY(TimeSeries(List((t0, 0d), (t0.plusHours(1), 1d))),
-                                       TimeSeries(List((t0.plusHours(2), 4d), (t0.plusHours(3), 9d))))
+    fragments shouldBe ImmutableArray(TimeSeries(List((t0, 0d), (t0.plusHours(1), 1d))),
+                                      TimeSeries(List((t0.plusHours(2), 4d), (t0.plusHours(3), 9d))))
   }
 
 }
