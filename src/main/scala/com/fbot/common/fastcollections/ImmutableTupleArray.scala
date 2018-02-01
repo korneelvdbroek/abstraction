@@ -359,7 +359,12 @@ object ImmutableTupleArray {
     } else {
       val dim = tuples.head.dim
 
-      val res = ImmutableTupleArray.empty(dim, len).asInstanceOf[Array[Array[Double]]]
+      var d: Int = 0
+      val res: Array[Array[Double]] = new Array[Array[Double]](dim)
+      while (d < dim) {
+        res(d) = new Array[Double](len)
+        d += 1
+      }
 
       var i = 0
       while (i < len) {

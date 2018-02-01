@@ -4,6 +4,7 @@ import java.time.{Instant, ZonedDateTime}
 
 import com.fbot.common.fastcollections._
 import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.fastarrayops.FastArray2Zipped._
 
 import scala.reflect.ClassTag
 
@@ -33,19 +34,21 @@ case class TimeSeries(timestamps: ImmutableArray[Long], values: ImmutableArray[D
   def head: (Instant, Double) = (instantFromLong(timestamps.head), values.head)
 
   def groupBy[Key: ClassTag](f: (Instant, Double) => Key): ImmutableArray[TimeSeries] = {
-    ImmutableArray((timestamps, values)
-                     .groupBy((t, x) => f(instantFromLong(t), x))
-                     .values
-                     .map(timestampsAndValues => TimeSeries(timestampsAndValues._1, timestampsAndValues._2)))
+    val setOfTimeSeries = tuple2FastArray2Zipped(timestamps, values)
+      .groupBy((t, x) => f(instantFromLong(t), x))
+      .values
+      .map(x => TimeSeries(x._1, x._2))
+    ImmutableArray(setOfTimeSeries)
   }
 
-  def fragmentBy(start: (Instant, Double) => Boolean,
-                 end: ((Instant, Double), (Instant, Double)) => Boolean): ImmutableArray[TimeSeries] = {
-    val indicesOfStart = (timestamps, values).indicesWhere((t, x) => start(instantFromLong(t), x))
+  def fragmentBy(startMarker: (Instant, Double) => Boolean,
+                 endMarker: ((Instant, Double), (Instant, Double)) => Boolean): ImmutableArray[TimeSeries] = {
+
+    val indicesOfStart = (timestamps, values).indicesWhere((t, x) => startMarker(instantFromLong(t), x)).map(index => ArrayIndex(index))
 
     indicesOfStart.map(startIndex => {
       val startDataPoint = (instantFromLong(timestamps(startIndex)), values(startIndex))
-      val (slicedTimestamps, slicedValues) = (timestamps, values).sliceWhile((t, x) => end(startDataPoint, (instantFromLong(t), x)), startIndex).zipArray
+      val (slicedTimestamps, slicedValues) = (timestamps, values).sliceWhile((t, x) => endMarker(startDataPoint, (instantFromLong(t), x)), startIndex).zipArray
       TimeSeries(slicedTimestamps, slicedValues)
     })
   }

@@ -40,9 +40,9 @@ object Utils {
   def printImmutableMatrix[T](matrix: ImmutableArray[ImmutableArray[T]],
                               formatPattern: String = "%5.3f", separator: String = ", ",
                               maxRows: Option[Int] = None, maxCols: Option[Int] = Some(10)): String = {
-    val lines = matrix.mapWithIndexToNewType((row, rowIndex) => {
+    val lines = matrix.mapWithIndex((row, rowIndex) => {
       if (maxRows.forall(rowIndex.toInt < _)) {
-        val rowStr = row.mapWithIndexToNewType((value, colIndex) => {
+        val rowStr = row.mapWithIndex((value, colIndex) => {
           if (maxCols.forall(colIndex.toInt < _)) {
             formatPattern.format(value) + (if (colIndex.toInt < row.length - 1) separator else "")
           } else if (maxCols.contains(colIndex.toInt)) {

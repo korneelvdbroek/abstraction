@@ -28,8 +28,6 @@ case class FastDoubleArrayOps(repr: Array[Double]) extends FastArrayOps {
 
   type A = Double
 
-  implicit val evidence: ClassTag[Double] = ClassTag.Double
-
   def indexOfSorted: ImmutableArray[ArrayIndex] = {
     val len = length
 

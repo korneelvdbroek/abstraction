@@ -27,7 +27,7 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
 
   // determine where the mass of the distribution is located
   val margin: Double = 0.0001d
-  val massCubeVectors: ImmutableTupleArray = ImmutableArray.indexRange(2 * dim).mapToTuple(d => {
+  val massCubeVectors: ImmutableTupleArray = ImmutableArray.range(0, 2 * dim).mapToTuple(d => {
     val coordinates = points.coordinate(d)
     val sortedIndices = coordinates.indexOfSorted
     val xLow = coordinates(sortedIndices.head)
@@ -69,7 +69,7 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
       }
     })._2.reverse
 
-    info(s"${massCubeEdgeSize.length }d space: split into ${Tuple(massCubeEdgeSize.toArray) / Tuple(partitionVector.toArray) } space units")
+    info(s"${massCubeEdgeSize.length }d space: split into ${(Tuple(massCubeEdgeSize.toArray) / Tuple(partitionVector.toArray)).forceString } space units")
 
     Tuple(partitionVector.toArray)
   }
@@ -101,7 +101,7 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
 
   def MI(k: Int = 10, absoluteTolerance: Double = 0.01): Double = {
     val sampleIndices = ImmutableArray.range(0, length)
-      .mapToNewType((_: Int) => Random.nextDouble())
+      .map((_: Int) => Random.nextDouble())
       .indexOfSorted
 
     val (mean, _): (Double, Double) = sampleIndices.foldLeftOrBreakWithIndex((0d, 0d))((acc, sampleIndex, countIndex) => {
@@ -111,8 +111,8 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
         kNearest(space)(k, sampleIndex)
       }
 
-      val epsilonX = kNearestIndices.mapToNewType(kNearestIndex => spaceX.distance(points(sampleIndex), points(kNearestIndex))).max
-      val epsilonY = kNearestIndices.mapToNewType(kNearestIndex => spaceY.distance(points(sampleIndex), points(kNearestIndex))).max
+      val epsilonX = kNearestIndices.map(kNearestIndex => spaceX.distance(points(sampleIndex), points(kNearestIndex))).max
+      val epsilonY = kNearestIndices.map(kNearestIndex => spaceY.distance(points(sampleIndex), points(kNearestIndex))).max
 
       val (x, t2) = Utils.timeIt {
         digamma(numberOfCloseByPoints(spaceX)(epsilonX, sampleIndex)) + digamma(numberOfCloseByPoints(spaceY)(epsilonY, sampleIndex))

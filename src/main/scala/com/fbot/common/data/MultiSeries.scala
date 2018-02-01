@@ -75,16 +75,12 @@ object MultiSeries {
     MultiSeries(series.toArray.map(ImmutableTupleArray.fromTuples))
   }
 
-  def apply(series: ImmutableTupleArray*)(implicit sc: SparkContext): MultiSeries = {
-    MultiSeries(series.toList)
-  }
-
   def apply(series: TraversableOnce[ImmutableTupleArray])(implicit sc: SparkContext): MultiSeries = {
     MultiSeries(ImmutableArray(series))
   }
 
   def apply(series: ImmutableArray[ImmutableTupleArray])(implicit sc: SparkContext): MultiSeries = {
-    val matrix = series.mapWithIndexToNewType((row, index) => {
+    val matrix = series.mapWithIndex((row, index) => {
       (index.toInt.toLong, row)
     }).toArray
 

@@ -78,7 +78,7 @@ object TestMI extends Logging {
     info(sc.defaultParallelism)
 
     val seriesPairs = (0 until data.length).combinations(2).toArray.map(ImmutableArray(_))
-      .zipWithIndex.map(x => SeriesIndexCombination(x._1.mapToNewType(_.toLong), x._2))
+      .zipWithIndex.map(x => SeriesIndexCombination(x._1.map(_.toLong), x._2))
 
 
     // For every action performed on a dataframe, all transformations (=lazy) will be recomputed.

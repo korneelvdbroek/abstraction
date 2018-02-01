@@ -106,12 +106,12 @@ object Test extends App {
 
 
   private def checkIfEqual(space: HyperSpace)(centerTuple: Tuple, resultBF: ImmutableArray[ArrayIndex], result: ImmutableArray[ArrayIndex]): Unit = {
-    val resultWithDistance = result.mapToNewType(index => (index, space.distance(cloud.points(index), centerTuple)))
-    val resultBFWithDistance = resultBF.mapToNewType(index => (index, space.distance(cloud.points(index), centerTuple)))
+    val resultWithDistance = result.map(index => (index, space.distance(cloud.points(index), centerTuple)))
+    val resultBFWithDistance = resultBF.map(index => (index, space.distance(cloud.points(index), centerTuple)))
 
     def removeLargestDistance(data: ImmutableArray[(ArrayIndex, Double)]): Map[Double, Set[ArrayIndex]] = {
-      val maxDistance = data.mapToNewType(_._2).repr.max // filter out biggest distance since we might have multiplicities...
-      data.groupBy(_._2).map(x => (x._1, x._2.mapToNewType(x => x._1).toSet)).filterKeys(distance => distance != maxDistance)
+      val maxDistance = data.map(_._2).repr.max // filter out biggest distance since we might have multiplicities...
+      data.groupBy(_._2).map(x => (x._1, x._2.map(x => x._1).toSet)).filterKeys(distance => distance != maxDistance)
     }
 
     if (removeLargestDistance(resultBFWithDistance) != removeLargestDistance(resultWithDistance)) {

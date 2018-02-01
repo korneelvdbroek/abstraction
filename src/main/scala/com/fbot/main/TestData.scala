@@ -126,8 +126,8 @@ case class ConstGaussianData2d(N: Int, const: Double, sigma: Double = 1d, mu: Do
 case class KraskovData(implicit sc: SparkContext) extends TestData {
 
   def data: MultiSeries = {
-    val dataX = ImmutableArray(39, 65, 101, 169, 171, 205, 232, 243, 258, 277, 302, 355, 381).mapToNewType(Tuple(_))
-    val dataY = ImmutableArray(358, 205, 126, 150, 350, 227, 390, 94, 268, 41, 328, 365, 119).mapToNewType(Tuple(_))
+    val dataX = ImmutableArray(39, 65, 101, 169, 171, 205, 232, 243, 258, 277, 302, 355, 381).map(Tuple(_))
+    val dataY = ImmutableArray(358, 205, 126, 150, 350, 227, 390, 94, 268, 41, 328, 365, 119).map(Tuple(_))
 
     MultiSeries(dataX, dataY)
   }

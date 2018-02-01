@@ -28,8 +28,6 @@ case class FastLongArrayOps(repr: Array[Long]) extends FastArrayOps {
 
   type A = Long
 
-  implicit val evidence: ClassTag[Long] = ClassTag.Long
-
   def sorted: ImmutableArray[Long] = {
     val len = length
 

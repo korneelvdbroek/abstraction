@@ -1,5 +1,7 @@
 package com.fbot.common.fastcollections.fastarrayops
 
+import scala.reflect.ClassTag
+
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
   *

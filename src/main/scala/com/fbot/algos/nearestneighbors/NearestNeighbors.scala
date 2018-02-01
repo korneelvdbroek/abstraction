@@ -20,7 +20,7 @@ trait NearestNeighbors {
   def kNearestBruteForce(space: HyperSpace, pointSubsetIndices: ImmutableArray[ArrayIndex])
                         (k: Int, currentTuple: Tuple): (ImmutableArray[ArrayIndex], ImmutableArray[Double]) = {
     val (sortedSubIndices, sortedDistances) = pointSubsetIndices
-      .mapToNewType(index => space.distance(points(index), currentTuple))
+      .map(index => space.distance(points(index), currentTuple))
       .partialSort(k)
 
     (sortedSubIndices.map(subIndex => pointSubsetIndices(subIndex)), sortedDistances)

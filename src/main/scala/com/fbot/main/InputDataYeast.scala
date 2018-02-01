@@ -47,7 +47,7 @@ case class InputDataYeast(implicit sc: SparkContext) extends TestData {
 
     // validation on length of series
     val expectedLength = dataSeriesNoHeader(ArrayIndex(0)).length
-    dataSeriesNoHeader.mapToNewType(_.length).toList.zipWithIndex.foreach(x => {
+    dataSeriesNoHeader.map(_.length).toList.zipWithIndex.foreach(x => {
       val (len, line) = x
       if (len != expectedLength) {
         println(s"issue on line $line: len = $len != $expectedLength")

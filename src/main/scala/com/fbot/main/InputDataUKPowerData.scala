@@ -58,7 +58,7 @@ case class InputDataUKPowerData(implicit sc: SparkContext) extends TestData with
 
     val seriesData = MultiSeries(fragments.filter(timeSeries => {
       timeSeries.length == 48 * 3 && timeSeries.head._1.isAfter(Instant.parse("2015-12-31T23:59:59Z"))
-    }).mapToNewType(_.values.mapToTuple(Tuple(_))))
+    }).map(_.values.mapToTuple(Tuple(_))))
 
     info(s"Number of data fragments = ${seriesData.length }")
     info(s"Length of each data fragment = ${seriesData(0).length }")

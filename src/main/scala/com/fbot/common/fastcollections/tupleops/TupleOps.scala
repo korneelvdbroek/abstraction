@@ -111,14 +111,26 @@ case class TupleOps(repr: Array[Double]) {
     Tuple(concat)
   }
 
+  def slice(from: Int, until: Int): Tuple = {
+    val lo = scala.math.max(from, 0)
+    val hi = scala.math.min(scala.math.max(until, 0), length)
+    val len = scala.math.max(hi - lo, 0)
+
+    val res = new Array[Double](len)
+    System.arraycopy(repr, lo, res, 0, len)
+    Tuple(res)
+  }
+
   def toList: List[Double] = doubleArrayOps(repr).toList
 
   def toSet: Set[Double] = doubleArrayOps(repr).toSet
 
   override def toString: String = mkString("(", ", ", ")")
 
+  def forceString: String = mkString("(", ", ", ")")
+
   def mkString(start: String, sep: String, end: String): String = {
-    doubleArrayOps(repr).mkString(start, sep, end)
+    toList.mkString(start, sep, end)
   }
 
 

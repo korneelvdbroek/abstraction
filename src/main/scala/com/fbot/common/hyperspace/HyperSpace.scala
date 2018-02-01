@@ -41,7 +41,7 @@ trait HyperSpace {
   }
 
   def embed(point: Tuple): Tuple = {
-    embeddingAxes.mapToNewType((d: Int) => point(d)).toTuple
+    embeddingAxes.map((d: Int) => point(d)).toTuple
   }
 
   def toCoordinate(spaceUnit: HyperSpaceUnit): Tuple = {

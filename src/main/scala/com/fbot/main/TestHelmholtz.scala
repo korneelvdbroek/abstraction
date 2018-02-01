@@ -9,8 +9,7 @@ import breeze.numerics.abs
 import ch.qos.logback.classic.{Level, Logger}
 import com.fbot.algos.clustering.{HelmholtzClustering, MISimilarity}
 import com.fbot.common.data.{IndexedSeries, MultiSeries, Series}
-import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.Tuple
+import com.fbot.common.fastcollections.{ImmutableArray, ImmutableTupleArray, Tuple}
 import com.fbot.common.linalg.RichDenseMatrix._
 import com.fbot.common.linalg.distributed.RichBlockMatrix
 import com.fbot.common.linalg.distributed.RichBlockMatrix._
@@ -55,7 +54,10 @@ object TestHelmholtz extends Logging {
     conf.registerKryoClasses(Array(classOf[DenseMatrix],
                                    classOf[Array[Matrix]],
                                    classOf[Array[Double]],
+                                   classOf[mutable.WrappedArray$ofRef],
+                                   classOf[ImmutableTupleArray],
                                    classOf[IndexedSeries],
+                                   classOf[Array[Object]],
                                    classOf[Series],
                                    classOf[MultiSeries.SeriesIndexCombination],
                                    classOf[SparseMatrix],

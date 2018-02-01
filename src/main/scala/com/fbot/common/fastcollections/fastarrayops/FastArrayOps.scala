@@ -27,8 +27,6 @@ trait FastArrayOps {
 
   type A
 
-  implicit val evidence: ClassTag[A]
-
   def repr: Array[A]
 
   def length: Int = repr.length
@@ -108,7 +106,7 @@ trait FastArrayOps {
     count
   }
 
-  def ++(that: ImmutableArray[A]): ImmutableArray[A] = {
+  def ++(that: ImmutableArray[A])(implicit evidence: ClassTag[A]): ImmutableArray[A] = {
     val thisLen = repr.length
     val thatLen = that.length
 
@@ -122,20 +120,7 @@ trait FastArrayOps {
     ImmutableArray(Array.range(0, length))
   }
 
-  def map(f: A => A): ImmutableArray[A] = {
-    val len = length
-    val res: Array[A] = new Array[A](len)
-
-    var i = 0
-    while (i < len) {
-      res(i) = f(apply(ArrayIndex(i)))
-      i += 1
-    }
-    ImmutableArray[A](res)
-  }
-
-
-  def mapToNewType[@specialized(Int, Long, Double) B: ClassTag](f: A => B): ImmutableArray[B] = {
+  def map[@specialized(Int, Long, Double) B: ClassTag](f: A => B): ImmutableArray[B] = {
     val len = length
     val res: Array[B] = new Array[B](len)
 
@@ -155,8 +140,15 @@ trait FastArrayOps {
     } else {
       val dim = f(head).dim
 
-      val res = ImmutableTupleArray.empty(dim, len).asInstanceOf[Array[Array[Double]]]
+      // allocate
+      var d: Int = 0
+      val res: Array[Array[Double]] = new Array[Array[Double]](dim)
+      while (d < dim) {
+        res(d) = new Array[Double](len)
+        d += 1
+      }
 
+      // fill with data
       var i = 0
       while (i < len) {
         var d = 0
@@ -171,7 +163,7 @@ trait FastArrayOps {
     }
   }
 
-  def mapWithIndexToNewType[@specialized(Int, Long, Double) B: ClassTag](f: (A, ArrayIndex) ⇒ B): ImmutableArray[B] = {
+  def mapWithIndex[@specialized(Int, Long, Double) B: ClassTag](f: (A, ArrayIndex) ⇒ B): ImmutableArray[B] = {
     val len = length
     val res: Array[B] = new Array[B](len)
 
@@ -198,7 +190,7 @@ trait FastArrayOps {
     ImmutableArray[B](res)
   }
 
-  def flatMap(f: A => ImmutableArray[A]): ImmutableArray[A] = {
+  def flatMap(f: A => ImmutableArray[A])(implicit evidence: ClassTag[A]): ImmutableArray[A] = {
     val len = length
     val unFlattened: Array[ImmutableArray[A]] = new Array[ImmutableArray[A]](len)
 
@@ -230,13 +222,13 @@ trait FastArrayOps {
     flattenArray(unFlattened, flattenedLength)
   }
 
-  def take(k: Int): ImmutableArray[A] = {
+  def take(k: Int)(implicit evidence: ClassTag[A]): ImmutableArray[A] = {
     val res = new Array[A](k)
     System.arraycopy(repr, 0, res, 0, k)
     ImmutableArray(res)
   }
 
-  def slice(from: Int, until: Int): ImmutableArray[A] = {
+  def slice(from: Int, until: Int)(implicit evidence: ClassTag[A]): ImmutableArray[A] = {
     val lo = scala.math.max(from, 0)
     val hi = scala.math.min(scala.math.max(until, 0), length)
     val len = scala.math.max(hi - lo, 0)
@@ -246,7 +238,7 @@ trait FastArrayOps {
     ImmutableArray(res)
   }
 
-  def filter(p: A ⇒ Boolean): ImmutableArray[A] = {
+  def filter(p: A ⇒ Boolean)(implicit evidence: ClassTag[A]): ImmutableArray[A] = {
     val len = length
     val temp: Array[A] = new Array[A](len)
 
@@ -268,7 +260,7 @@ trait FastArrayOps {
   }
 
 
-  def filterByIndex(p: Int => Boolean): ImmutableArray[A] = {
+  def filterByIndex(p: Int => Boolean)(implicit evidence: ClassTag[A]): ImmutableArray[A] = {
     val len = length
     val temp: Array[A] = new Array[A](len)
 
@@ -289,7 +281,7 @@ trait FastArrayOps {
   }
 
 
-  def filterNot(p: A ⇒ Boolean): ImmutableArray[A] = {
+  def filterNot(p: A ⇒ Boolean)(implicit evidence: ClassTag[A]): ImmutableArray[A] = {
     filter(!p(_))
   }
 

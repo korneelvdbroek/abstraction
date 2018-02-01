@@ -118,9 +118,7 @@ package object fastcollections {
 
     def empty[@specialized(Double, Int, Long) A: ClassTag]: ImmutableArray[A] = ImmutableArray(new Array[A](0))
 
-    def indexRange(length: Int): ImmutableArray[Int] = ImmutableArray(Array.range(0, length))
-
-    def indexRange(length: Long): ImmutableArray[Long] = ImmutableArray(Array.range(0, length.toInt).map(_.toLong))
+    def indexRange(length: Int): ImmutableArray[ArrayIndex] = ImmutableArray(Array.range(0, length).map(ArrayIndex))
 
     def range(from: Int, to: Int): ImmutableArray[Int] = ImmutableArray(Array.range(from, to))
 
@@ -135,7 +133,7 @@ package object fastcollections {
         ImmutableArray(line.split(separator, -1))
       }).drop(skipHeaderLines))
 
-      rows.mapToNewType(valueFromRow)
+      rows.map(valueFromRow)
     }
   }
 
