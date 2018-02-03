@@ -1,7 +1,6 @@
 package com.fbot.main
 
-import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections._
+import com.fbot.common.fastcollections.{ImmutableArray, _}
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
@@ -38,8 +37,8 @@ object Utils {
   }
 
   def printImmutableMatrix[T](matrix: ImmutableArray[ImmutableArray[T]],
-                              formatPattern: String = "%5.3f", separator: String = ", ",
-                              maxRows: Option[Int] = None, maxCols: Option[Int] = Some(10)): String = {
+                                        formatPattern: String = "%5.3f", separator: String = ", ",
+                                        maxRows: Option[Int] = None, maxCols: Option[Int] = Some(10)): String = {
     val lines = matrix.mapWithIndex((row, rowIndex) => {
       if (maxRows.forall(rowIndex.toInt < _)) {
         val rowStr = row.mapWithIndex((value, colIndex) => {

@@ -96,7 +96,8 @@ class FastArray2Zipped[El1, El2](val zipArray: (ImmutableArray[El1], ImmutableAr
     while (index < length && p(zipArray._1.apply(index), zipArray._2(index))) {
       arrayBuilder1 += zipArray._1(index)
       arrayBuilder2 += zipArray._2(index)
-      index += 1
+//      index += 1
+      index = ArrayIndex(index.toInt + 1)
     }
 
     new FastArray2Zipped(ImmutableArray(arrayBuilder1.result), ImmutableArray(arrayBuilder2.result))

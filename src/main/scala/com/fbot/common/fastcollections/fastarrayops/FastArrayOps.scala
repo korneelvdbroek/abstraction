@@ -23,7 +23,9 @@ import scala.reflect.ClassTag
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-// we extend from Any to make it a Universal Trait, so we can derive value classes from it
+// We extend from Any to make it a Universal Trait, so we can derive value classes from it.
+// Sadly, somehow we break the brittle value class structure of scala and value class is indeed
+// instantiated when accessing any of the methods in this trait :-(
 trait FastArrayOps extends Any {
 
   type A
