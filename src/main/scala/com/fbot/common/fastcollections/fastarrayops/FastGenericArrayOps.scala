@@ -19,7 +19,7 @@ import scala.reflect.ClassTag
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-case class FastGenericArrayOps[T](repr: Array[T]) extends FastArrayOps {
+case class FastGenericArrayOps[T](repr: Array[T]) extends AnyVal with FastArrayOps {
 
   type A = T
 

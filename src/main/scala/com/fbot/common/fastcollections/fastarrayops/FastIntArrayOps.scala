@@ -24,7 +24,7 @@ import scala.reflect.ClassTag
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-case class FastIntArrayOps(repr: Array[Int]) extends FastArrayOps {
+case class FastIntArrayOps(repr: Array[Int]) extends AnyVal with FastArrayOps {
 
   type A = Int
 
@@ -81,9 +81,10 @@ case class FastIntArrayOps(repr: Array[Int]) extends FastArrayOps {
     elementWise(rhs, _ * _)
   }
 
+  @inline
   private def elementWise(rhs: ImmutableArray[Int], f: (Int, Int) => Int): ImmutableArray[Int] = {
     val len = length
-    val res: Array[Int] = new Array[Int](length)
+    val res: Array[Int] = new Array[Int](len)
 
     var i = 0
     while (i < len) {

@@ -2,8 +2,8 @@ package com.fbot.common
 
 import com.fbot.common.fastcollections.fastarrayops._
 import com.fbot.common.fastcollections.tupleops.{HyperSpaceUnitOps, TupleOps}
-import shapeless.newtype
-import shapeless.newtype.Newtype
+import shapeless.tag
+import shapeless.tag.@@
 
 import scala.io.Source
 import scala.reflect.ClassTag
@@ -25,6 +25,8 @@ import scala.reflect.ClassTag
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   *
+  *
+  *
   * Value classes in scala don't really do their job, so we need tagged types
   * https://failex.blogspot.be/2017/04/the-high-cost-of-anyval-subclasses.html
   * We use shapeless since it makes T = Int translucent (scalaz7+ does not),
@@ -37,20 +39,29 @@ package object fastcollections {
 
   /**
     * ArrayIndex
+    *
+    * Since we have plenty of these flying around, we need its erasure to be Int.
+    * Hence we pick the translucent version of tagging (see https://failex.blogspot.be/2017/04/and-glorious-subst-to-come.html)
     */
-  type ArrayIndex = Newtype[Int, ArrayIndexOps]
+  trait ArrayIndexTag
 
-  def ArrayIndex(i: Int): ArrayIndex = newtype[Int, ArrayIndexOps](i)
+  type ArrayIndex = Int @@ ArrayIndexTag
 
+  // add ctor
+  def ArrayIndex(i: Int): ArrayIndex = tag[ArrayIndexTag][Int](i)
+
+  // add methods
   case class ArrayIndexOps(i: Int) {
 
     def toInt: Int = i
 
-    def +=(j: Int): ArrayIndex = ArrayIndex(i + j)
+    def += (j: Int): ArrayIndex = ArrayIndex(i + j)
 
-    def <(j: Int): Boolean = i < j
-    def ==(j: Int): Boolean = i == j
-    def >(j: Int): Boolean = i > j
+    def < (j: Int): Boolean = i < j
+
+    def == (j: Int): Boolean = i == j
+
+    def > (j: Int): Boolean = i > j
   }
 
   implicit def arrayIndexOps(index: ArrayIndex): ArrayIndexOps = ArrayIndexOps(index.asInstanceOf[Int])
@@ -58,15 +69,23 @@ package object fastcollections {
 
   /**
     * Tuple
+    *
+    * Since we have plenty of these flying around, we need its erasure to be Array[Double]
+    * Hence we pick the translucent version of tagging which is standard in shapeless (see https://failex.blogspot.be/2017/04/and-glorious-subst-to-come.html)
     */
-  type Tuple = Newtype[Array[Double], TupleOps]
+  trait TupleTag
 
-  def Tuple(arr: Array[Double]): Tuple = newtype[Array[Double], TupleOps](arr)
+  type Tuple = Array[Double] @@ TupleTag
+
+  // add ctors
+  def Tuple(arr: Array[Double]): Tuple = tag[TupleTag][Array[Double]](arr)
 
   def Tuple(d: Double*): Tuple = Tuple(d.toArray)
 
+  // add methods
   implicit def tupleOps(t: Tuple): TupleOps = TupleOps(t.asInstanceOf[Array[Double]])
 
+  // add factory
   object Tuple {
 
     def fill(dim: Int)(elem: ⇒ Double): Tuple = Tuple(Array.fill(dim)(elem))
@@ -76,14 +95,19 @@ package object fastcollections {
   /**
     * HyperSpaceUnit
     */
-  type HyperSpaceUnit = Newtype[Array[Long], HyperSpaceUnitOps]
+  trait HyperSpaceUnitTag
 
-  def HyperSpaceUnit(arr: Array[Long]): HyperSpaceUnit = newtype[Array[Long], HyperSpaceUnitOps](arr)
+  type HyperSpaceUnit = Array[Long] @@ HyperSpaceUnitTag
+
+  // add ctors
+  def HyperSpaceUnit(arr: Array[Long]): HyperSpaceUnit = tag[HyperSpaceUnitTag][Array[Long]](arr)
 
   def HyperSpaceUnit(d: Long*): HyperSpaceUnit = HyperSpaceUnit(d.toArray)
 
+  // add methods
   implicit def hyperSpaceUnitOps(t: HyperSpaceUnit): HyperSpaceUnitOps = HyperSpaceUnitOps(t.asInstanceOf[Array[Long]])
 
+  // add factories
   object HyperSpaceUnit {
 
     def fill(dim: Int)(elem: ⇒ Long): HyperSpaceUnit = HyperSpaceUnit(Array.fill(dim)(elem))
@@ -93,14 +117,62 @@ package object fastcollections {
     def unit(dim: Int): HyperSpaceUnit = HyperSpaceUnit(Array.fill[Long](dim)(1L))
   }
 
-
   /**
     * ImmutableArray
     */
-  type ImmutableArray[T] = Newtype[Array[T], FastArrayOps]
+  //  type ImmutableArray[T] = Newtype[Array[T], FastArrayOps]
+  //
+  //  def ImmutableArray[@specialized(Double, Int, Long) T](arr: Array[T]): ImmutableArray[T] = newtype(arr)
+  //
+  //  implicit def immutableArrayOps4Generic[T](t: ImmutableArray[T]): FastGenericArrayOps[T] = FastGenericArrayOps(t.asInstanceOf[Array[T]])
+  //
+  //  implicit def immutableArrayOps4Double(t: ImmutableArray[Double]): FastDoubleArrayOps = FastDoubleArrayOps(t.asInstanceOf[Array[Double]])
+  //
+  //  implicit def immutableArrayOps4Int(t: ImmutableArray[Int]): FastIntArrayOps = FastIntArrayOps(t.asInstanceOf[Array[Int]])
+  //
+  //  implicit def immutableArrayOps4Long(t: ImmutableArray[Long]): FastLongArrayOps = FastLongArrayOps(t.asInstanceOf[Array[Long]])
+  //
+  //  // add factories
+  //  object ImmutableArray {
+  //    def apply[@specialized(Double, Int, Long) A: ClassTag](data0: A, dataRest: A*): ImmutableArray[A] = ImmutableArray[A]((data0 +: dataRest).toArray)
+  //
+  //    def apply[@specialized(Double, Int, Long) A: ClassTag](data: TraversableOnce[A]): ImmutableArray[A] = ImmutableArray[A](data.toArray)
+  //
+  //    def fill[@specialized(Double, Int, Long) A: ClassTag](n: Int)(elem: ⇒ A): ImmutableArray[A] = ImmutableArray(Array.fill[A](n)(elem))
+  //
+  //    def empty[@specialized(Double, Int, Long) A: ClassTag]: ImmutableArray[A] = ImmutableArray(new Array[A](0))
+  //
+  //    def indexRange(length: Int): ImmutableArray[ArrayIndex] = ImmutableArray(Array.range(0, length).map(ArrayIndex))
+  //
+  //    def range(from: Int, to: Int): ImmutableArray[Int] = ImmutableArray(Array.range(from, to))
+  //
+  //    def range(from: Long, to: Long): ImmutableArray[Long] = ImmutableArray(Array.range(from.toInt, to.toInt).map(_.toLong))
+  //
+  //    def fromCsv[T: ClassTag](fileName: String,
+  //                             separator: String = ",", skipHeaderLines: Int = 1)
+  //                            (valueFromRow: ImmutableArray[String] => T): ImmutableArray[T] = {
+  //      val bufferedSource = Source.fromFile(fileName)
+  //
+  //      val rows = ImmutableArray(bufferedSource.getLines.map(line => {
+  //        ImmutableArray(line.split(separator, -1))
+  //      }).drop(skipHeaderLines))
+  //
+  //      rows.map(valueFromRow)
+  //    }
+  //  }
 
-  def ImmutableArray[@specialized(Double, Int, Long) T](arr: Array[T]): ImmutableArray[T] = newtype(arr)
+  trait ImmutableArrayTag
 
+  type ImmutableArray[T] = Array[T] @@ ImmutableArrayTag
+
+  // add ctor
+  def ImmutableArray[@specialized(Double, Int, Long) T](arr: Array[T]): ImmutableArray[T] = tag[ImmutableArrayTag][Array[T]](arr)
+
+  // add methods
+
+  //TODO: problem is that refArrayOps (ArrayOps) has higher priority for conversion :-( Also ImmutableArray[ArrayIndex] has issues...
+  // http://www.lihaoyi.com/post/ImplicitDesignPatternsinScala.html#type-class-implicits
+  // https://stackoverflow.com/questions/1886953/is-there-a-way-to-control-which-implicit-conversion-will-be-the-default-used
   implicit def immutableArrayOps4Generic[T](t: ImmutableArray[T]): FastGenericArrayOps[T] = FastGenericArrayOps(t.asInstanceOf[Array[T]])
 
   implicit def immutableArrayOps4Double(t: ImmutableArray[Double]): FastDoubleArrayOps = FastDoubleArrayOps(t.asInstanceOf[Array[Double]])
@@ -109,7 +181,10 @@ package object fastcollections {
 
   implicit def immutableArrayOps4Long(t: ImmutableArray[Long]): FastLongArrayOps = FastLongArrayOps(t.asInstanceOf[Array[Long]])
 
+
+  // add factories
   object ImmutableArray {
+
     def apply[@specialized(Double, Int, Long) A: ClassTag](data0: A, dataRest: A*): ImmutableArray[A] = ImmutableArray[A]((data0 +: dataRest).toArray)
 
     def apply[@specialized(Double, Int, Long) A: ClassTag](data: TraversableOnce[A]): ImmutableArray[A] = ImmutableArray[A](data.toArray)

@@ -22,7 +22,7 @@ import scala.annotation.tailrec
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-case class TupleOps(repr: Array[Double]) {
+case class TupleOps(repr: Array[Double]) extends AnyVal {
 
   def length: Int = repr.length
 
@@ -150,9 +150,10 @@ case class TupleOps(repr: Array[Double]) {
     elementWise(_ / _)(rhs)
   }
 
+  @inline
   private def elementWise(f: (Double, Double) => Double)(rhs: Tuple): Tuple = {
     val len = length
-    val res: Array[Double] = new Array[Double](length)
+    val res: Array[Double] = new Array[Double](len)
 
     var i = 0
     while (i < len) {

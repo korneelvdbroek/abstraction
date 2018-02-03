@@ -23,11 +23,20 @@ import com.fbot.common.fastcollections._
 object TestBoxing extends App {
 
   // TODO: checks
-  val a = ImmutableArray[ArrayIndex](Array(ArrayIndex(4), ArrayIndex(11)))  // check it is implemented as Array[Int]
+  val z = ArrayIndex(27)   // should be I
 
-  val b = ImmutableArray[Double](Array(4d, 11d, 8d, 2d, 13d)) // check it is implemented as Array[Double] (check one of the functions)
+  val a = ImmutableArray[ArrayIndex](Array(ArrayIndex(4), ArrayIndex(11)).map(ArrayIndex))  // should be [I
 
-  val c = b.map((x: Double) => x.toInt)
 
-  val d = b.indexOfSorted
+  //
+  val tuple = Tuple(13d, 17d, 23d)   // should be [D
+
+  val tuple2 = tuple.head
+
+  //
+  val immutableArray = ImmutableArray[Double](Array(4d, 11d, 8d, 2d, 13d)) // should be [D
+
+  val immutableArray2 = immutableArray.map((x: Double) => x.toInt)
+
+  val immutableArray3 = immutableArray.indexOfSorted
 }

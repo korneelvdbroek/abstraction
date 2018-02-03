@@ -23,7 +23,8 @@ import scala.reflect.ClassTag
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-trait FastArrayOps {
+// we extend from Any to make it a Universal Trait, so we can derive value classes from it
+trait FastArrayOps extends Any {
 
   type A
 

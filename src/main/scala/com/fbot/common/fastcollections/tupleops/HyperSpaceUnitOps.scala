@@ -23,7 +23,7 @@ import scala.annotation.tailrec
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-case class HyperSpaceUnitOps(repr: Array[Long]) {
+case class HyperSpaceUnitOps(repr: Array[Long]) extends AnyVal {
 
   def length: Int = repr.length
 
@@ -143,9 +143,10 @@ case class HyperSpaceUnitOps(repr: Array[Long]) {
     elementWise(_ / _)(rhs)
   }
 
+  @inline
   private def elementWise(f: (Long, Long) => Long)(rhs: HyperSpaceUnit): HyperSpaceUnit = {
     val len = length
-    val res: Array[Long] = new Array[Long](length)
+    val res: Array[Long] = new Array[Long](len)
 
     var i = 0
     while (i < len) {
