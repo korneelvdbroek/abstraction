@@ -1,8 +1,7 @@
 package com.fbot.common
 
-import com.fbot.common.fastcollections.fastarrayops._
+import com.fbot.common.fastcollections.fastarrayops.{FastArrayIndexArrayOps, _}
 import com.fbot.common.fastcollections.tupleops.{HyperSpaceUnitOps, TupleOps}
-
 import com.fbot.common.fastcollections.newtype.Newtype
 import com.fbot.common.fastcollections.translucenttag.@@
 
@@ -67,7 +66,7 @@ package object fastcollections {
   def ArrayIndex(i: Int): ArrayIndex = translucenttag[ArrayIndexTag][Int](i)
 
   // add methods
-  case class ArrayIndexOps(i: Int) {
+  case class ArrayIndexOps(i: Int) extends AnyVal {
 
     def toInt: Int = i
 
@@ -82,6 +81,10 @@ package object fastcollections {
 
   implicit def arrayIndexOps(index: ArrayIndex): ArrayIndexOps = ArrayIndexOps(index.asInstanceOf[Int])
 
+  object ArrayIndex {
+    def subst[F[_]](fi: F[Int]): F[ArrayIndex] = fi.asInstanceOf[F[ArrayIndex]]
+
+  }
 
   /**
     * Tuple
@@ -157,6 +160,8 @@ package object fastcollections {
   implicit def immutableArrayOps4Double(t: ImmutableArray[Double]): FastDoubleArrayOps = FastDoubleArrayOps(t.asInstanceOf[LiteWrappedArray[Double]])
 
   implicit def immutableArrayOps4Int(t: ImmutableArray[Int]): FastIntArrayOps = FastIntArrayOps(t.asInstanceOf[LiteWrappedArray[Int]])
+
+  implicit def immutableArrayOps4ArrayIndex(t: ImmutableArray[ArrayIndex]): FastArrayIndexArrayOps = FastArrayIndexArrayOps(t.asInstanceOf[LiteWrappedArray[Int]])
 
   implicit def immutableArrayOps4Long(t: ImmutableArray[Long]): FastLongArrayOps = FastLongArrayOps(t.asInstanceOf[LiteWrappedArray[Long]])
 

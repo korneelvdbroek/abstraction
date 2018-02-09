@@ -27,7 +27,7 @@ object translucenttag {
   type @@[+Repr, TagTrait] = Repr with Tagged[TagTrait]
 
   class Tagger[TagTrait] {
-    def apply[@specialized(Int) Repr](t : Repr) : Repr @@ TagTrait = t.asInstanceOf[Repr @@ TagTrait]
+    @inline def apply[@specialized(Int) Repr](t : Repr) : Repr @@ TagTrait = t.asInstanceOf[Repr @@ TagTrait]
   }
 }
 
