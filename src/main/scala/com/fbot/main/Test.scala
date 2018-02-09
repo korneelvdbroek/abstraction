@@ -2,11 +2,16 @@ package com.fbot.main
 
 import breeze.linalg.{DenseMatrix, DenseVector}
 import com.fbot.algos.mutualinformation.MutualInformation
+import com.fbot.common.data.{IndexedSeries, MultiSeries, Series}
 import com.fbot.common.fastcollections.Tuple
 import com.fbot.common.fastcollections._
 import com.fbot.common.hyperspace._
+import com.fbot.main.InputData.GaussianData
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.SparkSession
 
+import scala.collection.mutable
+import scala.reflect.ClassTag
 import scala.util.Random
 
 /**
@@ -35,8 +40,18 @@ object Test extends App {
 
   import Utils._
 
-  val spark = SparkSession.builder.appName("Simple Application").getOrCreate()
-  implicit val sc = spark.sparkContext
+  val conf = new SparkConf().setAppName("Simple Application")
+  conf.registerKryoClasses(Array(classOf[Array[Double]],
+                                 classOf[mutable.WrappedArray$ofRef],
+                                 classOf[ImmutableTupleArray],
+                                 classOf[IndexedSeries],
+                                 classOf[Array[Array[Double]]],
+                                 classOf[Array[Object]],
+                                 classOf[Series],
+                                 classOf[MultiSeries.SeriesIndexCombination],
+                                 classOf[Array[Int]],
+                                 ClassTag(Class.forName("org.apache.spark.util.collection.CompactBuffer")).wrap.runtimeClass))
+  implicit val sc = new SparkContext(conf)
 
   val k = 10
   val dim = 3
@@ -110,7 +125,7 @@ object Test extends App {
     val resultBFWithDistance = resultBF.map(index => (index, space.distance(cloud.points(index), centerTuple)))
 
     def removeLargestDistance(data: ImmutableArray[(ArrayIndex, Double)]): Map[Double, Set[ArrayIndex]] = {
-      val maxDistance = data.map(_._2).repr.max // filter out biggest distance since we might have multiplicities...
+      val maxDistance = data.map(_._2).max // filter out biggest distance since we might have multiplicities...
       data.groupBy(_._2).map(x => (x._1, x._2.map(x => x._1).toSet)).filterKeys(distance => distance != maxDistance)
     }
 

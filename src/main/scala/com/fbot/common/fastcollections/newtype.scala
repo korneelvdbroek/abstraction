@@ -1,5 +1,7 @@
 package com.fbot.common.fastcollections
 
+import scala.collection.GenIterable
+
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
   *
@@ -35,7 +37,7 @@ object newtype {
     * Creates a value of the newtype given a value of its representation type.
     */
   @inline
-  def apply[@specialized(Double, Int, Long) Repr, Ops](r : Repr) : Newtype[Repr, Ops] = r.asInstanceOf[Any with Newtype[Repr, Ops]]
+  def apply[@specialized(Int, Long, Double) Repr, Ops](r : Repr) : Newtype[Repr, Ops] = r.asInstanceOf[Any with Newtype[Repr, Ops]]
 
   /**
     * New type with `Repr` as representation type and operations provided by `Ops`.
@@ -44,14 +46,15 @@ object newtype {
     * values of the representation type to conform to Any. In practice this means that value
     * types will receive their standard Scala AnyVal boxing and reference types will be unboxed.
     */
-  type Newtype[Repr, Ops] = { type Tag = NewtypeTag[Repr, Ops] }
+  // anonymous type declaration: https://tomlee.co/2007/11/anonymous-type-acrobatics-with-scala/
+  type Newtype[Repr, Ops] = { type Tag = NewtypeTag[Repr, Ops] } // whatever this is mixed with has the `type Tag = ...` added to their implementation
   trait NewtypeTag[Repr, Ops]
 
-  /**
-    * Implicit conversion of newtype to `Ops` type for the selection of `Ops` newtype operations.
-    *
-    * The implicit conversion `Repr => Ops` would typically be provided by publishing the companion
-    * object of the `Ops` type as an implicit value.
-    */
-  implicit def newtypeOps[Repr, Ops](t : Newtype[Repr, Ops])(implicit mkOps : Repr => Ops) : Ops = t.asInstanceOf[Repr]
+//  /**
+//    * Implicit conversion of newtype to `Ops` type for the selection of `Ops` newtype operations.
+//    *
+//    * The implicit conversion `Repr => Ops` would typically be provided by publishing the companion
+//    * object of the `Ops` type as an implicit value.
+//    */
+//  implicit def newtypeOps[Repr, Ops](t : Newtype[Repr, Ops])(implicit mkOps : Repr => Ops) : Ops = t.asInstanceOf[Repr]
 }

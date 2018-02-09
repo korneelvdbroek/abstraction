@@ -1,9 +1,8 @@
 package com.fbot.common.fastcollections
 
 import scala.annotation.tailrec
-import shapeless.newtype.newtypeOps
-
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
+import scala.collection.immutable
 import scala.reflect.ClassTag
 
 /**
@@ -25,20 +24,24 @@ import scala.reflect.ClassTag
   */
 case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
 
-  def dimension: Int = coordinates.length
+  def dim: Int = coordinates.length
 
   def length: Int = {
-    if (coordinates.length == 0) 0 else coordinates(0).length
+    if (coordinates.length == 0) {
+      0
+    } else {
+      immutableArrayOps4Double(coordinates(0)).length
+    }
   }
 
   def isEmpty: Boolean = coordinates.length == 0 || coordinates(0).isEmpty
 
   def apply(index: ArrayIndex): Tuple = {
-    val dim = dimension
-    val res: Array[Double] = new Array[Double](dim)
+    val dimension = dim
+    val res: Array[Double] = new Array[Double](dimension)
 
     var d = 0
-    while (d < dim) {
+    while (d < dimension) {
       res(d) = coordinates(d)(index)
       d += 1
     }
@@ -114,15 +117,15 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
   }
 
 
-  def ++(that: ImmutableTupleArray): ImmutableTupleArray = {
-    assert(this.dimension == that.dimension, "Cannot concatenate ImmutableArray of Tuples since Tuple dimensions do not match")
+  def ++ (that: ImmutableTupleArray): ImmutableTupleArray = {
+    assert(this.dim == that.dim, "Cannot concatenate ImmutableArray of Tuples since Tuple dimensions do not match")
 
-    val dim = dimension
-    val res: Array[ImmutableArray[Double]] = new Array[ImmutableArray[Double]](dim)
+    val dimension = dim
+    val res: Array[ImmutableArray[Double]] = new Array[ImmutableArray[Double]](dimension)
 
     var d = 0
-    while (d < dim) {
-      res(d) = coordinates(d) ++ that.coordinates(d)
+    while (d < dimension) {
+      res.update(d, coordinates(d) ++ that.coordinates(d))
       d += 1
     }
 
@@ -144,11 +147,10 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
   }
 
 
-
   // non-tuple operations
   def extend(that: ImmutableTupleArray): ImmutableTupleArray = {
-    val thisDim = dimension
-    val thatDim = that.dimension
+    val thisDim = dim
+    val thatDim = that.dim
     val res: Array[ImmutableArray[Double]] = new Array[ImmutableArray[Double]](thisDim + thatDim)
 
     System.arraycopy(coordinates, 0, res, 0, thisDim)
@@ -158,11 +160,11 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
 
   def map(f: Tuple ⇒ Tuple): ImmutableTupleArray = {
     val len = length
-    val dim = dimension
+    val dimension = dim
 
     var d: Int = 0
-    val res: Array[Array[Double]] = new Array[Array[Double]](dim)
-    while (d < dim) {
+    val res: Array[Array[Double]] = new Array[Array[Double]](dimension)
+    while (d < dimension) {
       res(d) = new Array[Double](len)
       d += 1
     }
@@ -170,23 +172,23 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
     var i: Int = 0
     while (i < len) {
       var d: Int = 0
-      while (d < dim) {
+      while (d < dimension) {
         res(d)(i) = f(apply(ArrayIndex(i))).apply(d)
         d += 1
       }
       i += 1
     }
 
-    ImmutableTupleArray(res.asInstanceOf[Array[ImmutableArray[Double]]])
+    ImmutableTupleArray(res.map(arr => new LiteWrappedArray(arr)).asInstanceOf[Array[ImmutableArray[Double]]])
   }
 
   def mapWithIndex(f: (Tuple, Int) ⇒ Tuple): ImmutableTupleArray = {
     val len = length
-    val dim = dimension
+    val dimension = dim
 
     var d: Int = 0
-    val res: Array[Array[Double]] = new Array[Array[Double]](dim)
-    while (d < dim) {
+    val res: Array[Array[Double]] = new Array[Array[Double]](dimension)
+    while (d < dimension) {
       res(d) = new Array[Double](len)
       d += 1
     }
@@ -194,23 +196,23 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
     var i: Int = 0
     while (i < len) {
       var d: Int = 0
-      while (d < dim) {
+      while (d < dimension) {
         res(d)(i) = f(apply(ArrayIndex(i)), i).apply(d)
         d += 1
       }
       i += 1
     }
 
-    ImmutableTupleArray(res.asInstanceOf[Array[ImmutableArray[Double]]])
+    ImmutableTupleArray(res.map(arr => new LiteWrappedArray(arr)).asInstanceOf[Array[ImmutableArray[Double]]])
   }
 
   def take(k: Int): ImmutableTupleArray = {
-    val dim = dimension
+    val dimension = dim
 
-    val res: Array[ImmutableArray[Double]] = new Array[ImmutableArray[Double]](dim)
+    val res: Array[ImmutableArray[Double]] = new Array[ImmutableArray[Double]](dimension)
 
     var d: Int = 0
-    while (d < dim) {
+    while (d < dimension) {
       res(d) = coordinates(d).take(k)
       d += 1
     }
@@ -219,12 +221,12 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
   }
 
   def slice(from: Int, until: Int): ImmutableTupleArray = {
-    val dim = dimension
+    val dimension = dim
 
-    val res: Array[ImmutableArray[Double]] = new Array[ImmutableArray[Double]](dim)
+    val res: Array[ImmutableArray[Double]] = new Array[ImmutableArray[Double]](dimension)
 
     var d: Int = 0
-    while (d < dim) {
+    while (d < dimension) {
       res(d) = coordinates(d).slice(from, until)
       d += 1
     }
@@ -246,11 +248,11 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
 
   def select(indices: ImmutableArray[ArrayIndex]): ImmutableTupleArray = {
     val len = indices.length
-    val dim = dimension
+    val dimension = dim
 
     var d: Int = 0
-    val res: Array[Array[Double]] = new Array[Array[Double]](dim)
-    while (d < dim) {
+    val res: Array[Array[Double]] = new Array[Array[Double]](dimension)
+    while (d < dimension) {
       res(d) = new Array[Double](len)
       d += 1
     }
@@ -258,14 +260,14 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
     var iFiltered: Int = 0
     while (iFiltered < len) {
       var d: Int = 0
-      while (d < dim) {
+      while (d < dimension) {
         res(d)(iFiltered) = apply(indices(ArrayIndex(iFiltered)))(d)
         d += 1
       }
       iFiltered += 1
     }
 
-    ImmutableTupleArray(res.asInstanceOf[Array[ImmutableArray[Double]]])
+    ImmutableTupleArray(res.map(arr => new LiteWrappedArray(arr)).asInstanceOf[Array[ImmutableArray[Double]]])
   }
 
   def filterIndices(p: Tuple ⇒ Boolean): ImmutableArray[ArrayIndex] = {
@@ -292,7 +294,7 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
 
   def groupBy[Key: ClassTag](f: Tuple ⇒ Key): Map[Key, ImmutableTupleArray] = {
     val len = length
-    val dim = dimension
+    val dimension = dim
     val m = mutable.Map.empty[Key, Array[mutable.Builder[Double, Array[Double]]]]
 
     // make mutable Map
@@ -303,9 +305,9 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
 
       // find key, or create new entry (Key, (ArrayBuilder, ArrayBuilder, ...))
       val bldr = m.getOrElseUpdate(key, {
-        val emptyTupleArray = new Array[mutable.Builder[Double, Array[Double]]](dim)
+        val emptyTupleArray = new Array[mutable.Builder[Double, Array[Double]]](dimension)
         var d = 0
-        while (d < dim) {
+        while (d < dimension) {
           emptyTupleArray(d) = new mutable.ArrayBuilder.ofDouble
           d += 1
         }
@@ -314,7 +316,7 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
 
       // add actual tuple
       var d = 0
-      while (d < dim) {
+      while (d < dimension) {
         bldr(d) += elem(d)
         d += 1
       }
@@ -326,8 +328,8 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
     val b = immutable.Map.newBuilder[Key, ImmutableTupleArray]
     for ((k, v) <- m) {
       var d = 0
-      val res = new Array[ImmutableArray[Double]](dim)
-      while (d < dim) {
+      val res = new Array[ImmutableArray[Double]](dimension)
+      while (d < dimension) {
         res(d) = ImmutableArray(v(d).result)
         d += 1
       }
@@ -376,7 +378,7 @@ object ImmutableTupleArray {
         i += 1
       }
 
-      ImmutableTupleArray(res.asInstanceOf[Array[ImmutableArray[Double]]])
+      ImmutableTupleArray(res.map(arr => new LiteWrappedArray(arr)).asInstanceOf[Array[ImmutableArray[Double]]])
     }
   }
 
@@ -387,7 +389,7 @@ object ImmutableTupleArray {
       res(d) = new Array[Double](len)
       d += 1
     }
-    ImmutableTupleArray(res.asInstanceOf[Array[ImmutableArray[Double]]])
+    ImmutableTupleArray(res.map(arr => new LiteWrappedArray(arr)).asInstanceOf[Array[ImmutableArray[Double]]])
   }
 
 }

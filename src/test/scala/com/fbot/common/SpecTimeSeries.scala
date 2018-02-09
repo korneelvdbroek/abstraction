@@ -2,7 +2,7 @@ package com.fbot.common
 
 import java.time.{ZoneId, ZonedDateTime}
 
-import com.fbot.common.fastcollections.ImmutableArray
+import com.fbot.common.fastcollections.{ImmutableArray, ImmutableArraySpec}
 import com.fbot.common.timeseries.TimeSeries
 import org.scalatest.{FlatSpec, Matchers}
 

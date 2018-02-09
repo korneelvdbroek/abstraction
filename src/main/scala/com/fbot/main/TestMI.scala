@@ -7,6 +7,7 @@ import com.fbot.common.data.MultiSeries.SeriesIndexCombination
 import com.fbot.common.data.{IndexedSeries, MultiSeries}
 import com.fbot.common.fastcollections.ImmutableArray
 import com.fbot.common.fastcollections._
+import com.fbot.main.InputData.GaussianData
 import grizzled.slf4j.Logging
 import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry}
 import org.apache.spark.rdd.RDD

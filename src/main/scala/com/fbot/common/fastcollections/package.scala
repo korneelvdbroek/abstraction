@@ -2,20 +2,12 @@ package com.fbot.common
 
 import com.fbot.common.fastcollections.fastarrayops._
 import com.fbot.common.fastcollections.tupleops.{HyperSpaceUnitOps, TupleOps}
-//import shapeless.newtype.Newtype
-//import shapeless.newtype
-//import shapeless.tag
-//import shapeless.tag.@@
 
 import com.fbot.common.fastcollections.newtype.Newtype
-import com.fbot.common.fastcollections.newtype
-
-import com.fbot.common.fastcollections.translucenttag
 import com.fbot.common.fastcollections.translucenttag.@@
 
 import scala.io.Source
 import scala.reflect.ClassTag
-
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek
@@ -43,6 +35,19 @@ import scala.reflect.ClassTag
   *
   * specialized does not really do its job in scala, it does not specialize an Array[T] contained in a trait with type T specialized
   * http://www.scala-lang.org/old/node/10408.html
+  *
+  *
+  *
+  * Solution needs to support
+  * 1. Performance of an Array of primitives
+  * 2. Having equals defined based on sameelements
+  * 3. Being typesafe by having a separate type at compile time (no performance penalty) and only expose the methods I decide (e.g. to make it immutable)
+  *
+  * Proposed solution:
+  * Newtype around a WrapperArray-Lite which contains an Array.
+  * Newtype controls nicely what operations of the underlying WrapperArrayLite that we want to expose, moreover it becomes a separate type with type safety
+  * without any boxing overhead. The WrapperArray-Lite is to properly implement equals() and hashcode() on Array -- so this is a real object with boxing.
+  *
   */
 package object fastcollections {
 
@@ -81,16 +86,19 @@ package object fastcollections {
   /**
     * Tuple
     *
+    * Array[Double] is of type AnyRef, so Ljava.lang.Object in bytecode
     */
-  type Tuple = Newtype[Array[Double], TupleOps]
+  type Tuple = Newtype[LiteWrappedArray[Double], TupleOps]
 
   // add ctors
-  def Tuple(arr: Array[Double]): Tuple = newtype[Array[Double], TupleOps](arr)
+  private[fastcollections] def Tuple(arr: LiteWrappedArray[Double]): Tuple = newtype[LiteWrappedArray[Double], TupleOps](arr)
+
+  def Tuple(arr: Array[Double]): Tuple = Tuple(new LiteWrappedArray(arr))
 
   def Tuple(d: Double*): Tuple = Tuple(d.toArray)
 
   // add methods
-  implicit def tupleOps(t: Tuple): TupleOps = TupleOps(t.asInstanceOf[Array[Double]])
+  implicit def tupleOps(t: Tuple): TupleOps = TupleOps(t.asInstanceOf[LiteWrappedArray[Double]])
 
   // add factory
   object Tuple {
@@ -102,15 +110,17 @@ package object fastcollections {
   /**
     * HyperSpaceUnit
     */
-  type HyperSpaceUnit = Newtype[Array[Long], HyperSpaceUnitOps]
+  type HyperSpaceUnit = Newtype[LiteWrappedArray[Long], HyperSpaceUnitOps]
 
   // add ctors
-  def HyperSpaceUnit(arr: Array[Long]): HyperSpaceUnit = newtype[Array[Long], HyperSpaceUnitOps](arr)
+  private[fastcollections] def HyperSpaceUnit(arr: LiteWrappedArray[Long]): HyperSpaceUnit = newtype[LiteWrappedArray[Long], HyperSpaceUnitOps](arr)
+
+  def HyperSpaceUnit(arr: Array[Long]): HyperSpaceUnit = HyperSpaceUnit(new LiteWrappedArray(arr))
 
   def HyperSpaceUnit(d: Long*): HyperSpaceUnit = HyperSpaceUnit(d.toArray)
 
   // add methods
-  implicit def hyperSpaceUnitOps(t: HyperSpaceUnit): HyperSpaceUnitOps = HyperSpaceUnitOps(t.asInstanceOf[Array[Long]])
+  implicit def hyperSpaceUnitOps(t: HyperSpaceUnit): HyperSpaceUnitOps = HyperSpaceUnitOps(t.asInstanceOf[LiteWrappedArray[Long]])
 
   // add factories
   object HyperSpaceUnit {
@@ -127,32 +137,40 @@ package object fastcollections {
     *
     * We don't want ImmutableArray to be translucent.
     * Reason:   If we would make it translucent, then, at compile time, we know it is an Array[T], and hence it will find implicit conversion to ArrayOps, so
-    *           all methods from ArrayOps would be accessible such as update(). Moreover, Array[T] has the member method update() which we don't want to expose
+    * all methods from ArrayOps would be accessible such as update(). Moreover, Array[T] has the member method update() which we don't want to expose
     * Drawback: Since we don't make it translucent, an ImmutableArray[T] is not a plain Array[T], instead it is wrapped as a java.lang.Object.
-    *           This should be fine performance-wise, as ImmutableArrays can be boxed, but not its content.
+    * This should be fine performance-wise, as ImmutableArrays can be boxed, but not its content.
     *
-    * Note: same holds for Tuples, they will be boxed, so an ImmutableArray[Tuple] has each element boxed, hence requiring the more performant ImmutableTupleArray
+    * Note: same holds for Tuples, they will be boxed, so an ImmutableArray[Tuple] has each element boxed, hence requiring the more performant
+    * ImmutableTupleArray
     */
-  type ImmutableArray[T] = Newtype[Array[T], FastArrayOps]
+  type ImmutableArray[T] = Newtype[LiteWrappedArray[T], FastArrayOps]
 
-  def ImmutableArray[@specialized(Double, Int, Long) T](arr: Array[T]): ImmutableArray[T] = newtype(arr)
+  // add ctors
+  private[fastcollections] def ImmutableArray[@specialized(Double, Int, Long) T](arr: LiteWrappedArray[T]): ImmutableArray[T] = newtype(arr)
 
-  implicit def immutableArrayOps4Generic[T](t: ImmutableArray[T]): FastGenericArrayOps[T] = FastGenericArrayOps(t.asInstanceOf[Array[T]])
+  def ImmutableArray[@specialized(Double, Int, Long) T](arr: Array[T]): ImmutableArray[T] = ImmutableArray(new LiteWrappedArray(arr))
 
-  implicit def immutableArrayOps4Double(t: ImmutableArray[Double]): FastDoubleArrayOps = FastDoubleArrayOps(t.asInstanceOf[Array[Double]])
+  // add methods
+  implicit def immutableArrayOps4Generic[T](t: ImmutableArray[T]): FastGenericArrayOps[T] = FastGenericArrayOps(t.asInstanceOf[LiteWrappedArray[T]])
 
-  implicit def immutableArrayOps4Int(t: ImmutableArray[Int]): FastIntArrayOps = FastIntArrayOps(t.asInstanceOf[Array[Int]])
+  implicit def immutableArrayOps4Double(t: ImmutableArray[Double]): FastDoubleArrayOps = FastDoubleArrayOps(t.asInstanceOf[LiteWrappedArray[Double]])
 
-  implicit def immutableArrayOps4Long(t: ImmutableArray[Long]): FastLongArrayOps = FastLongArrayOps(t.asInstanceOf[Array[Long]])
+  implicit def immutableArrayOps4Int(t: ImmutableArray[Int]): FastIntArrayOps = FastIntArrayOps(t.asInstanceOf[LiteWrappedArray[Int]])
+
+  implicit def immutableArrayOps4Long(t: ImmutableArray[Long]): FastLongArrayOps = FastLongArrayOps(t.asInstanceOf[LiteWrappedArray[Long]])
 
   // add factories
   object ImmutableArray {
+
     def apply[@specialized(Double, Int, Long) A: ClassTag](data0: A, dataRest: A*): ImmutableArray[A] = ImmutableArray[A]((data0 +: dataRest).toArray)
 
+    // TODO: not specialized
     def apply[@specialized(Double, Int, Long) A: ClassTag](data: TraversableOnce[A]): ImmutableArray[A] = ImmutableArray[A](data.toArray)
 
     def fill[@specialized(Double, Int, Long) A: ClassTag](n: Int)(elem: ⇒ A): ImmutableArray[A] = ImmutableArray(Array.fill[A](n)(elem))
 
+    // TODO: not specialized
     def empty[@specialized(Double, Int, Long) A: ClassTag]: ImmutableArray[A] = ImmutableArray(new Array[A](0))
 
     def indexRange(length: Int): ImmutableArray[ArrayIndex] = ImmutableArray(Array.range(0, length).map(ArrayIndex))
@@ -174,55 +192,55 @@ package object fastcollections {
     }
   }
 
-//  trait ImmutableArrayTag
-//
-//  type ImmutableArray[T] = Array[T] @@ ImmutableArrayTag
-//
-//  // add ctor
-//  def ImmutableArray[@specialized(Double, Int, Long) T](arr: Array[T]): ImmutableArray[T] = tag[ImmutableArrayTag][Array[T]](arr)
-//
-//  // add methods
-//
-//  //TODO: problem is that refArrayOps (ArrayOps) has higher priority for conversion :-( Also ImmutableArray[ArrayIndex] has issues...
-//  // http://www.lihaoyi.com/post/ImplicitDesignPatternsinScala.html#type-class-implicits
-//  // https://stackoverflow.com/questions/1886953/is-there-a-way-to-control-which-implicit-conversion-will-be-the-default-used
-//  implicit def immutableArrayOps4Generic[T <: AnyRef](t: ImmutableArray[T]): FastGenericArrayOps[T] = FastGenericArrayOps(t.asInstanceOf[Array[T]])
-//
-//  implicit def immutableArrayOps4Double(t: ImmutableArray[Double]): FastDoubleArrayOps = FastDoubleArrayOps(t.asInstanceOf[Array[Double]])
-//
-//  implicit def immutableArrayOps4Int(t: ImmutableArray[Int]): FastIntArrayOps = FastIntArrayOps(t.asInstanceOf[Array[Int]])
-//
-//  implicit def immutableArrayOps4Long(t: ImmutableArray[Long]): FastLongArrayOps = FastLongArrayOps(t.asInstanceOf[Array[Long]])
-//
-//
-//  // add factories
-//  object ImmutableArray {
-//    def apply[@specialized(Double, Int, Long) A: ClassTag](data0: A, dataRest: A*): ImmutableArray[A] = ImmutableArray[A]((data0 +: dataRest).toArray)
-//
-//    def apply[@specialized(Double, Int, Long) A: ClassTag](data: TraversableOnce[A]): ImmutableArray[A] = ImmutableArray[A](data.toArray)
-//
-//    def fill[@specialized(Double, Int, Long) A: ClassTag](n: Int)(elem: ⇒ A): ImmutableArray[A] = ImmutableArray(Array.fill[A](n)(elem))
-//
-//    def empty[@specialized(Double, Int, Long) A: ClassTag]: ImmutableArray[A] = ImmutableArray(new Array[A](0))
-//
-//    def indexRange(length: Int): ImmutableArray[ArrayIndex] = ImmutableArray(Array.range(0, length).map(ArrayIndex))
-//
-//    def range(from: Int, to: Int): ImmutableArray[Int] = ImmutableArray(Array.range(from, to))
-//
-//    def range(from: Long, to: Long): ImmutableArray[Long] = ImmutableArray(Array.range(from.toInt, to.toInt).map(_.toLong))
-//
-//    def fromCsv[T: ClassTag](fileName: String,
-//                             separator: String = ",", skipHeaderLines: Int = 1)
-//                            (valueFromRow: ImmutableArray[String] => T): ImmutableArray[T] = {
-//
-//      val bufferedSource = Source.fromFile(fileName)
-//
-//      val rows = ImmutableArray(bufferedSource.getLines.map(line => {
-//        ImmutableArray(line.split(separator, -1))
-//      }).drop(skipHeaderLines))
-//
-//      rows.map(valueFromRow)
-//    }
-//  }
+  //  trait ImmutableArrayTag
+  //
+  //  type ImmutableArray[T] = Array[T] @@ ImmutableArrayTag
+  //
+  //  // add ctor
+  //  def ImmutableArray[@specialized(Double, Int, Long) T](arr: Array[T]): ImmutableArray[T] = tag[ImmutableArrayTag][Array[T]](arr)
+  //
+  //  // add methods
+  //
+  //  //TODO: problem is that refArrayOps (ArrayOps) has higher priority for conversion :-( Also ImmutableArray[ArrayIndex] has issues...
+  //  // http://www.lihaoyi.com/post/ImplicitDesignPatternsinScala.html#type-class-implicits
+  //  // https://stackoverflow.com/questions/1886953/is-there-a-way-to-control-which-implicit-conversion-will-be-the-default-used
+  //  implicit def immutableArrayOps4Generic[T <: AnyRef](t: ImmutableArray[T]): FastGenericArrayOps[T] = FastGenericArrayOps(t.asInstanceOf[Array[T]])
+  //
+  //  implicit def immutableArrayOps4Double(t: ImmutableArray[Double]): FastDoubleArrayOps = FastDoubleArrayOps(t.asInstanceOf[Array[Double]])
+  //
+  //  implicit def immutableArrayOps4Int(t: ImmutableArray[Int]): FastIntArrayOps = FastIntArrayOps(t.asInstanceOf[Array[Int]])
+  //
+  //  implicit def immutableArrayOps4Long(t: ImmutableArray[Long]): FastLongArrayOps = FastLongArrayOps(t.asInstanceOf[Array[Long]])
+  //
+  //
+  //  // add factories
+  //  object ImmutableArray {
+  //    def apply[@specialized(Double, Int, Long) A: ClassTag](data0: A, dataRest: A*): ImmutableArray[A] = ImmutableArray[A]((data0 +: dataRest).toArray)
+  //
+  //    def apply[@specialized(Double, Int, Long) A: ClassTag](data: TraversableOnce[A]): ImmutableArray[A] = ImmutableArray[A](data.toArray)
+  //
+  //    def fill[@specialized(Double, Int, Long) A: ClassTag](n: Int)(elem: ⇒ A): ImmutableArray[A] = ImmutableArray(Array.fill[A](n)(elem))
+  //
+  //    def empty[@specialized(Double, Int, Long) A: ClassTag]: ImmutableArray[A] = ImmutableArray(new Array[A](0))
+  //
+  //    def indexRange(length: Int): ImmutableArray[ArrayIndex] = ImmutableArray(Array.range(0, length).map(ArrayIndex))
+  //
+  //    def range(from: Int, to: Int): ImmutableArray[Int] = ImmutableArray(Array.range(from, to))
+  //
+  //    def range(from: Long, to: Long): ImmutableArray[Long] = ImmutableArray(Array.range(from.toInt, to.toInt).map(_.toLong))
+  //
+  //    def fromCsv[T: ClassTag](fileName: String,
+  //                             separator: String = ",", skipHeaderLines: Int = 1)
+  //                            (valueFromRow: ImmutableArray[String] => T): ImmutableArray[T] = {
+  //
+  //      val bufferedSource = Source.fromFile(fileName)
+  //
+  //      val rows = ImmutableArray(bufferedSource.getLines.map(line => {
+  //        ImmutableArray(line.split(separator, -1))
+  //      }).drop(skipHeaderLines))
+  //
+  //      rows.map(valueFromRow)
+  //    }
+  //  }
 
 }

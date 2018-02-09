@@ -1,11 +1,9 @@
-package com.fbot.main
+package com.fbot.main.InputData
 
 import breeze.linalg.{DenseMatrix, DenseVector}
 import breeze.stats.distributions.{Gaussian, MultivariateGaussian}
 import com.fbot.common.data.MultiSeries
-import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections._
-import com.fbot.common.fastcollections.Tuple
+import com.fbot.common.fastcollections.{ImmutableArray, Tuple, _}
 import org.apache.spark.SparkContext
 
 import scala.util.Random
@@ -27,14 +25,14 @@ import scala.util.Random
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-trait TestData {
+trait InputData {
 
   def data: MultiSeries
 
 }
 
 
-case class RndDataXd(dim: Int, N: Int)(implicit sc: SparkContext) extends TestData {
+case class RndDataXd(dim: Int, N: Int)(implicit sc: SparkContext) extends InputData {
 
   def data: MultiSeries = {
     def randomDouble = {
@@ -53,7 +51,7 @@ case class RndDataXd(dim: Int, N: Int)(implicit sc: SparkContext) extends TestDa
 }
 
 
-case class FxDataXd(dim: Int, N: Int)(implicit sc: SparkContext) extends TestData {
+case class FxDataXd(dim: Int, N: Int)(implicit sc: SparkContext) extends InputData {
 
   def data: MultiSeries = {
     def randomDouble = {
@@ -61,7 +59,7 @@ case class FxDataXd(dim: Int, N: Int)(implicit sc: SparkContext) extends TestDat
     }
 
     def f(tuple: Tuple): Tuple = {
-      Tuple(tuple.repr.map(x => if (x >= 500d) Random.nextDouble() * 1000d else 0d))
+      Tuple(tuple.repr.map(x => if (x >= 500d) Random.nextDouble() * 1000d else 0d).toArray)
     }
 
     val dataX = ImmutableArray(Array.fill[Tuple](N)(Tuple(Array.fill(dim)(randomDouble))))
@@ -77,7 +75,7 @@ case class FxDataXd(dim: Int, N: Int)(implicit sc: SparkContext) extends TestDat
 
 case class GaussianData2d(N: Int, rho: Double,
                           sigmaX: Double = 1d, sigmaY: Double = 1d,
-                          muX: Double = 0d, muY: Double = 0d)(implicit sc: SparkContext) extends TestData {
+                          muX: Double = 0d, muY: Double = 0d)(implicit sc: SparkContext) extends InputData {
 
   def data: MultiSeries = {
     val mu = DenseVector(muX, muY)
@@ -90,7 +88,7 @@ case class GaussianData2d(N: Int, rho: Double,
 }
 
 case class GaussianData(numberOfDataSets: Int, samplesSize: Int, sampleDim: Int,
-                        sigma: DenseMatrix[Double], mu: DenseVector[Double])(implicit sc: SparkContext) extends TestData {
+                        sigma: DenseMatrix[Double], mu: DenseVector[Double])(implicit sc: SparkContext) extends InputData {
 
   require(numberOfDataSets * sampleDim == mu.size, s"Dimension of mu matrix provided does not match $numberOfDataSets*$sampleDim")
   require(numberOfDataSets * sampleDim == sigma.rows, s"Dimension of sigma matrix provided does not match $numberOfDataSets*$sampleDim")
@@ -106,7 +104,7 @@ case class GaussianData(numberOfDataSets: Int, samplesSize: Int, sampleDim: Int,
 }
 
 
-case class ConstGaussianData2d(N: Int, const: Double, sigma: Double = 1d, mu: Double = 0d)(implicit sc: SparkContext) extends TestData {
+case class ConstGaussianData2d(N: Int, const: Double, sigma: Double = 1d, mu: Double = 0d)(implicit sc: SparkContext) extends InputData {
 
   def data: MultiSeries = {
     val gaussian = Gaussian(mu, sigma)
@@ -123,7 +121,7 @@ case class ConstGaussianData2d(N: Int, const: Double, sigma: Double = 1d, mu: Do
 
 }
 
-case class KraskovData(implicit sc: SparkContext) extends TestData {
+case class KraskovData(implicit sc: SparkContext) extends InputData {
 
   def data: MultiSeries = {
     val dataX = ImmutableArray(39, 65, 101, 169, 171, 205, 232, 243, 258, 277, 302, 355, 381).map(Tuple(_))
@@ -134,7 +132,7 @@ case class KraskovData(implicit sc: SparkContext) extends TestData {
 
 }
 
-case class Data2d(implicit sc: SparkContext) extends TestData {
+case class Data2d(implicit sc: SparkContext) extends InputData {
 
   def data: MultiSeries = {
     //  5432101234567

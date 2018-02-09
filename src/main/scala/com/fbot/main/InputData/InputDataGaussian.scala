@@ -1,4 +1,4 @@
-package com.fbot.main
+package com.fbot.main.InputData
 
 import breeze.linalg.{DenseMatrix => BDM, DenseVector => BDV, Matrix => BM}
 import com.fbot.common.data.MultiSeries
@@ -22,7 +22,7 @@ import org.apache.spark.SparkContext
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-case class InputDataGaussian(implicit sc: SparkContext) extends TestData with Logging {
+case class InputDataGaussian(implicit sc: SparkContext) extends InputData with Logging {
 
   def data: MultiSeries = {
     val rho: Double = 0.0d

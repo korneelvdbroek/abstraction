@@ -31,9 +31,16 @@ object TestBoxing extends App {
   val len = imArr.length
 
   // Tuple
-  val tuple = Tuple(13d, 17d, 23d)   // should be [Ljava.lang.Object  (cannot be translucent since it would kinda behave like an Array[Double]... mutable etc.)
+  val tuple1 = Tuple(13d, 17d, 23d)   // should be [Ljava.lang.Object  (cannot be translucent since it would kinda behave like an Array[Double]... mutable etc.)
+  val tuple2 = Tuple(13d, 17d, 23d)   // should be [Ljava.lang.Object  (cannot be translucent since it would kinda behave like an Array[Double]... mutable etc.)
+  val tuple3 = Tuple(17d, 13d, 23d)
 
-  val tuple2 = tuple.head
+  val tuple1Head = tuple1.head
+
+  val equals1 = tuple1 == tuple1
+  val equals2 = tuple1 == tuple2
+  val equals3 = tuple1 == tuple3
+
 
   // ImmutableArray
   val immutableArray = ImmutableArray[Double](Array(4d, 11d, 8d, 2d, 13d)) // should be [Ljava.lang.Object

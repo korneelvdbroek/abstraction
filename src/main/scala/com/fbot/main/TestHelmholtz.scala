@@ -9,10 +9,11 @@ import breeze.numerics.abs
 import ch.qos.logback.classic.{Level, Logger}
 import com.fbot.algos.clustering.{HelmholtzClustering, MISimilarity}
 import com.fbot.common.data.{IndexedSeries, MultiSeries, Series}
-import com.fbot.common.fastcollections.{ImmutableArray, ImmutableTupleArray, Tuple}
+import com.fbot.common.fastcollections.{ImmutableArray, ImmutableTupleArray, LiteWrappedArray, Tuple}
 import com.fbot.common.linalg.RichDenseMatrix._
 import com.fbot.common.linalg.distributed.RichBlockMatrix
 import com.fbot.common.linalg.distributed.RichBlockMatrix._
+import com.fbot.main.InputData.InputDataIcebergs
 import grizzled.slf4j.Logging
 import org.apache.spark.mllib.linalg.distributed.BlockMatrix
 import org.apache.spark.mllib.linalg.{DenseMatrix, Matrix, SparseMatrix}
@@ -63,6 +64,11 @@ object TestHelmholtz extends Logging {
                                    classOf[SparseMatrix],
                                    classOf[breeze.linalg.DenseMatrix$mcD$sp],
                                    classOf[Array[Int]],
+                                   classOf[LiteWrappedArray[Double]],
+                                   classOf[com.fbot.common.fastcollections.LiteWrappedArray$mcD$sp],
+                                   classOf[LiteWrappedArray[Int]],
+                                   classOf[LiteWrappedArray[Long]],
+                                   classOf[LiteWrappedArray[Object]],
                                    ClassTag(Class.forName("org.apache.spark.util.collection.CompactBuffer")).wrap.runtimeClass))
     implicit val sc = new SparkContext(conf)
 

@@ -1,9 +1,7 @@
-package com.fbot.main
+package com.fbot.main.InputData
 
 import com.fbot.common.data.MultiSeries
-import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections._
-import com.fbot.common.fastcollections.Tuple
+import com.fbot.common.fastcollections.{ImmutableArray, Tuple, _}
 import org.apache.spark.SparkContext
 
 import scala.io.Source
@@ -26,7 +24,7 @@ import scala.util.Try
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-case class InputDataYeast(implicit sc: SparkContext) extends TestData {
+case class InputDataYeast(implicit sc: SparkContext) extends InputData {
 
   def data: MultiSeries = {
     val bufferedSource = Source.fromFile("doc/yeast/figure3_173microarray_colcleaned.cdt.txt")

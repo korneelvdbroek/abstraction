@@ -25,7 +25,7 @@ case class HyperCube(left: HyperSpaceUnit, right: HyperSpaceUnit) {
   def dim: Int = left.dim
 
   def grow(leftDirection: ImmutableArray[Long], rightDirection: ImmutableArray[Long]): HyperCube = {
-    HyperCube(left + HyperSpaceUnit(leftDirection.repr), right + HyperSpaceUnit(rightDirection.repr))
+    HyperCube(left + HyperSpaceUnit(leftDirection.toArray), right + HyperSpaceUnit(rightDirection.toArray))
   }
 
   def growCubeSidesToIncludeDistanceAround(space: HyperSpace)(epsilon: Double, point: Tuple): HyperCube = {

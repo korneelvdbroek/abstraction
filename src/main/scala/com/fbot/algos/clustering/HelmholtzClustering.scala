@@ -20,7 +20,7 @@ case class MISimilarity(data: MultiSeries, blockSizeN: Int, blockSizeNc: Int)(im
       if (series1.index < series2.index) {
         val MIMax = MutualInformation.MIMax(series1.length)
         // this is the slow step
-        val MI = MutualInformation(series1.data, series2.data).MI(k = 200, absoluteTolerance = MIMax * 0.05)
+        val MI = MutualInformation(series1.data, series2.data).MI(k = 200) //, absoluteTolerance = MIMax * 0.05)
 
         Seq(MatrixEntry(series1.index, series2.index, MI),
             MatrixEntry(series2.index, series1.index, MI))

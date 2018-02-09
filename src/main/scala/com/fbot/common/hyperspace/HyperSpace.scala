@@ -37,7 +37,7 @@ trait HyperSpace {
 
   def hyperSpaceUnitAround(point: Tuple): HyperSpaceUnit = {
     val location = (embed(point) - origin) / unitCubeSizes
-    HyperSpaceUnit(location.repr.map(_.floor.toLong))
+    HyperSpaceUnit(location.repr.map(_.floor.toLong).toArray)
   }
 
   def embed(point: Tuple): Tuple = {
@@ -45,7 +45,7 @@ trait HyperSpace {
   }
 
   def toCoordinate(spaceUnit: HyperSpaceUnit): Tuple = {
-    unitCubeSizes * Tuple(spaceUnit.repr.map(_.toDouble)) + origin
+    unitCubeSizes * Tuple(spaceUnit.repr.map(_.toDouble).toArray) + origin
   }
 
 

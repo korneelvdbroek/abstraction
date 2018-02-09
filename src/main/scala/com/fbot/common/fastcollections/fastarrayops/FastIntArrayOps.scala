@@ -24,19 +24,127 @@ import scala.reflect.ClassTag
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-case class FastIntArrayOps(repr: Array[Int]) extends AnyVal with FastArrayOps {
+case class FastIntArrayOps(repr: LiteWrappedArray[Int]) extends AnyVal with FastArrayOps {
 
-  type A = Int
+  // publish methods from LiteWrappedArray
+  def length: Int = repr.length
 
+  def isEmpty: Boolean = repr.isEmpty
+
+  def nonEmpty: Boolean = repr.nonEmpty
+
+  def apply(index: ArrayIndex): Int = repr.apply(index.toInt)
+
+  def head: Int = repr.head
+
+  def headOption: Option[Int] = repr.headOption
+
+  def last: Int = repr.last
+
+  def lastOption: Option[Int] = repr.lastOption
+
+  def foldLeft[B](z: B)(op: (B, Int) => B): B = repr.foldLeft(z)(op)
+
+  def foldLeftOrBreakWithIndex[B](z: B)(op: (B, Int, ArrayIndex) => (B, Boolean)): B = {
+    repr.foldLeftOrBreakWithIndex(z)((acc, elem, index) => op(acc, elem, ArrayIndex(index)))
+  }
+
+  def forall(p: (Int) => Boolean): Boolean = repr.forall(p)
+
+  def forallWithIndex(p: (Int, ArrayIndex) => Boolean): Boolean = {
+    repr.forallWithIndex((elem, index) => p(elem, ArrayIndex(index)))
+  }
+
+  def count(p: (Int) => Boolean): Int = repr.count(p)
+
+  def ++ (that: ImmutableArray[Int]): ImmutableArray[Int] = ImmutableArray(repr ++ that.repr)
+
+  def slice(from: Int, until: Int): ImmutableArray[Int] = ImmutableArray(repr.slice(from, until))
+
+  def toArray: Array[Int] = repr.array
+
+  def toList: List[Int] = repr.toList
+
+  def toSet: Set[Int] = repr.toSet
+
+
+
+  // mapping methods
+  def indexRange: ImmutableArray[Int] = ImmutableArray(repr.indexRange)
+
+  def map[@specialized(Int, Long, Double) B: ClassTag](f: Int => B): ImmutableArray[B] = ImmutableArray(repr.map(f))
+
+  def mapWithIndex[@specialized(Int, Long, Double) B: ClassTag](f: (Int, ArrayIndex) ⇒ B): ImmutableArray[B] = {
+    ImmutableArray(repr.mapWithIndex((elem, index) => f(elem, ArrayIndex(index))))
+  }
+
+  def flatMap(f: Int => ImmutableArray[Int])(implicit evidence: ClassTag[Int]): ImmutableArray[Int] = {
+    ImmutableArray(repr.flatMap(elem => f(elem).repr))
+  }
+
+  def flatMapWithIndex[B: ClassTag](f: (Int, ArrayIndex) => ImmutableArray[B]): ImmutableArray[B] = {
+    ImmutableArray(repr.flatMapWithIndex((elem, index) => f(elem, ArrayIndex(index)).repr))
+  }
+
+  def take(k: Int)(implicit evidence: ClassTag[Int]): ImmutableArray[Int] = ImmutableArray(repr.take(k))
+
+  def filter(p: Int ⇒ Boolean)(implicit evidence: ClassTag[Int]): ImmutableArray[Int] = ImmutableArray(repr.filter(p))
+
+  def filterByIndex(p: ArrayIndex => Boolean)(implicit evidence: ClassTag[Int]): ImmutableArray[Int] = {
+    ImmutableArray(repr.filterByIndex(index => p(ArrayIndex(index))))
+  }
+
+  def filterNot(p: Int ⇒ Boolean)(implicit evidence: ClassTag[Int]): ImmutableArray[Int] = ImmutableArray(repr.filterNot(p))
+
+  def groupBy[Key: ClassTag](f: Int ⇒ Key): Map[Key, ImmutableArray[Int]] = repr.groupBy(f).mapValues(values => ImmutableArray(values))
+
+
+
+  // new methods
+  def mkString: String = repr.mkString("[", ", ", "]")
+
+  def mapToTuple(f: Int => Tuple): ImmutableTupleArray = {
+    val len = length
+
+    if (len == 0) {
+      ImmutableTupleArray.empty(0)
+    } else {
+      val dim = f(head).dim
+
+      // allocate
+      var d: Int = 0
+      val res: Array[Array[Double]] = new Array[Array[Double]](dim)
+      while (d < dim) {
+        res(d) = new Array[Double](len)
+        d += 1
+      }
+
+      // fill with data
+      var i = 0
+      while (i < len) {
+        var d = 0
+        while (d < dim) {
+          res(d)(i) = f(repr.array(i))(d)
+          d += 1
+        }
+        i += 1
+      }
+
+      ImmutableTupleArray(res.map(arr => new LiteWrappedArray(arr)).asInstanceOf[Array[ImmutableArray[Double]]])
+    }
+  }
+
+
+  // new methods
   def sorted: ImmutableArray[Int] = {
     val len = length
 
     if (len <= 1) {
-      ImmutableArray(repr)
+      ImmutableArray(repr.array)
     } else {
       // we make a copy, such that the unsorted ImmutableArray remains untouched
       val res: Array[Int] = new Array[Int](len)
-      System.arraycopy(repr, 0, res, 0, len)
+      System.arraycopy(repr.array, 0, res, 0, len)
       java.util.Arrays.sort(res)
       ImmutableArray(res)
     }
@@ -50,15 +158,15 @@ case class FastIntArrayOps(repr: Array[Int]) extends AnyVal with FastArrayOps {
     // load up the PQ
     var i = 0
     while (i < k && i < len) {
-      pq.enqueue((ArrayIndex(i), repr(i)))
+      pq.enqueue((ArrayIndex(i), repr.array(i)))
       i += 1
     }
 
     // evaluate rest of array
     while (i < len) {
-      if (repr(i) <= pq.head._2) {
+      if (repr.array(i) <= pq.head._2) {
         pq.dequeue()
-        pq.enqueue((ArrayIndex(i), repr(i)))
+        pq.enqueue((ArrayIndex(i), repr.array(i)))
       }
       i += 1
     }
@@ -88,7 +196,7 @@ case class FastIntArrayOps(repr: Array[Int]) extends AnyVal with FastArrayOps {
 
     var i = 0
     while (i < len) {
-      res(i) = f(apply(ArrayIndex(i)), rhs.repr.apply(i))
+      res(i) = f(apply(ArrayIndex(i)), rhs.repr.array.apply(i))
       i += 1
     }
     ImmutableArray[Int](res)

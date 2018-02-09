@@ -1,6 +1,6 @@
 package com.fbot.algos.mutualinformation
 
-import breeze.linalg.max
+import breeze.linalg.{max, min}
 import breeze.numerics.{digamma, pow, sqrt}
 import com.fbot.algos.nearestneighbors.NearestNeighbors
 import com.fbot.common.fastcollections.{ImmutableArray, ImmutableTupleArray, Tuple, _}
@@ -19,11 +19,11 @@ import scala.util.Random
   */
 case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleArray) extends NearestNeighbors with Logging {
 
-  val points: ImmutableTupleArray = dataX.extend(dataY)
+  val points: ImmutableTupleArray = dataX extend dataY
 
   val length: Int = points.length
 
-  val dim: Int = dataX.dimension
+  val dim: Int = dataX.dim
 
   // determine where the mass of the distribution is located
   val margin: Double = 0.0001d
@@ -69,7 +69,7 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
       }
     })._2.reverse
 
-    info(s"${massCubeEdgeSize.length }d space: split into ${(Tuple(massCubeEdgeSize.toArray) / Tuple(partitionVector.toArray)).forceString } space units")
+    info(s"${massCubeEdgeSize.length }d space: split into ${(Tuple(massCubeEdgeSize.toArray) / Tuple(partitionVector.toArray)).mkString } space units")
 
     Tuple(partitionVector.toArray)
   }
@@ -126,7 +126,7 @@ case class MutualInformation(dataX: ImmutableTupleArray, dataY: ImmutableTupleAr
 
       val MI = digamma(k) - 1d / k + digamma(length) - mean
 
-      val breakCondition = standardErrorOfMean < absoluteTolerance && countIndex.toInt > 4 * k
+      val breakCondition = standardErrorOfMean < absoluteTolerance && countIndex.toInt > min(k, length)
 
       if (breakCondition) {
         info(f"${countIndex.toInt }%7d ($sampleIndex%12s):  ${Utils.prettyPrintTime(t1) } // ${

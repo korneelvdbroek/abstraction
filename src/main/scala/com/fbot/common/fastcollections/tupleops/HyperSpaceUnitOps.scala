@@ -23,109 +23,59 @@ import scala.annotation.tailrec
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-case class HyperSpaceUnitOps(repr: Array[Long]) extends AnyVal {
+case class HyperSpaceUnitOps(repr: LiteWrappedArray[Long]) extends AnyVal {
 
+  // publish methods from LiteWrappedArray
   def length: Int = repr.length
 
-  def dim: Int = length
+  def isEmpty: Boolean = repr.isEmpty
 
-  def isEmpty: Boolean = length == 0
+  def nonEmpty: Boolean = repr.nonEmpty
 
-  def nonEmpty: Boolean = !isEmpty
+  def apply(index: ArrayIndex): Long = repr.apply(index.toInt)
 
+  def head: Long = repr.head
 
-  def apply(index: Int): Long = repr(index)
+  def headOption: Option[Long] = repr.headOption
 
+  def last: Long = repr.last
 
-  def head: Long = repr(0)
+  def lastOption: Option[Long] = repr.lastOption
 
-  def headOption: Option[Long] = if (nonEmpty) Some(head) else None
+  def foldLeft[B](z: B)(op: (B, Long) => B): B = repr.foldLeft(z)(op)
 
-  def last: Long = repr(length - 1)
-
-  def lastOption: Option[Long] = if (nonEmpty) Some(last) else None
-
-
-  def foldLeft[B](z: B)(op: (B, Long) => B): B = foldl(0, length, z, op)
-
-  @tailrec
-  private def foldl[B](start: Int, end: Int, acc: B, op: (B, Long) => B): B = {
-    if (start == end) {
-      acc
-    } else {
-      foldl(start + 1, end, op(acc, apply(start)), op)
-    }
+  def foldLeftOrBreakWithIndex[B](z: B)(op: (B, Long, ArrayIndex) => (B, Boolean)): B = {
+    repr.foldLeftOrBreakWithIndex(z)((acc, elem, index) => op(acc, elem, ArrayIndex(index)))
   }
 
-  def foldLeftOrBreak[B](z: B)(op: (B, Long) => (B, Boolean)): B = foldl(0, length, z, break = false, op)
+  def forall(p: (Long) => Boolean): Boolean = repr.forall(p)
 
-  @tailrec
-  private def foldl[B](start: Int, end: Int, acc: B, break: Boolean, op: (B, Long) => (B, Boolean)): B = {
-    if (start == end || break) {
-      acc
-    } else {
-      val (newAcc, newBreak) = op(acc, apply(start))
-      foldl(start + 1, end, newAcc, newBreak, op)
-    }
+  def forallWithIndex(p: (Long, ArrayIndex) => Boolean): Boolean = {
+    repr.forallWithIndex((elem, index) => p(elem, ArrayIndex(index)))
   }
 
-  def forall(p: (Long) => Boolean): Boolean = {
-    val len = length
+  def count(p: (Long) => Boolean): Int = repr.count(p)
 
-    var i = 0
-    while (i < len && p(apply(i))) {
-      i += 1
-    }
-    i == len
-  }
+  def ++ (that: ImmutableArray[Long]): ImmutableArray[Long] = ImmutableArray(repr ++ that.repr)
 
-  def forallWithIndex(p: (Long, Int) => Boolean): Boolean = {
-    val len = length
+  def slice(from: Int, until: Int): ImmutableArray[Long] = ImmutableArray(repr.slice(from, until))
 
-    var i = 0
-    while (i < len && p(apply(i), i)) {
-      i += 1
-    }
-    i == len
-  }
-
-  def count(p: (Long) => Boolean): Int = {
-    val len = length
-
-    var count = 0
-    var i = 0
-    while (i < len) {
-      if (p(apply(i))) count += 1
-      i += 1
-    }
-
-    count
-  }
-
-  def ++ (that: HyperSpaceUnit): HyperSpaceUnit = {
-    val thisLen = repr.length
-    val thatLen = that.length
-
-    val concat = new Array[Long](thisLen + thatLen)
-    System.arraycopy(repr, 0, concat, 0, thisLen)
-    System.arraycopy(that.repr, 0, concat, thisLen, thatLen)
-    HyperSpaceUnit(concat)
-  }
+  def toArray: Array[Long] = repr.array
 
   def toList: List[Long] = repr.toList
 
   def toSet: Set[Long] = repr.toSet
 
-  override def toString: String = mkString("HyperSpaceUnit(", ", ", ")")
+  def mkString(start: String, sep: String, end: String): String = repr.mkString(start, sep, end)
 
-  def mkString(start: String, sep: String, end: String): String = {
-    repr.mkString(start, sep, end)
-  }
+
+
+  // new methods
+  def dim: Int = length
 
   def mkString(space: HyperSpace): String = {
-    space.toCoordinate(HyperSpaceUnit(repr)).mkString("SpaceUnit(", ",", ")")
+    space.toCoordinate(HyperSpaceUnit(repr.array)).mkString("SpaceUnit(", ",", ")")
   }
-
 
   def + (rhs: HyperSpaceUnit): HyperSpaceUnit = {
     elementWise(_ + _)(rhs)
@@ -139,10 +89,6 @@ case class HyperSpaceUnitOps(repr: Array[Long]) extends AnyVal {
     elementWise(_ * _)(rhs)
   }
 
-  def / (rhs: HyperSpaceUnit): HyperSpaceUnit = {
-    elementWise(_ / _)(rhs)
-  }
-
   @inline
   private def elementWise(f: (Long, Long) => Long)(rhs: HyperSpaceUnit): HyperSpaceUnit = {
     val len = length
@@ -150,7 +96,7 @@ case class HyperSpaceUnitOps(repr: Array[Long]) extends AnyVal {
 
     var i = 0
     while (i < len) {
-      res(i) = f(apply(i), rhs.repr.apply(i))
+      res(i) = f(repr.array(i), rhs.repr.array(i))
       i += 1
     }
     HyperSpaceUnit(res)
@@ -160,13 +106,14 @@ case class HyperSpaceUnitOps(repr: Array[Long]) extends AnyVal {
     map(-_)
   }
 
+  @inline
   private def map(f: Long => Long): HyperSpaceUnit = {
     val len = length
     val res: Array[Long] = new Array[Long](length)
 
     var i = 0
     while (i < len) {
-      res(i) = f(apply(i))
+      res(i) = f(repr.array(i))
       i += 1
     }
     HyperSpaceUnit(res)

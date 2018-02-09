@@ -1,13 +1,11 @@
-package com.fbot.main
+package com.fbot.main.InputData
 
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoField
 import java.time.{Instant, LocalDateTime, ZoneId, ZonedDateTime}
 
 import com.fbot.common.data.MultiSeries
-import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections._
-import com.fbot.common.fastcollections.Tuple
+import com.fbot.common.fastcollections.{ImmutableArray, Tuple, _}
 import com.fbot.common.timeseries.TimeSeries
 import grizzled.slf4j.Logging
 import org.apache.spark.SparkContext
@@ -32,7 +30,7 @@ import org.apache.spark.SparkContext
   * Data file can be found on
   * http://www2.nationalgrid.com/UK/Industry-information/Electricity-transmission-operational-data/Data-Explorer/
   */
-case class InputDataUKPowerData(implicit sc: SparkContext) extends TestData with Logging {
+case class InputDataUKPowerData(implicit sc: SparkContext) extends InputData with Logging {
 
   def data: MultiSeries = {
 
