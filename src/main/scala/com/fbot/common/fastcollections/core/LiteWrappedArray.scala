@@ -1,6 +1,4 @@
-package com.fbot.common.fastcollections
-
-import com.fbot.common.fastcollections.fastarrayops.FastArrayOps
+package com.fbot.common.fastcollections.core
 
 import scala.annotation.tailrec
 import scala.reflect.ClassTag
@@ -24,7 +22,7 @@ import scala.reflect.ClassTag
   */
 // Not a value class, since we explicitly need to override equals() and hashcode(), so we do have boxing.
 // The underlying Array[T], array, is only accessible to the fastcollections package
-// since our type-save derivations might want to define some additional fast methods on top of it.
+// since our type-safe newtype derivations might want to define some additional fast methods on top of it.
 class LiteWrappedArray[@specialized(Int, Long, Double) A](private[fastcollections] val array: Array[A]) extends java.io.Serializable {
 
   /** The equals method for arbitrary sequences. Compares this sequence to
@@ -126,7 +124,7 @@ class LiteWrappedArray[@specialized(Int, Long, Double) A](private[fastcollection
     count
   }
 
-  def ++(that: LiteWrappedArray[A])(implicit evidence: ClassTag[A]): LiteWrappedArray[A] = {
+  def ++ (that: LiteWrappedArray[A])(implicit evidence: ClassTag[A]): LiteWrappedArray[A] = {
     val thisLen = array.length
     val thatLen = that.length
 

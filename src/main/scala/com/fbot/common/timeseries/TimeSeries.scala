@@ -4,7 +4,7 @@ import java.time.{Instant, ZonedDateTime}
 
 import com.fbot.common.fastcollections._
 import com.fbot.common.fastcollections.ImmutableArray
-import com.fbot.common.fastcollections.fastarrayops.FastArray2Zipped._
+import ImmutableArray2Zipped._
 
 import scala.reflect.ClassTag
 
@@ -34,7 +34,7 @@ case class TimeSeries(timestamps: ImmutableArray[Long], values: ImmutableArray[D
   def head: (Instant, Double) = (instantFromLong(timestamps.head), values.head)
 
   def groupBy[Key: ClassTag](f: (Instant, Double) => Key): ImmutableArray[TimeSeries] = {
-    val setOfTimeSeries = tuple2FastArray2Zipped(timestamps, values)
+    val setOfTimeSeries = (timestamps, values)
       .groupBy((t, x) => f(instantFromLong(t), x))
       .values
       .map(x => TimeSeries(x._1, x._2))

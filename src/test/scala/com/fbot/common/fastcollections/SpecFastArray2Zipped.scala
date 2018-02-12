@@ -1,6 +1,6 @@
 package com.fbot.common.fastcollections
 
-import com.fbot.common.fastcollections.fastarrayops.FastArray2Zipped._
+import ImmutableArray2Zipped._
 import org.scalatest.{FlatSpec, Matchers}
 
 /**

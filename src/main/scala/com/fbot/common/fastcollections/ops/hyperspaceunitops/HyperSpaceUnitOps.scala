@@ -1,10 +1,8 @@
-package com.fbot.common.fastcollections.tupleops
+package com.fbot.common.fastcollections.ops.hyperspaceunitops
 
-import com.fbot.common.fastcollections.HyperSpaceUnit
-import com.fbot.common.fastcollections._
+import com.fbot.common.fastcollections.core.LiteWrappedArray
+import com.fbot.common.fastcollections.{HyperSpaceUnit, _}
 import com.fbot.common.hyperspace.HyperSpace
-
-import scala.annotation.tailrec
 
 /**
   * Copyright (C) 2017-2018  korneelvdbroek

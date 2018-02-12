@@ -1,10 +1,8 @@
-package com.fbot.common.fastcollections.fastarrayops
+package com.fbot.common.fastcollections.ops.immutablearrayops
 
-import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray, ImmutableTupleArray, LiteWrappedArray, Tuple}
-import com.fbot.common.fastcollections._
+import com.fbot.common.fastcollections.core.LiteWrappedArray
+import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray, ImmutableTupleArray, Tuple, _}
 
-import scala.collection.mutable
-import scala.math.Ordering
 import scala.reflect.ClassTag
 
 /**
@@ -24,7 +22,7 @@ import scala.reflect.ClassTag
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-case class FastArrayIndexArrayOps(repr: LiteWrappedArray[Int]) extends AnyVal with FastArrayOps {
+case class ImmutableArrayIndexArrayOps(repr: LiteWrappedArray[Int]) extends AnyVal with ImmutableArrayOps {
 
   // publish methods from LiteWrappedArray
   def length: Int = repr.length
@@ -68,7 +66,6 @@ case class FastArrayIndexArrayOps(repr: LiteWrappedArray[Int]) extends AnyVal wi
   def toSet: Set[ArrayIndex] = ArrayIndex.subst(repr.toSet)
 
 
-
   // mapping methods
   def indexRange: ImmutableArray[ArrayIndex] = ArrayIndex.subst(ImmutableArray(repr.indexRange))
 
@@ -103,7 +100,6 @@ case class FastArrayIndexArrayOps(repr: LiteWrappedArray[Int]) extends AnyVal wi
   def groupBy[Key: ClassTag](f: ArrayIndex ⇒ Key): Map[Key, ImmutableArray[ArrayIndex]] = {
     repr.groupBy(elem => f(ArrayIndex(elem))).mapValues(values => ArrayIndex.subst(ImmutableArray(values)))
   }
-
 
 
   // new methods

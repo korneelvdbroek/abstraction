@@ -28,31 +28,31 @@ class ImmutableArraySpec extends FlatSpec with Matchers {
   }
 
   it should "return true for ImmutableArrays with identical elements in the same order" in {
-    series1 == series2 shouldBe true
+    series1 == seriesWithEqualElementsAs1 shouldBe true
   }
 
   it should "return true for ImmutableArrays of different types but with identical elements in the same order" in {
-    series1 == series3 shouldBe true
+    series1 == series1AsDoubles shouldBe true
   }
 
   it should "return false for ImmutableArrays with identical elements in a different order" in {
-    series1 == series4 shouldBe false
+    series1 == series1WithDifferentOrder shouldBe false
   }
 
   "indexOfSorted" should "return the positions of the elements once sorted" in {
-    series3.indexOfSorted.toList shouldBe List(ArrayIndex(0), ArrayIndex(1), ArrayIndex(2), ArrayIndex(3))
+    series1AsDoubles.indexOfSorted.toList shouldBe List(ArrayIndex(0), ArrayIndex(1), ArrayIndex(2), ArrayIndex(3))
   }
 
   "++" should "return a concatenated array" in {
-    series1 ++ series2 shouldBe ImmutableArray(0,1,2,3,0,1,2,3)
+    series1 ++ seriesWithEqualElementsAs1 shouldBe ImmutableArray(0, 1, 2, 3, 0, 1, 2, 3)
   }
 }
 
 object ImmutableArraySpec {
 
   val series1 = ImmutableArray(0, 1, 2, 3)
-  val series2 = ImmutableArray(0, 1, 2, 3)
-  val series3 = ImmutableArray(0d, 1d, 2d, 3d)
-  val series4 = ImmutableArray(0, 1, 3, 2)
+  val seriesWithEqualElementsAs1 = ImmutableArray(0, 1, 2, 3)
+  val series1AsDoubles = ImmutableArray(0d, 1d, 2d, 3d)
+  val series1WithDifferentOrder = ImmutableArray(0, 1, 3, 2)
 }
 

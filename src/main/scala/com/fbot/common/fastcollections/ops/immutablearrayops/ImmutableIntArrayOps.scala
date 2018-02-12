@@ -1,7 +1,8 @@
-package com.fbot.common.fastcollections.fastarrayops
+package com.fbot.common.fastcollections.ops.immutablearrayops
 
 import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray}
 import com.fbot.common.fastcollections._
+import com.fbot.common.fastcollections.core.LiteWrappedArray
 
 import scala.collection.mutable
 import scala.math.Ordering
@@ -24,7 +25,7 @@ import scala.reflect.ClassTag
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-case class FastIntArrayOps(repr: LiteWrappedArray[Int]) extends AnyVal with FastArrayOps {
+case class ImmutableIntArrayOps(repr: LiteWrappedArray[Int]) extends AnyVal with ImmutableArrayOps {
 
   // publish methods from LiteWrappedArray
   def length: Int = repr.length

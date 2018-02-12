@@ -1,6 +1,7 @@
-package com.fbot.common.fastcollections.fastarrayops
+package com.fbot.common.fastcollections.ops.immutablearrayops
 
-import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray, ImmutableTupleArray, LiteWrappedArray, Tuple, _}
+import com.fbot.common.fastcollections.core.LiteWrappedArray
+import com.fbot.common.fastcollections.{ArrayIndex, ImmutableArray, ImmutableTupleArray, Tuple, _}
 
 import scala.reflect.ClassTag
 
@@ -21,7 +22,7 @@ import scala.reflect.ClassTag
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   *
   */
-case class FastGenericArrayOps[A](repr: LiteWrappedArray[A]) extends AnyVal with FastArrayOps {
+case class ImmutableGenericArrayOps[A](repr: LiteWrappedArray[A]) extends AnyVal with ImmutableArrayOps {
 
   // publish methods from LiteWrappedArray
   def length: Int = repr.length

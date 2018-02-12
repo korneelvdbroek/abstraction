@@ -1,5 +1,7 @@
 package com.fbot.common.fastcollections
 
+import com.fbot.common.fastcollections.core.LiteWrappedArray
+
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.immutable
@@ -30,7 +32,7 @@ case class ImmutableTupleArray(coordinates: Array[ImmutableArray[Double]]) {
     if (coordinates.length == 0) {
       0
     } else {
-      immutableArrayOps4Double(coordinates(0)).length
+      coordinates(0).length
     }
   }
 

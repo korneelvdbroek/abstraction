@@ -11,7 +11,6 @@ import scala.annotation.tailrec
   */
 trait NearestNeighbors {
 
-  // TODO: refactor to unpack the Tuple to ImmutableArray[ImmutableArray[Double]]
   def points: ImmutableTupleArray
 
   def pointsBySpaceUnitPerSpace: Map[HyperSpace, (ImmutableArray[HyperSpaceUnit], ImmutableArray[ImmutableArray[ArrayIndex]])]

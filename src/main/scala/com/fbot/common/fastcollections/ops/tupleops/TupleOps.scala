@@ -1,7 +1,8 @@
-package com.fbot.common.fastcollections.tupleops
+package com.fbot.common.fastcollections.ops.tupleops
 
 import com.fbot.common.fastcollections.Tuple
 import com.fbot.common.fastcollections._
+import com.fbot.common.fastcollections.core.LiteWrappedArray
 
 import scala.annotation.tailrec
 
